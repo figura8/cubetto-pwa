@@ -1,4 +1,4 @@
-const CACHE_NAME = "cubetto-v1";
+const CACHE_NAME = "cubetto-v2";
 const PRECACHE_URLS = [
   "./",
   "./index.html",
