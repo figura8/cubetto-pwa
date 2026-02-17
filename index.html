@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cubetto</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#667eea">
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Comic Sans MS', 'Chalkboard SE', 'Arial Rounded MT Bold', system-ui, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 30px;
+      padding: 30px;
+      max-width: 900px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    h1 {
+      text-align: center;
+      color: #667eea;
+      margin-bottom: 10px;
+      font-size: 2.5em;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 1.2em;
+    }
+
+    .game-area {
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+
+    .grid-container {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative; /* per sprite overlay */
+    }
+
+    .grid-title {
+      font-size: 1.3em;
+      color: #667eea;
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(6, 60px);
+      grid-template-rows: repeat(6, 60px);
+      gap: 5px;
+      background: #ddd;
+      padding: 5px;
+      border-radius: 15px;
+      position: relative;
+    }
+
+    .cell {
+      background: white;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 2.5em;
+      transition: all 0.2s ease;
+    }
+
+    .cell.goal {
+      background: #d4edda;
+      border-color: #28a745;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+
+    .cell.drag-over-grid {
+      background: #E3F2FD;
+      border-color: #42A5F5;
+      transform: scale(1.03);
+    }
+
+    .character-sprite {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      pointer-events: auto;
+      user-select: none;
+      touch-action: none;
+      cursor: grab;
+    }
+    .character-sprite:active { cursor: grabbing; }
+
+    .character-sprite-inner {
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .character-sprite.moving .character-sprite-inner {
+      animation: cubetto-wiggle 0.18s linear infinite;
+    }
+
+    @keyframes cubetto-wiggle {
+      0% { transform: translateY(0) rotate(0deg); }
+      25% { transform: translateY(-1px) rotate(-1deg); }
+      50% { transform: translateY(0) rotate(0deg); }
+      75% { transform: translateY(-1px) rotate(1deg); }
+      100% { transform: translateY(0) rotate(0deg); }
+    }
+
+    .blocks-section {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .section-title {
+      font-size: 1.3em;
+      color: #667eea;
+      margin-bottom: 15px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .available-blocks {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 0;
+    }
+
+    .available-slot {
+      width: 70px;
+      height: 70px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: transparent;
+      transition: all 0.2s ease;
+    }
+
+    .block {
+      width: 70px;
+      height: 70px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 2.5em;
+      cursor: grab;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      user-select: none;
+    }
+
+    .block:active { cursor: grabbing; transform: scale(0.95); }
+    .block:hover { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(0,0,0,0.25); }
+
+    .cubetto-block { border: none; position: relative; }
+
+    .program-sequence {
+      display: grid;
+      grid-template-columns: repeat(3, 70px);
+      grid-template-rows: repeat(3, 70px);
+      gap: 12px;
+      padding: 20px;
+      background: #F5E6D3;
+      border-radius: 20px;
+      border: 3px solid #D7CCC8;
+      position: relative;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.1);
+      justify-content: center;
+      margin: 0 auto;
+      width: fit-content;
+    }
+
+    .program-slot {
+      width: 70px;
+      height: 70px;
+      border: 2px solid #9FA8DA;
+      border-radius: 15px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #E8EAF6;
+      transition: all 0.2s ease;
+      position: relative;
+      z-index: 2;
+    }
+
+    .program-slot::before {
+      content: '';
+      position: absolute;
+      bottom: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 8px;
+      height: 8px;
+      background: #424242;
+      border-radius: 50%;
+      transition: all 0.2s ease;
+    }
+
+    .program-slot.active::before {
+      background: #FFC107;
+      box-shadow: 0 0 10px rgba(255, 193, 7, 1), 0 0 15px rgba(255, 193, 7, 0.8);
+      animation: pulse-light 0.6s ease-in-out infinite;
+    }
+
+    @keyframes pulse-light {
+      0%, 100% { transform: translateX(-50%) scale(1); opacity: 1; }
+      50% { transform: translateX(-50%) scale(1.2); opacity: 0.8; }
+    }
+
+    .program-slot.drag-over {
+      background: #C5CAE9;
+      border-color: #667eea;
+      transform: scale(1.05);
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    .btn {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+      position: relative;
+      background: #4CAF50;
+    }
+
+    .btn:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 6px 20px rgba(0,0,0,0.35); }
+    .btn:active { transform: translateY(0) scale(0.95); box-shadow: 0 3px 10px rgba(0,0,0,0.25); }
+
+    .btn-run { background: linear-gradient(135deg, #66BB6A 0%, #4CAF50 100%); }
+    .btn-run.running {
+      background: linear-gradient(135deg, #FFA726 0%, #FF9800 100%);
+      animation: pulse-button 1s ease-in-out infinite;
+    }
+
+    @keyframes pulse-button {
+      0%, 100% { transform: scale(1); box-shadow: 0 6px 20px rgba(255, 152, 0, 0.5); }
+      50% { transform: scale(1.1); box-shadow: 0 8px 30px rgba(255, 152, 0, 0.8); }
+    }
+
+    .message {
+      text-align: center;
+      font-size: 1.5em;
+      margin-top: 20px;
+      min-height: 40px;
+      font-weight: bold;
+      color: #667eea;
+    }
+    .message.success { color: #28a745; animation: bounce 0.5s; }
+    .message.error { color: #dc3545; }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    @media (max-width: 768px) {
+      .grid { grid-template-columns: repeat(6, 50px); grid-template-rows: repeat(6, 50px); }
+      .character-sprite, .character-sprite-inner { width: 50px; height: 50px; }
+      h1 { font-size: 2em; }
+    }
+
+    @media (max-width: 499px) {
+      .program-sequence { grid-template-columns: repeat(3, 60px); grid-template-rows: repeat(3, 60px); gap: 8px; padding: 14px; }
+      .program-slot { width: 60px; height: 60px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🤖 Il Mio Primo Programma!</h1>
+    <p class="subtitle">Porta il robot alla stellina ⭐</p>
+
+    <div class="game-area">
+      <div class="grid-container" id="gridContainer">
+        <div class="grid-title">🎮 Area di Gioco</div>
+
+        <div id="characterSprite" class="character-sprite" draggable="true" aria-label="Cubetto">
+          <div class="character-sprite-inner" id="characterSpriteInner"></div>
+        </div>
+
+        <div class="grid" id="gameGrid"></div>
+      </div>
+
+      <div class="blocks-section">
+        <div class="section-title">📦 Blocchi Disponibili</div>
+        <div class="available-blocks" id="availableBlocks"></div>
+
+        <div class="section-title">🎯 Sequenza Programma</div>
+        <div class="program-sequence" id="programSequence">
+          <div class="program-slot" data-slot="0"></div><div class="program-slot" data-slot="1"></div><div class="program-slot" data-slot="2"></div>
+          <div class="program-slot" data-slot="3"></div><div class="program-slot" data-slot="4"></div><div class="program-slot" data-slot="5"></div>
+          <div class="program-slot" data-slot="6"></div><div class="program-slot" data-slot="7"></div><div class="program-slot" data-slot="8"></div>
+        </div>
+
+        <div class="controls">
+          <button class="btn btn-run" id="runButton" aria-label="Esegui programma" onclick="runProgram()"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="message" id="message"></div>
+  </div>
+
+  <script>
+    const GRID_SIZE = 6;
+    const goalPos = { x: 5, y: 5 };
+    const startPos = { x: 0, y: 0 };
+    const startOrientation = 'right';
+
+    let characterPos = { ...startPos };
+    let characterOrientation = startOrientation;
+
+    let isRunning = false;
+    let isDraggingCharacter = false;
+    let isCharacterAnimating = false;
+
+    const MOVE_DURATION_MS = 850;
+    const TURN_PAUSE_MS = 420;
+    const STEP_PAUSE_MS = 500;
+
+    let audioCtx = null;
+    function getAudioCtx() {
+      if (!audioCtx) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new Ctx();
+      }
+      if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+      return audioCtx;
+    }
+    function beep(freq = 880, durationSec = 0.08, volume = 0.15) {
+      const ctx = getAudioCtx();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(freq, ctx.currentTime);
+      g.gain.setValueAtTime(volume, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + durationSec);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(); o.stop(ctx.currentTime + durationSec);
+    }
+
+    const blockPool = {
+      forward: { direction: 'forward', label: 'Forward', color: '#7EDCC4' },
+      left: { direction: 'left', label: 'Left', color: '#FFE089' },
+      right: { direction: 'right', label: 'Right', color: '#FF8A8A' }
+    };
+
+    let availableBlocks = [
+      { id: 'forward-0', ...blockPool.forward },
+      { id: 'left-0', ...blockPool.left },
+      { id: 'right-0', ...blockPool.right }
+    ];
+
+    let blockIdCounter = 1;
+    let programBlocks = Array(9).fill(null);
+
+    let draggedBlock = null;
+    let dragSource = null;
+    let dragSourceIndex = null;
+
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+    function showMessage(text, type = '') {
+      const message = document.getElementById('message');
+      message.textContent = text;
+      message.className = `message ${type}`;
+    }
+
+    function initGrid() {
+      const grid = document.getElementById('gameGrid');
+      grid.innerHTML = '';
+      for (let y = 0; y < GRID_SIZE; y++) {
+        for (let x = 0; x < GRID_SIZE; x++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.dataset.x = String(x);
+          cell.dataset.y = String(y);
+
+          cell.addEventListener('dragover', (e) => {
+            if (isRunning || isCharacterAnimating) return;
+            if (!isDraggingCharacter) return;
+            e.preventDefault();
+            cell.classList.add('drag-over-grid');
+            e.dataTransfer.dropEffect = 'move';
+          });
+          cell.addEventListener('dragleave', () => cell.classList.remove('drag-over-grid'));
+          cell.addEventListener('drop', async (e) => {
+            if (isRunning || isCharacterAnimating) return;
+            if (!isDraggingCharacter) return;
+            e.preventDefault();
+            cell.classList.remove('drag-over-grid');
+            isDraggingCharacter = false;
+            await animateCharacterTo(x, y, MOVE_DURATION_MS);
+            showMessage('');
+          });
+
+          grid.appendChild(cell);
+        }
+      }
+      updateGrid();
+      syncCharacterSprite();
+      setupCharacterSpriteDrag();
+    }
+
+    function updateGrid() {
+      document.querySelectorAll('.cell').forEach(cell => {
+        const x = Number(cell.dataset.x);
+        const y = Number(cell.dataset.y);
+        cell.innerHTML = '';
+        cell.className = 'cell';
+        if (x === goalPos.x && y === goalPos.y) {
+          cell.innerHTML = '⭐';
+          cell.classList.add('goal');
+        }
+      });
+      renderCharacterSprite();
+    }
+
+    function renderCharacterSprite() {
+      const inner = document.getElementById('characterSpriteInner');
+      if (!inner) return;
+      inner.innerHTML = getRobotWithOrientation(characterOrientation);
+    }
+
+    function getCellRectRelativeToContainer(x, y) {
+      const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+      const container = document.getElementById('gridContainer');
+      if (!cell || !container) return null;
+      const cellRect = cell.getBoundingClientRect();
+      const contRect = container.getBoundingClientRect();
+      return { left: cellRect.left - contRect.left, top: cellRect.top - contRect.top, width: cellRect.width, height: cellRect.height };
+    }
+
+    function syncCharacterSprite() {
+      const sprite = document.getElementById('characterSprite');
+      const r = getCellRectRelativeToContainer(characterPos.x, characterPos.y);
+      if (!sprite || !r) return;
+      sprite.style.left = (r.left + r.width / 2 - sprite.offsetWidth / 2) + 'px';
+      sprite.style.top  = (r.top + r.height / 2 - sprite.offsetHeight / 2) + 'px';
+      renderCharacterSprite();
+    }
+
+    async function animateCharacterTo(x, y, durationMs = 400) {
+      if (isCharacterAnimating) return;
+      const sprite = document.getElementById('characterSprite');
+      const from = getCellRectRelativeToContainer(characterPos.x, characterPos.y);
+      const to = getCellRectRelativeToContainer(x, y);
+      if (!sprite || !from || !to) { characterPos = { x, y }; syncCharacterSprite(); return; }
+      isCharacterAnimating = true;
+      sprite.classList.add('moving');
+      const fromLeft = (from.left + from.width / 2 - sprite.offsetWidth / 2);
+      const fromTop  = (from.top + from.height / 2 - sprite.offsetHeight / 2);
+      const toLeft   = (to.left + to.width / 2 - sprite.offsetWidth / 2);
+      const toTop    = (to.top + to.height / 2 - sprite.offsetHeight / 2);
+
+      const anim = sprite.animate(
+        [{ left: fromLeft + 'px', top: fromTop + 'px' }, { left: toLeft + 'px', top: toTop + 'px' }],
+        { duration: durationMs, easing: 'cubic-bezier(0.2, 0.9, 0.2, 1)', fill: 'forwards' }
+      );
+
+      await anim.finished.catch(() => {});
+      sprite.style.left = toLeft + 'px';
+      sprite.style.top  = toTop + 'px';
+      sprite.classList.remove('moving');
+      characterPos = { x, y };
+      isCharacterAnimating = false;
+      document.querySelectorAll('.cell.drag-over-grid').forEach(c => c.classList.remove('drag-over-grid'));
+    }
+
+    function setupCharacterSpriteDrag() {
+      const sprite = document.getElementById('characterSprite');
+      if (!sprite) return;
+      sprite.addEventListener('dragstart', (e) => {
+        if (isRunning || isCharacterAnimating) { e.preventDefault(); return; }
+        isDraggingCharacter = true;
+        e.dataTransfer.setData('text/plain', 'character');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      sprite.addEventListener('dragend', () => {
+        isDraggingCharacter = false;
+        document.querySelectorAll('.cell.drag-over-grid').forEach(c => c.classList.remove('drag-over-grid'));
+      });
+    }
+
+    function getRobotWithOrientation(orientation) {
+      return `
+        <svg width="45" height="45" viewBox="0 0 50 50" style="display:block;margin:auto;">
+          <rect x="5" y="5" width="40" height="40" fill="#F5DEB3" stroke="#8B7355" stroke-width="2" rx="3"/>
+          <circle cx="12" cy="12" r="5" fill="#87CEEB" stroke="#4682B4" stroke-width="1.5"/>
+          <circle cx="38" cy="12" r="5" fill="#87CEEB" stroke="#4682B4" stroke-width="1.5"/>
+          <circle cx="12" cy="38" r="5" fill="#87CEEB" stroke="#4682B4" stroke-width="1.5"/>
+          <circle cx="38" cy="38" r="5" fill="#87CEEB" stroke="#4682B4" stroke-width="1.5"/>
+          ${getOrientationMarker(orientation)}
+        </svg>`;
+    }
+    function getOrientationMarker(orientation) {
+      switch (orientation) {
+        case 'up': return '<path d="M 25 15 L 18 25 L 25 22 L 32 25 Z" fill="white" stroke="#CCC" stroke-width="1"/>';
+        case 'down': return '<path d="M 25 35 L 18 25 L 25 28 L 32 25 Z" fill="white" stroke="#CCC" stroke-width="1"/>';
+        case 'left': return '<path d="M 15 25 L 25 18 L 22 25 L 25 32 Z" fill="white" stroke="#CCC" stroke-width="1"/>';
+        default: return '<path d="M 35 25 L 25 18 L 28 25 L 25 32 Z" fill="white" stroke="#CCC" stroke-width="1"/>';
+      }
+    }
+
+    function createBlockElement(block) {
+      const blockEl = document.createElement('div');
+      blockEl.className = 'block cubetto-block';
+      blockEl.draggable = true;
+      blockEl.dataset.blockId = block.id;
+      blockEl.dataset.direction = block.direction;
+      blockEl.style.background = block.color;
+      blockEl.style.position = 'relative';
+      if (block.direction === 'forward') blockEl.style.clipPath = 'polygon(0 0, 85% 0, 100% 50%, 85% 100%, 0 100%)';
+      else if (block.direction === 'left') blockEl.style.clipPath = 'polygon(50% 0, 100% 35%, 100% 100%, 0 100%, 0 35%)';
+      else if (block.direction === 'right') blockEl.style.clipPath = 'polygon(0 0, 100% 0, 100% 65%, 50% 100%, 0 65%)';
+      return blockEl;
+    }
+
+    function renderAvailableBlocks() {
+      const container = document.getElementById('availableBlocks');
+      container.innerHTML = '';
+      availableBlocks.forEach((block, i) => {
+        const slot = document.createElement('div');
+        slot.className = 'available-slot';
+        slot.dataset.availableIndex = String(i);
+        const blockEl = createBlockElement(block);
+        blockEl.dataset.availableIndex = String(i);
+        slot.appendChild(blockEl);
+        container.appendChild(slot);
+      });
+      setupAvailableDragListeners();
+    }
+
+    function setupAvailableDragListeners() {
+      document.querySelectorAll('.available-slot .block').forEach(blockEl => {
+        blockEl.addEventListener('dragstart', (e) => {
+          const availableIndex = Number(e.target.dataset.availableIndex);
+          draggedBlock = availableBlocks[availableIndex];
+          dragSource = 'available';
+          dragSourceIndex = availableIndex;
+          e.target.style.opacity = '0.5';
+        });
+        blockEl.addEventListener('dragend', (e) => { e.target.style.opacity = '1'; });
+      });
+    }
+
+    function renderProgramSequence() {
+      document.querySelectorAll('.program-slot').forEach((slot, index) => {
+        slot.innerHTML = '';
+        const block = programBlocks[index];
+        if (!block) return;
+        const blockEl = createBlockElement(block);
+        slot.appendChild(blockEl);
+        blockEl.addEventListener('dragstart', (e) => {
+          draggedBlock = programBlocks[index];
+          dragSource = 'program';
+          dragSourceIndex = index;
+          e.target.style.opacity = '0.5';
+        });
+        blockEl.addEventListener('dragend', (e) => {
+          e.target.style.opacity = '1';
+          if (draggedBlock && dragSource === 'program') {
+            programBlocks[dragSourceIndex] = null;
+            draggedBlock = null; dragSource = null; dragSourceIndex = null;
+            renderProgramSequence();
+          }
+        });
+      });
+    }
+
+    function setupProgramDropZones() {
+      document.querySelectorAll('.program-slot').forEach((slot, index) => {
+        slot.addEventListener('dragover', (e) => { e.preventDefault(); slot.classList.add('drag-over'); });
+        slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
+        slot.addEventListener('drop', (e) => {
+          e.preventDefault(); slot.classList.remove('drag-over');
+          if (!draggedBlock) return;
+          if (dragSource === 'available') {
+            programBlocks[index] = { id: `${draggedBlock.direction}-${blockIdCounter++}`, direction: draggedBlock.direction, label: draggedBlock.label, color: draggedBlock.color };
+            availableBlocks[dragSourceIndex] = { id: `${draggedBlock.direction}-${blockIdCounter++}`, ...blockPool[draggedBlock.direction] };
+          } else if (dragSource === 'program') {
+            const temp = programBlocks[index];
+            programBlocks[index] = draggedBlock;
+            programBlocks[dragSourceIndex] = temp;
+          }
+          draggedBlock = null; dragSource = null; dragSourceIndex = null;
+          renderAvailableBlocks(); renderProgramSequence();
+        });
+      });
+    }
+
+    function highlightSlot(index) {
+      document.querySelectorAll('.program-slot').forEach(s => s.classList.remove('active'));
+      const slots = document.querySelectorAll('.program-slot');
+      if (slots[index]) slots[index].classList.add('active');
+    }
+
+    async function moveCharacter(direction) {
+      if (direction === 'forward') {
+        const newPos = { ...characterPos };
+        if (characterOrientation === 'up') newPos.y = Math.max(0, newPos.y - 1);
+        else if (characterOrientation === 'down') newPos.y = Math.min(GRID_SIZE - 1, newPos.y + 1);
+        else if (characterOrientation === 'left') newPos.x = Math.max(0, newPos.x - 1);
+        else newPos.x = Math.min(GRID_SIZE - 1, newPos.x + 1);
+        await animateCharacterTo(newPos.x, newPos.y, MOVE_DURATION_MS);
+        await sleep(120);
+      } else if (direction === 'left') {
+        const rotations = { up: 'left', left: 'down', down: 'right', right: 'up' };
+        characterOrientation = rotations[characterOrientation];
+        renderCharacterSprite();
+        await sleep(TURN_PAUSE_MS);
+      } else if (direction === 'right') {
+        const rotations = { up: 'right', right: 'down', down: 'left', left: 'up' };
+        characterOrientation = rotations[characterOrientation];
+        renderCharacterSprite();
+        await sleep(TURN_PAUSE_MS);
+      }
+    }
+
+    async function runProgram() {
+      if (isRunning || isCharacterAnimating) return;
+      isRunning = true;
+      const button = document.getElementById('runButton');
+      button.classList.add('running');
+      showMessage('');
+      beep(880, 0.10, 0.18);
+      await sleep(350);
+
+      for (let i = 0; i < 9; i++) {
+        highlightSlot(i);
+        beep(660, 0.06, 0.14);
+        await sleep(STEP_PAUSE_MS);
+
+        if (programBlocks[i] !== null) {
+          await moveCharacter(programBlocks[i].direction);
+          await sleep(STEP_PAUSE_MS);
+
+          if (characterPos.x === goalPos.x && characterPos.y === goalPos.y) {
+            await sleep(250);
+            showMessage('🎉 COMPLIMENTI! Hai vinto!', 'success');
+            document.querySelectorAll('.program-slot').forEach(s => s.classList.remove('active'));
+            button.classList.remove('running');
+            isRunning = false;
+            return;
+          }
+        } else {
+          await sleep(STEP_PAUSE_MS);
+        }
+      }
+      document.querySelectorAll('.program-slot').forEach(s => s.classList.remove('active'));
+      button.classList.remove('running');
+      isRunning = false;
+    }
+
+    initGrid();
+    renderAvailableBlocks();
+    renderProgramSequence();
+    setupProgramDropZones();
+    window.addEventListener('resize', () => syncCharacterSprite());
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js');
+      });
+    }
+  </script>
+</body>
+</html>
