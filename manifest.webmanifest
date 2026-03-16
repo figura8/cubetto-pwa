@@ -1,15 +1,36 @@
 {
-  "name": "Cubetto",
-  "short_name": "Cubetto",
-  "description": "Gioco educativo di programmazione a blocchi (stile Cubetto).",
-  "start_url": "./index.html",
-  "scope": "./",
+  "name": "BÖKS",
+  "short_name": "BÖKS",
+  "id": "/",
+  "lang": "it-IT",
+  "description": "Gioco educativo di programmazione a blocchi.",
+  "start_url": "/",
+  "scope": "/",
   "display": "fullscreen",
-  "background_color": "#f0ebe3",
-  "theme_color": "#f0ebe3",
+  "display_override": ["fullscreen", "standalone", "window-controls-overlay"],
+  "dir": "ltr",
+  "background_color": "#f0e6d0",
+  "theme_color": "#f0e6d0",
   "orientation": "portrait",
+  "categories": ["education", "kids", "games"],
+  "prefer_related_applications": false,
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/boks-apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/home-narrow.png",
+      "sizes": "1082x2402",
+      "type": "image/png",
+      "label": "Schermata principale"
+    },
+    {
+      "src": "screenshots/home-wide.png",
+      "sizes": "2048x2732",
+      "type": "image/png",
+      "label": "Gameplay"
+    }
   ]
 }

@@ -5,32 +5,83 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
-  <title>Cubetto</title>
+  <meta name="theme-color" content="#e8dfcc"/>
+  <title>BÖKS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;700&family=Lilita+One&display=swap" rel="stylesheet">
   <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/boks-apple-touch-icon.png">
   <style>
     *, *::before, *::after {
       margin: 0; padding: 0; box-sizing: border-box;
       -webkit-tap-highlight-color: transparent; user-select: none;
     }
+    :root {
+      --app-vh: 100dvh;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --bg-base: #e8dfcc;
+      --panel-bg: #ede7d7;
+      --panel-edge: #d2c9b4;
+      --grid-bg: #f3eedf;
+      --cell-bg: #efead9;
+      --cell-edge: #d9cfb8;
+      --toy-red: #f51c24;
+      --toy-green: #00aa50;
+      --toy-blue: #005abd;
+      --toy-yellow: #fdb515;
+      --toy-purple: #9e44ad;
+      --toy-orange: #e57e22;
+    }
     html, body {
       width: 100%; height: 100%;
+      min-height: var(--app-vh);
       overflow: hidden;
-      background: #ece6dc;
-      font-family: system-ui, sans-serif;
+      background: radial-gradient(120% 80% at 50% 0%, #f4efdf 0%, var(--bg-base) 72%);
+      font-family: 'Fredoka', system-ui, sans-serif;
     }
 
-    /* Full-screen column layout */
     #app {
-      position: fixed; inset: 0;
+      position: fixed;
+      left: 0; right: 0; top: 0;
+      height: var(--app-vh);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 6px 10px 10px;
-      gap: 6px;
+      padding: calc(6px + var(--safe-top)) 12px calc(12px + var(--safe-bottom));
+      gap: 8px;
+      max-width: 520px;
+      margin: 0 auto;
     }
 
-    /* Grid wrapper: fixed size set by JS */
+    /* Header BÖKS */
+    #header {
+      flex-shrink: 0;
+      display: flex; align-items: center; gap: 1px;
+      letter-spacing: 0.5px;
+    }
+    .logo-letter {
+      font-family: 'Lilita One', cursive;
+      font-size: 1.62em;
+      line-height: 1;
+      display: inline-block;
+      -webkit-text-stroke: 0.8px rgba(86, 64, 34, 0.35);
+      text-shadow: 0 2px 0 rgba(130, 101, 56, 0.42), 0 4px 7px rgba(88, 64, 31, 0.2);
+      transform: translateY(-0.5px);
+    }
+    .logo-b {
+      color: #e53a32;
+    }
+    .logo-o {
+      color: #d8a300;
+    }
+    .logo-k {
+      color: #2fa64c;
+    }
+    .logo-s {
+      color: #2d84c9;
+    }
+
     #gridWrap {
       position: relative;
       width: 100%;
@@ -39,29 +90,43 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      border-radius: 16px;
+      overflow: hidden;
+      background: var(--panel-bg);
+      border: 2px solid var(--panel-edge);
+      box-shadow: 0 2px 0 #cdc2ab, 0 8px 14px rgba(95, 78, 52, 0.18);
     }
 
-    /* Grid: square, sized by JS after measuring available height */
     #gameGrid {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
       grid-template-rows: repeat(6, 1fr);
-      gap: 3px;
+      gap: 4px;
       position: relative;
       flex-shrink: 0;
+      padding: 6px;
+      background: var(--grid-bg);
+      border-radius: 16px;
+      border: 1px solid #dfd5bf;
     }
     .cell {
-      background: rgba(245,241,235,0.55);
-      border: none;
-      border-radius: 7px;
+      background: var(--cell-bg);
+      border: 1px solid var(--cell-edge);
+      border-radius: 8px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.65), inset 0 -1px 0 rgba(190,172,139,0.35);
     }
-    .cell.hi { background: rgba(120,180,255,0.55); }
+    .cell.hi {
+      background: #f7e59f;
+      border-color: #e1b842;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.78), 0 0 0 1px rgba(225,184,66,0.45);
+    }
 
     #sprite {
       position: absolute;
       z-index: 20;
       touch-action: none;
       cursor: grab;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.18));
     }
     #sprite:active { cursor: grabbing; }
     #sprite.moving { animation: wg .18s linear infinite; }
@@ -71,7 +136,6 @@
       70%      { transform: rotate(3deg)  translateY(-1px); }
     }
 
-    /* Fixed bottom section */
     #bottom {
       width: 100%;
       max-width: 460px;
@@ -85,118 +149,255 @@
     /* Available blocks row */
     #blocksRow {
       width: 100%;
-      background: #faf5ee;
-      border-radius: 12px;
-      border: none;
-      padding: 8px 12px;
+      background: var(--panel-bg);
+      border: 2px solid var(--panel-edge);
+      border-radius: 16px;
+      padding: 10px 14px;
       display: flex;
       justify-content: space-evenly;
       align-items: center;
+      box-shadow: 0 2px 0 #cdc2ab, 0 7px 14px rgba(95, 78, 52, 0.12), inset 0 1px 0 rgba(255,255,255,0.72);
     }
     .ablock {
       flex-shrink: 0;
       touch-action: none;
       cursor: grab;
-      border-radius: 5px;
-      box-shadow: 0 2px 6px rgba(0,0,0,.2);
+      border-radius: 7px;
+      filter: drop-shadow(0 3px 0 rgba(96, 75, 40, 0.3)) drop-shadow(0 6px 8px rgba(0,0,0,0.13));
+      transition: transform .12s, filter .12s;
+    }
+    .ablock:active {
+      transform: translateY(1px) scale(0.96);
+      filter: drop-shadow(0 2px 0 rgba(96, 75, 40, 0.28)) drop-shadow(0 4px 7px rgba(0,0,0,0.12));
     }
 
     /* Program board */
     #boardRow {
       width: 100%;
-      background: #faf5ee;
-      border-radius: 12px;
-      border: none;
-      box-shadow: none;
-      padding: 7px;
+      background: var(--panel-bg);
+      border: 2px solid var(--panel-edge);
+      border-radius: 16px;
+      padding: 10px;
+      position: relative;
+      box-shadow: 0 2px 0 #cdc2ab, 0 8px 14px rgba(95, 78, 52, 0.12), inset 0 1px 0 rgba(255,255,255,0.74);
     }
     #boardGrid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 5px;
+      position: relative;
+      width: 100%;
     }
+    #boardTrack {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      overflow: visible;
+    }
+    #boardSlots {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .board-row { display: flex; }
+    .board-row.reverse { flex-direction: row-reverse; }
+
     .pslot {
-      background: #f5f1eb;
-      border: none;
-      border-radius: 8px;
+      flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 3px;
-      padding: 3px 2px 5px;
+      gap: 2px;
+      padding: 4px 2px 5px;
       touch-action: none;
-      transition: background .1s;
+      border-radius: 10px;
+      background: #ddc29b;
+      transition: background .2s, box-shadow .2s;
+      position: relative;
+      margin: 0 1px;
+      border: 1px solid #c6a67a;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 0 rgba(158,121,72,0.2);
     }
-    .pslot.over   { background: #d8eeff; border-color: #7ab8f5; }
+    .pslot.over    { background: #e7cb9f; border-color: #b98a4e; }
+    .pslot.done    { background: #d5bb93; }
+    .pslot.done .dot { background: #a7773a; box-shadow: 0 0 4px rgba(167,119,58,0.45); }
+    .pslot.active  {
+      background: #c6e3ff;
+      animation: slotPulse .7s ease-in-out infinite;
+    }
     .pslot.active .dot {
-      background: #ffc107;
-      box-shadow: 0 0 5px rgba(255,193,7,.9);
+      background: var(--toy-blue);
+      box-shadow: 0 0 6px rgba(43,143,212,0.9);
       animation: bd .6s infinite;
     }
-    @keyframes bd { 0%,100%{transform:scale(1)} 50%{transform:scale(1.6)} }
+    @keyframes slotPulse {
+      0%,100% { box-shadow: 0 0 6px rgba(43,143,212,0.2); }
+      50%      { box-shadow: 0 0 14px rgba(43,143,212,0.5); }
+    }
+    .slot-arrow { font-size: 10px; color: rgba(130,92,45,0.55); line-height: 1; }
+    @keyframes bd { 0%,100%{transform:scale(1)} 50%{transform:scale(1.7)} }
     .sinner { display:flex; align-items:center; justify-content:center; }
-    .pblock  { border-radius: 4px; touch-action: none; cursor: grab; }
-    .dot     { width: 4px; height: 4px; background: #c0b090; border-radius: 50%; flex-shrink: 0; transition: all .2s; }
+    .pblock {
+      border-radius: 7px; touch-action: none; cursor: grab;
+      filter: drop-shadow(0 3px 0 rgba(96, 75, 40, 0.32)) drop-shadow(0 6px 8px rgba(0,0,0,0.14));
+    }
+    .dot { width: 5px; height: 5px; background: rgba(132,91,41,0.45); border-radius: 50%; flex-shrink: 0; transition: all .2s; }
 
-    /* Run button */
+    /* fn slot states */
+    .pslot.fn-active {
+      background: #e2d0f0;
+      animation: slotPulseFn .7s ease-in-out infinite;
+    }
+    .pslot.fn-active .dot { background: var(--toy-purple); box-shadow: 0 0 6px rgba(124,58,237,0.75); animation: bd .6s infinite; }
+    .pslot.fn-done { background: #d5bee6; }
+    .pslot.fn-done .dot { background: #7C3AED; box-shadow: 0 0 4px rgba(124,58,237,0.5); }
+    @keyframes slotPulseFn {
+      0%,100% { box-shadow: 0 0 6px rgba(124,58,237,0.2); }
+      50%      { box-shadow: 0 0 14px rgba(124,58,237,0.6); }
+    }
+
+    /* Run button - toy plastic style */
     #runBtn {
       width: 52px; height: 52px;
       flex-shrink: 0;
-      border-radius: 10px;
-      border: none;
-      background: #f5f1eb;
-      box-shadow: 0 4px 0 #c8bfb0;
-      color: #5a4a3a;
-      font-size: 1.2em;
-      display: flex; align-items: center; justify-content: center;
+      border-radius: 13px;
+      border: 2px solid #d59d00;
+      outline: none;
+      background: linear-gradient(180deg, #ffd538 0%, #fdb515 100%);
+      box-shadow: 0 3px 0 #c78300, 0 7px 12px rgba(92, 66, 19, 0.26);
+      display: flex; align-items: flex-start; justify-content: center;
       cursor: pointer;
-      padding-left: 3px;
       touch-action: manipulation;
-      transition: transform .1s, box-shadow .1s;
+      transition: 0.1s ease-in-out;
       -webkit-appearance: none;
       appearance: none;
       -webkit-tap-highlight-color: transparent;
-      outline: none;
+      padding: 8px 0 0 0;
     }
-    #runBtn:active, #runBtn:focus { 
-      transform: translateY(4px); 
-      box-shadow: 0 0 0 #c8bfb0;
-      background: #f5f1eb;
-      outline: none;
+    #runBtn svg {
+      transition: 0.1s ease-in-out;
+      flex-shrink: 0;
+      filter: drop-shadow(0 1px 0 rgba(255,255,255,0.35));
     }
-    #runBtn.running {
-      background: #f5f1eb;
-      box-shadow: 0 4px 0 #c8bfb0;
-      padding-left: 0;
-      animation: pb 1s ease-in-out infinite;
+    #runBtn:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #c78300, 0 4px 8px rgba(92, 66, 19, 0.2);
     }
-    @keyframes pb { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+    #runBtn:active svg { transform: translateY(1px); }
+    #runBtn.running { animation: pb 1s ease-in-out infinite; }
+    @keyframes pb { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
 
-    /* Ghost for drag */
     #ghost {
       position: fixed; z-index: 9999;
       pointer-events: none;
-      transform: translate(-50%, -50%) scale(1.1);
-      opacity: .88; display: none; border-radius: 5px;
+      transform: translate(-50%, -50%) scale(1.15);
+      opacity: .9; display: none; border-radius: 5px;
+      filter: drop-shadow(0 6px 12px rgba(0,0,0,0.25));
     }
 
-    /* Toast */
     #toast {
-      position: fixed; bottom: 70px;
+      position: fixed;
       left: 50%; transform: translateX(-50%);
-      background: white; border-radius: 16px;
-      padding: 5px 14px; font-size: .85em; font-weight: 700;
-      box-shadow: 0 3px 10px rgba(0,0,0,.15);
+      background: #fff9ea; border-radius: 20px;
+      padding: 6px 16px; font-size: .85em; font-weight: 700;
+      color: #5f4e34;
+      border: 1px solid #dfcda9;
+      box-shadow: 0 4px 16px rgba(0,0,0,.12);
       opacity: 0; transition: opacity .3s;
       pointer-events: none; white-space: nowrap; z-index: 200;
     }
     #toast.show { opacity: 1; }
-    #toast.win  { color: #3a9a3e; }
+    #toast.win  {
+      color: #e0a000;
+      font-size: 1.6em;
+      padding: 12px 28px;
+      background: #fffbe6;
+      box-shadow: 0 6px 24px rgba(255,200,0,0.3);
+    }
+    @keyframes starPulse {
+      0%,100% { transform: translate(-50%,-50%) scale(1); }
+      50%      { transform: translate(-50%,-50%) scale(1.18); }
+    }
+    .cell.goal-cell svg { animation: starPulse 1.6s ease-in-out infinite; }
+
+    /* ── Splash screen ── */
+    #splash {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--bg-base);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 0;
+      transition: opacity 0.5s ease;
+    }
+    #splash.hide { opacity: 0; pointer-events: none; }
+
+    #splash-logo {
+      display: flex; align-items: center; gap: 2px;
+      animation: splashBounce 0.7s cubic-bezier(0.36,0.07,0.19,0.97) forwards;
+      transform: scale(0);
+    }
+    #splash-logo span {
+      font-family: 'Lilita One', cursive, Arial Black, sans-serif;
+      font-size: min(22vw, 110px);
+      line-height: 1;
+      display: inline-block;
+    }
+
+    #splash-turtle {
+      margin-top: 12px;
+      opacity: 0;
+      transform: scale(0.5) translateY(20px);
+      animation: turtlePop 0.4s ease forwards 0.85s;
+    }
+
+    @keyframes splashBounce {
+      0%   { transform: scale(0) rotate(-8deg); opacity:0; }
+      60%  { transform: scale(1.18) rotate(3deg); opacity:1; }
+      78%  { transform: scale(0.93) rotate(-1deg); }
+      90%  { transform: scale(1.06) rotate(1deg); }
+      100% { transform: scale(1) rotate(0deg); opacity:1; }
+    }
+    @keyframes turtlePop {
+      0%   { opacity:0; transform: scale(0.5) translateY(20px); }
+      70%  { transform: scale(1.12) translateY(-4px); }
+      100% { opacity:1; transform: scale(1) translateY(0); }
+    }
   </style>
 </head>
 <body>
-<div id="app">
+
+<!-- Splash screen -->
+<div id="splash">
+  <div id="splash-logo">
+    <span style="color:#E8302A;text-shadow:0 5px 0 #9a1208;">B</span><span style="color:#F47E20;text-shadow:0 5px 0 #a04800;">Ö</span><span style="color:#4CAF3F;text-shadow:0 5px 0 #2d6e26;">K</span><span style="color:#2B8FD4;text-shadow:0 5px 0 #1a5a8a;">S</span>
+  </div>
+  <div id="splash-turtle">
+    <svg width="90" height="80" viewBox="0 0 72 72">
+      <ellipse cx="24" cy="20" rx="7" ry="5" fill="#4CAF3F" transform="rotate(-30 24 20)"/>
+      <ellipse cx="24" cy="52" rx="7" ry="5" fill="#4CAF3F" transform="rotate(30 24 52)"/>
+      <ellipse cx="40" cy="20" rx="7" ry="5" fill="#4CAF3F" transform="rotate(30 40 20)"/>
+      <ellipse cx="40" cy="52" rx="7" ry="5" fill="#4CAF3F" transform="rotate(-30 40 52)"/>
+      <ellipse cx="32" cy="36" rx="18" ry="14" fill="#4CAF3F"/>
+      <ellipse cx="32" cy="36" rx="13" ry="9" fill="#3a8a2e"/>
+      <ellipse cx="32" cy="36" rx="8" ry="5" fill="#4CAF3F"/>
+      <line x1="32" y1="27" x2="32" y2="45" stroke="#3a8a2e" stroke-width="1.5"/>
+      <line x1="19" y1="36" x2="45" y2="36" stroke="#3a8a2e" stroke-width="1.5"/>
+      <line x1="23" y1="29" x2="41" y2="43" stroke="#3a8a2e" stroke-width="1"/>
+      <line x1="41" y1="29" x2="23" y2="43" stroke="#3a8a2e" stroke-width="1"/>
+      <ellipse cx="52" cy="36" rx="8" ry="7" fill="#4CAF3F"/>
+      <ellipse cx="52" cy="36" rx="6" ry="5" fill="#5abf4a"/>
+      <circle cx="55" cy="33" r="1.8" fill="#222"/>
+      <circle cx="55.6" cy="32.4" r="0.6" fill="#fff"/>
+      <ellipse cx="16" cy="36" rx="5" ry="3" fill="#4CAF3F"/>
+    </svg>
+  </div>
+</div>
+  <div id="app">
+  <!-- BÖKS header -->
+  <div id="header">
+    <span class="logo-letter logo-b">B</span><span class="logo-letter logo-o">Ö</span><span class="logo-letter logo-k">K</span><span class="logo-letter logo-s">S</span>
+  </div>
   <!-- Row 1: grid (flexible) -->
   <div id="gridWrap">
     <canvas id="bgCanvas" style="position:absolute;inset:0;pointer-events:none;border-radius:7px;"></canvas>
@@ -208,7 +409,11 @@
   <div id="bottom">
     <div id="blocksRow"></div>
     <div id="boardRow"><div id="boardGrid"></div></div>
-    <button id="runBtn" onclick="run()">▶</button>
+    <button id="runBtn" onclick="run()" onmousedown="this.blur()">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <polygon points="7,4 21,12 7,20" fill="#111111"/>
+      </svg>
+    </button>
   </div>
 </div>
 <div id="ghost"></div>
@@ -216,21 +421,71 @@
 
 <script>
 // ═══ CONSTANTS ═══
-const COLS = 6, ROWS = 6, SLOTS = 12;
-const GOAL = {x:5,y:5}, START = {x:2,y:2};
+const COLS = 6, ROWS = 6, SLOTS = 8, FSLOTS = 4;
+let GOAL = {x:5,y:5};
+const START = {x:2,y:2};
+
+// ── Goal SVG: mattoncino BÖKS da raccogliere ──
+function goalSVG() {
+  return `<svg viewBox="0 0 50 50" style="width:72%;height:72%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);filter:drop-shadow(0 2px 4px rgba(0,0,0,0.18));">
+    <!-- stud sopra -->
+    <ellipse cx="20" cy="10" rx="5" ry="3.5" fill="#d4880a"/>
+    <ellipse cx="20" cy="8"  rx="5" ry="3.5" fill="#F5C400"/>
+    <ellipse cx="32" cy="10" rx="5" ry="3.5" fill="#d4880a"/>
+    <ellipse cx="32" cy="8"  rx="5" ry="3.5" fill="#F5C400"/>
+    <!-- lato superiore 3D -->
+    <polygon points="8,12 26,6 42,12 24,18" fill="#ffd730"/>
+    <!-- lato destro 3D -->
+    <polygon points="42,12 42,36 24,36 24,18" fill="#c07e00" opacity="0.55"/>
+    <!-- faccia frontale -->
+    <rect x="8" y="12" width="34" height="24" rx="5" fill="#F5C400"/>
+    <!-- highlight -->
+    <rect x="10" y="14" width="30" height="8" rx="3" fill="rgba(255,255,255,0.22)"/>
+    <!-- bordo -->
+    <rect x="8" y="12" width="34" height="24" rx="5" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1"/>
+    <!-- puntini decorativi -->
+    <circle cx="19" cy="27" r="3" fill="rgba(255,255,255,0.35)"/>
+    <circle cx="31" cy="27" r="3" fill="rgba(255,255,255,0.35)"/>
+  </svg>`;
+}
+
+function moveGoal() {
+  const old = document.querySelector('.goal-cell');
+  if(old) { old.classList.remove('goal-cell'); old.innerHTML = ''; old.style.position=''; old.style.overflow=''; }
+  let nx, ny, attempts = 0;
+  do {
+    nx = Math.floor(Math.random()*COLS);
+    ny = Math.floor(Math.random()*ROWS);
+    attempts++;
+  } while(
+    attempts < 100 &&
+    (Math.abs(nx-pos.x)+Math.abs(ny-pos.y) < 3 ||
+     (nx===START.x && ny===START.y))
+  );
+  GOAL = {x:nx, y:ny};
+  const cell = document.querySelector(`.cell[data-cx="${nx}"][data-cy="${ny}"]`);
+  if(cell) {
+    cell.classList.add('goal-cell');
+    cell.innerHTML = goalSVG();
+    cell.style.position = 'relative';
+    cell.style.overflow = 'hidden';
+  }
+}
 let ori = 'right';
 const MOVE_MS = 650, TURN_MS = 320, STEP_MS = 380;
 const POOL = {
-  forward: {dir:'forward', color:'#7edcc4'},
-  left:    {dir:'left',    color:'#ffe089'},
-  right:   {dir:'right',  color:'#ff8a8a'}
+  forward:  {dir:'forward',  color:'#5BC85A', dark:'#3a8a39', light:'#8de88c'},
+  left:     {dir:'left',     color:'#F5C842', dark:'#b8920a', light:'#ffe87a'},
+  right:    {dir:'right',    color:'#E8504A', dark:'#a02820', light:'#ff8a84'},
+  function: {dir:'function', color:'#9B6FE8', dark:'#5c2eb0', light:'#c8a8ff'}
 };
 
 // ═══ STATE ═══
 let pos = {...START};
 let running = false, animating = false, idN = 0;
-const avail = ['forward','left','right'].map((d,i) => ({id:`${d}${i}`, ...POOL[d]}));
-const prog = Array(SLOTS).fill(null);
+const avail = ['forward','left','right','function'].map((d,i) => ({id:`${d}${i}`, ...POOL[d]}));
+const prog  = Array(SLOTS).fill(null);
+const fnProg = Array(FSLOTS).fill(null);
 
 // ═══ AUDIO ═══
 let ac;
@@ -243,16 +498,47 @@ function T(f,t,s,d,v=.12) {
   o.connect(g); g.connect(c.destination);
   o.start(c.currentTime+s); o.stop(c.currentTime+s+d+.05);
 }
-const sStart = () => [400,500,400,600,800].forEach((f,i) => T(f,'square',i*.08,.1,.1));
-const sStep  = () => { T(300,'square',0,.07,.1); T(500,'square',.09,.07,.1); };
-const sEnd   = () => [523,659,784,1047,784,659,523].forEach((f,i) => T(f,'square',i*.09,.12,.12));
+const sStep  = () => { T(440,'sine',0,.06,.08); };
 const sErr   = () => { T(300,'sine',0,.18,.2); T(180,'sine',.2,.22,.18); };
+function sWin() {
+  // Melodia dolce — arpeggio carino
+  [[523,0],[659,.12],[784,.24],[1047,.38],[659,.52],[784,.64],[1047,.78],[1319,.94]].forEach(([f,s])=>{
+    T(f,'sine',s,.35,.14);
+    T(f*2,'sine',s,.2,.04);
+  });
+}
 
 // ═══ UTILS ═══
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-function toast(msg, cls='') {
+function syncViewportHeight() {
+  const h = window.visualViewport ? Math.round(window.visualViewport.height) : window.innerHeight;
+  document.documentElement.style.setProperty('--app-vh', `${h}px`);
+}
+async function requestAppFullscreen() {
+  if (document.fullscreenElement) return;
+  const el = document.documentElement;
+  try {
+    if (el.requestFullscreen) await el.requestFullscreen({ navigationUI: 'hide' });
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  } catch (_) {}
+  // blocca orientamento portrait su Android
+  try {
+    if (screen.orientation?.lock) await screen.orientation.lock('portrait');
+  } catch (_) {}
+}
+function toast(msg, cls='', aboveEl=null) {
   const el = document.getElementById('toast');
   el.textContent = msg; el.className = msg ? 'show '+cls : '';
+  if(aboveEl && msg) {
+    const r = aboveEl.getBoundingClientRect();
+    el.style.top  = (r.top - 60) + 'px';
+    el.style.bottom = '';
+    el.style.left = (r.left + r.width/2) + 'px';
+  } else {
+    el.style.top = '';
+    el.style.bottom = '70px';
+    el.style.left = '50%';
+  }
   clearTimeout(el._t); if(msg) el._t = setTimeout(() => el.className='', 3000);
 }
 
@@ -268,7 +554,75 @@ function mkB(block, w, h, cls='') {
   el.className = cls;
   el.dataset.dir = block.dir || block.direction;
   el.dataset.bid = block.id;
-  el.style.cssText = `width:${w}px;height:${h}px;background:${block.color};clip-path:${clip(el.dataset.dir)};flex-shrink:0;border-radius:4px;`;
+  const dir = el.dataset.dir;
+  el.style.cssText = `width:${w}px;height:${h}px;flex-shrink:0;display:flex;align-items:center;justify-content:center;`;
+
+  const c  = block.color;
+  const dk = block.dark  || '#666';
+  const lt = block.light || '#fff';
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox','0 0 40 32');
+  svg.setAttribute('width', w); svg.setAttribute('height', h);
+
+  const shape = {
+    forward:  `M4,8 Q4,4 8,4 L32,4 Q38,4 38,10 L38,22 Q38,28 32,28 L8,28 Q4,28 4,24 Z`,
+    left:     `M20,4 L36,4 Q40,4 40,8 L40,28 L4,28 L4,8 Q4,4 8,4 Z`,
+    right:    `M4,4 L36,4 Q40,4 40,8 L40,28 L4,28 L4,8 Q4,4 4,4 Z`,
+    function: `M4,8 Q4,4 8,4 L32,4 Q36,4 36,8 L36,24 Q36,28 32,28 L8,28 Q4,28 4,24 Z`,
+  };
+
+  // ombra
+  const shadow = document.createElementNS('http://www.w3.org/2000/svg','path');
+  shadow.setAttribute('d', shape[dir] || shape.forward);
+  shadow.setAttribute('fill', dk);
+  shadow.setAttribute('transform','translate(0,3)');
+  svg.appendChild(shadow);
+
+  // corpo
+  const body = document.createElementNS('http://www.w3.org/2000/svg','path');
+  body.setAttribute('d', shape[dir] || shape.forward);
+  body.setAttribute('fill', c);
+  svg.appendChild(body);
+
+  // highlight
+  const hi = document.createElementNS('http://www.w3.org/2000/svg','path');
+  hi.setAttribute('d', shape[dir] || shape.forward);
+  hi.setAttribute('fill', lt);
+  hi.setAttribute('opacity','0.35');
+  hi.setAttribute('clip-path','inset(0 0 55% 0)');
+  svg.appendChild(hi);
+
+  // simbolo piccolo — centrato nel blocco, scala ridotta
+  const symG = document.createElementNS('http://www.w3.org/2000/svg','g');
+  symG.setAttribute('transform','translate(20,16) scale(0.42) translate(-20,-16)');
+
+  if(dir === 'function') {
+    const c1 = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c1.setAttribute('cx','14'); c1.setAttribute('cy','16'); c1.setAttribute('r','6');
+    c1.setAttribute('fill','rgba(255,255,255,0.88)');
+    const c2 = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c2.setAttribute('cx','26'); c2.setAttribute('cy','16'); c2.setAttribute('r','6');
+    c2.setAttribute('fill','rgba(255,255,255,0.88)');
+    symG.appendChild(c1); symG.appendChild(c2);
+  } else {
+    const paths = {
+      forward: `M8,16 H24 M22,10 L32,16 L22,22`,
+      left:    `M28,9 Q28,23 13,23 M9,19 L13,27 L17,19`,
+      right:   `M12,9 Q12,23 27,23 M23,19 L27,27 L31,19`,
+    };
+    const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+    p.setAttribute('d', paths[dir]);
+    p.setAttribute('fill','none');
+    p.setAttribute('stroke','rgba(255,255,255,0.88)');
+    p.setAttribute('stroke-width','4');
+    p.setAttribute('stroke-linecap','round');
+    p.setAttribute('stroke-linejoin','round');
+    symG.appendChild(p);
+  }
+  svg.appendChild(symG);
+
+  el.appendChild(svg);
   return el;
 }
 
@@ -279,6 +633,12 @@ function initGrid() {
   for(let y=0; y<ROWS; y++) for(let x=0; x<COLS; x++) {
     const c = document.createElement('div');
     c.className = 'cell'; c.dataset.cx = x; c.dataset.cy = y;
+    if(x===GOAL.x && y===GOAL.y) {
+      c.classList.add('goal-cell');
+      c.innerHTML = goalSVG();
+      c.style.position = 'relative';
+      c.style.overflow = 'hidden';
+    }
     g.appendChild(c);
   }
 }
@@ -306,10 +666,48 @@ function sizeGrid() {
 function svgRobot(o) {
   const rot = { right: 0, down: 90, left: 180, up: 270 };
   const deg = rot[o];
-  return `<svg width="100%" height="100%" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
-    <g transform="rotate(${deg} 25 25)">
-      <rect x="4" y="4" width="42" height="42" fill="#F5DEB3" rx="7" ry="7" stroke="#b0a898" stroke-width="1.5"/>
-      <path d="M32 25 L20 16 L23 25 L20 34Z" fill="#5a4a3a"/>
+  return `<svg width="100%" height="100%" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+    <g transform="rotate(${deg} 36 36)">
+      <!-- sfondo cella -->
+      <rect x="1" y="1" width="70" height="70" fill="#fff8ee" rx="10" stroke="#e8c878" stroke-width="1"/>
+
+      <!-- zampe — clay morbide -->
+      <ellipse cx="22" cy="19" rx="8" ry="6" fill="#5abf4a" transform="rotate(-20 22 19)"/>
+      <ellipse cx="22" cy="19" rx="5" ry="3.5" fill="#72d95e" transform="rotate(-20 22 19)"/>
+
+      <ellipse cx="22" cy="53" rx="8" ry="6" fill="#5abf4a" transform="rotate(20 22 53)"/>
+      <ellipse cx="22" cy="53" rx="5" ry="3.5" fill="#72d95e" transform="rotate(20 22 53)"/>
+
+      <ellipse cx="38" cy="19" rx="8" ry="6" fill="#5abf4a" transform="rotate(20 38 19)"/>
+      <ellipse cx="38" cy="19" rx="5" ry="3.5" fill="#72d95e" transform="rotate(20 38 19)"/>
+
+      <ellipse cx="38" cy="53" rx="8" ry="6" fill="#5abf4a" transform="rotate(-20 38 53)"/>
+      <ellipse cx="38" cy="53" rx="5" ry="3.5" fill="#72d95e" transform="rotate(-20 38 53)"/>
+
+      <!-- corpo — guscio clay 3D -->
+      <ellipse cx="30" cy="37" rx="19" ry="16" fill="#3a7a2e"/>
+      <ellipse cx="30" cy="35" rx="19" ry="16" fill="#4CAF3F"/>
+      <!-- highlight guscio -->
+      <ellipse cx="27" cy="29" rx="10" ry="6" fill="#72d95e" opacity="0.5"/>
+      <!-- pattern guscio -->
+      <ellipse cx="30" cy="35" rx="12" ry="9" fill="#3a8a2e" opacity="0.5"/>
+      <ellipse cx="30" cy="35" rx="7" ry="5" fill="#4CAF3F"/>
+      <ellipse cx="26" cy="31" rx="3" ry="2" fill="#3a8a2e" opacity="0.4"/>
+      <ellipse cx="34" cy="31" rx="3" ry="2" fill="#3a8a2e" opacity="0.4"/>
+      <ellipse cx="30" cy="39" rx="3" ry="2" fill="#3a8a2e" opacity="0.4"/>
+
+      <!-- testa — clay tonda -->
+      <ellipse cx="52" cy="36" rx="10" ry="9" fill="#3a7a2e"/>
+      <ellipse cx="51" cy="35" rx="10" ry="9" fill="#4CAF3F"/>
+      <ellipse cx="48" cy="31" rx="5" ry="3" fill="#72d95e" opacity="0.5"/>
+      <!-- occhio -->
+      <circle cx="54" cy="33" r="2.5" fill="#fff"/>
+      <circle cx="54.5" cy="33.5" r="1.4" fill="#222"/>
+      <circle cx="55" cy="32.8" r="0.5" fill="#fff"/>
+
+      <!-- coda -->
+      <ellipse cx="14" cy="37" rx="6" ry="4" fill="#3a7a2e"/>
+      <ellipse cx="14" cy="36" rx="6" ry="4" fill="#4CAF3F"/>
     </g>
   </svg>`;
 }
@@ -405,160 +803,112 @@ function drawBackground() {
   if (!S) return;
   canvas.width  = S;
   canvas.height = S;
-  // Position canvas exactly over gameGrid within gridWrap
   canvas.style.left   = (rect.left - wrap.left) + 'px';
   canvas.style.top    = (rect.top  - wrap.top)  + 'px';
   canvas.style.width  = S + 'px';
   canvas.style.height = S + 'px';
   const cx = canvas.getContext('2d');
 
-  const r = (min,max) => min + Math.random()*(max-min);
-  const seed = 42; // deterministic-ish using array
-  let si = 0;
-  const rands = Array.from({length:200},(_,i)=>{
-    si = (si*1664525+1013904223)&0xffffffff;
-    return (si>>>0)/4294967296;
-  });
-  let ri = 0;
-  const rn = (mn,mx) => mn + rands[ri++%rands.length]*(mx-mn);
+  // ── SFONDO: pavimento in legno chiaro ──
+  const bg = cx.createLinearGradient(0, 0, 0, S);
+  bg.addColorStop(0, '#fff8ee');
+  bg.addColorStop(1, '#fde8c4');
+  cx.fillStyle = bg;
+  cx.fillRect(0, 0, S, S);
 
-  // ── BACKGROUND: sand gradient ──
-  const grad = cx.createLinearGradient(0,0,S,S);
-  grad.addColorStop(0,   '#f0dda8');
-  grad.addColorStop(0.4, '#e8c87a');
-  grad.addColorStop(0.7, '#dbb96a');
-  grad.addColorStop(1,   '#c8a050');
-  cx.fillStyle = grad;
-  cx.fillRect(0,0,S,S);
-
-  // ── RIVER: diagonal blue strip ──
+  // venatura legno
   cx.save();
-  const rg = cx.createLinearGradient(S*0.1, 0, S*0.32, S);
-  rg.addColorStop(0,'#5aa0d0'); rg.addColorStop(0.5,'#7ec8e8'); rg.addColorStop(1,'#4888b8');
-  cx.fillStyle = rg;
-  cx.beginPath();
-  cx.moveTo(S*0.08, 0);
-  cx.bezierCurveTo(S*0.18,S*0.2, S*0.12,S*0.5, S*0.22,S*0.75);
-  cx.bezierCurveTo(S*0.26,S*0.85, S*0.30,S*0.92, S*0.28,S);
-  cx.lineTo(S*0.38, S);
-  cx.bezierCurveTo(S*0.36,S*0.9, S*0.32,S*0.8, S*0.28,S*0.65);
-  cx.bezierCurveTo(S*0.24,S*0.45, S*0.30,S*0.18, S*0.20,0);
-  cx.closePath();
-  cx.fill();
-  // river ripples
-  cx.strokeStyle='rgba(255,255,255,0.3)'; cx.lineWidth=1.5;
-  for(let i=0;i<5;i++){
-    const ty = S*(0.1+i*0.18);
+  cx.globalAlpha = 0.045;
+  cx.strokeStyle = '#b07830';
+  for(let i = 0; i < 9; i++) {
+    const y = S * i / 8;
+    cx.lineWidth = S * 0.008;
     cx.beginPath();
-    cx.moveTo(S*0.12,ty);
-    cx.quadraticCurveTo(S*0.18,ty-S*0.02, S*0.24,ty);
+    cx.moveTo(0, y + Math.sin(i*1.3)*S*0.03);
+    cx.bezierCurveTo(S*0.3, y - S*0.02, S*0.6, y + S*0.03, S, y + Math.sin(i*0.9)*S*0.02);
     cx.stroke();
   }
   cx.restore();
 
-  // ── GREEN OASIS banks ──
-  cx.save();
-  cx.fillStyle='#7ab870';
-  [[S*0.06,S*0.1,S*0.08,S*0.14],[S*0.22,S*0.4,S*0.1,S*0.12],
-   [S*0.14,S*0.68,S*0.09,S*0.11],[S*0.26,S*0.82,S*0.08,S*0.1]].forEach(([ex,ey,ew,eh])=>{
-    cx.beginPath(); cx.ellipse(ex,ey,ew,eh,0.3,0,Math.PI*2); cx.fill();
-  });
-  cx.restore();
-
-  // ── SAND DUNES ──
-  cx.save();
-  cx.globalAlpha = 0.22;
-  cx.fillStyle = '#c8903a';
-  [[S*0.65,S*0.15,S*0.22,S*0.08],[S*0.75,S*0.35,S*0.18,S*0.06],
-   [S*0.55,S*0.6, S*0.25,S*0.09],[S*0.80,S*0.75,S*0.15,S*0.05]].forEach(([dx,dy,dw,dh])=>{
-    cx.beginPath(); cx.ellipse(dx,dy,dw,dh,0.2,0,Math.PI*2); cx.fill();
-  });
-  cx.globalAlpha=1;
-  cx.restore();
-
-  function drawPyramid(px,py,base,h) {
-    // shadow
-    cx.fillStyle='rgba(0,0,0,0.13)';
-    cx.beginPath(); cx.ellipse(px+base*0.3,py+4,base*0.5,5,0,0,Math.PI*2); cx.fill();
-    // left face
-    const lg=cx.createLinearGradient(px-base/2,py,px,py-h);
-    lg.addColorStop(0,'#d4a040'); lg.addColorStop(1,'#f0cc70');
-    cx.fillStyle=lg;
-    cx.beginPath(); cx.moveTo(px,py-h); cx.lineTo(px-base/2,py); cx.lineTo(px,py); cx.closePath(); cx.fill();
-    // right face
-    const rg2=cx.createLinearGradient(px,py,px+base/2,py-h*0.3);
-    rg2.addColorStop(0,'#b08020'); rg2.addColorStop(1,'#c89830');
-    cx.fillStyle=rg2;
-    cx.beginPath(); cx.moveTo(px,py-h); cx.lineTo(px+base/2,py); cx.lineTo(px,py); cx.closePath(); cx.fill();
-  }
-
-  // ── THREE PYRAMIDS (bottom-right zone) ──
-  drawPyramid(S*0.72, S*0.58, S*0.16, S*0.14);
-  drawPyramid(S*0.84, S*0.62, S*0.12, S*0.10);
-  drawPyramid(S*0.62, S*0.65, S*0.10, S*0.08);
-
-  function drawPalm(px,py,h) {
-    // trunk
-    cx.strokeStyle='#8a5a20'; cx.lineWidth=h*0.12;
-    cx.beginPath(); cx.moveTo(px,py); cx.bezierCurveTo(px+h*0.1,py-h*0.4,px-h*0.1,py-h*0.7,px,py-h); cx.stroke();
-    // fronds
-    cx.strokeStyle='#4a9040'; cx.lineWidth=1.5;
-    for(let a=0;a<6;a++){
-      const ang = (a/6)*Math.PI*2;
-      cx.beginPath();
-      cx.moveTo(px,py-h);
-      cx.quadraticCurveTo(
-        px+Math.cos(ang)*h*0.45, py-h+Math.sin(ang)*h*0.3,
-        px+Math.cos(ang)*h*0.7,  py-h+Math.sin(ang)*h*0.45
-      );
-      cx.stroke();
+  // ── MATTONCINI SPARSI SUL PAVIMENTO ──
+  // Helper: disegna un mattone BÖKS con effetto 3D
+  function brick(bx, by, w, h, col, studs=2, alpha=1) {
+    const dark = col.replace('rgb','rgba').replace(')',`,${alpha*0.7})`);
+    cx.save(); cx.globalAlpha = alpha;
+    // ombra
+    cx.fillStyle = 'rgba(0,0,0,0.12)';
+    cx.beginPath(); cx.roundRect(bx+3, by+4, w, h, 5); cx.fill();
+    // lato destro (3D)
+    cx.fillStyle = shadeColor(col, -25);
+    cx.beginPath();
+    cx.moveTo(bx+w, by); cx.lineTo(bx+w+6, by-4);
+    cx.lineTo(bx+w+6, by+h-4); cx.lineTo(bx+w, by+h);
+    cx.closePath(); cx.fill();
+    // lato superiore (3D)
+    cx.fillStyle = shadeColor(col, 20);
+    cx.beginPath();
+    cx.moveTo(bx, by); cx.lineTo(bx+6, by-4);
+    cx.lineTo(bx+w+6, by-4); cx.lineTo(bx+w, by);
+    cx.closePath(); cx.fill();
+    // faccia frontale
+    cx.fillStyle = col;
+    cx.beginPath(); cx.roundRect(bx, by, w, h, 5); cx.fill();
+    // highlight
+    cx.fillStyle = 'rgba(255,255,255,0.22)';
+    cx.beginPath(); cx.roundRect(bx+3, by+3, w-6, h*0.38, 4); cx.fill();
+    // bordo
+    cx.strokeStyle = 'rgba(0,0,0,0.1)'; cx.lineWidth = 1;
+    cx.beginPath(); cx.roundRect(bx, by, w, h, 5); cx.stroke();
+    // studi (dischetti sopra)
+    const sw = w/studs;
+    for(let s=0; s<studs; s++) {
+      const sx = bx + sw*(s+0.5), sy = by - 7;
+      // cilindretto 3D
+      cx.fillStyle = shadeColor(col, -10);
+      cx.beginPath(); cx.ellipse(sx, sy+3, sw*0.26, 4, 0, 0, Math.PI*2); cx.fill();
+      cx.fillStyle = col;
+      cx.beginPath(); cx.ellipse(sx, sy, sw*0.26, 4, 0, 0, Math.PI*2); cx.fill();
+      cx.fillStyle = 'rgba(255,255,255,0.18)';
+      cx.beginPath(); cx.ellipse(sx-1, sy-1.5, sw*0.11, 2, 0, 0, Math.PI*2); cx.fill();
+      cx.strokeStyle='rgba(0,0,0,0.08)'; cx.lineWidth=0.8;
+      cx.beginPath(); cx.ellipse(sx, sy, sw*0.26, 4, 0, 0, Math.PI*2); cx.stroke();
     }
+    cx.restore();
   }
 
-  // ── PALM TREES along river banks ──
-  [[S*0.25,S*0.12,S*0.065],[S*0.05,S*0.3,S*0.055],[S*0.29,S*0.5,S*0.06],
-   [S*0.07,S*0.6,S*0.05],[S*0.32,S*0.78,S*0.055]].forEach(([px,py,h])=>drawPalm(px,py,h));
+  function shadeColor(hex, pct) {
+    // semplice schiarisci/scurisci
+    const n = parseInt(hex.replace('#',''), 16);
+    const r = Math.min(255, Math.max(0, (n>>16) + pct*2));
+    const g = Math.min(255, Math.max(0, ((n>>8)&0xff) + pct*2));
+    const b = Math.min(255, Math.max(0, (n&0xff) + pct*2));
+    return `rgb(${r},${g},${b})`;
+  }
 
-  // ── SPHINX (center-left) ──
-  cx.save();
-  cx.translate(S*0.42, S*0.38);
-  // body
-  const sbg = cx.createLinearGradient(-S*0.08,0,S*0.08,0);
-  sbg.addColorStop(0,'#c89840'); sbg.addColorStop(1,'#e0b858');
-  cx.fillStyle=sbg;
-  cx.beginPath(); cx.ellipse(0,0,S*0.1,S*0.055,0,0,Math.PI*2); cx.fill();
-  cx.fillStyle='#c89840';
-  cx.beginPath(); cx.rect(-S*0.1,-S*0.055,S*0.2,S*0.055); cx.fill();
-  // head
-  cx.fillStyle='#d8aa50';
-  cx.beginPath(); cx.ellipse(-S*0.07,-S*0.045,S*0.038,S*0.042,0,0,Math.PI*2); cx.fill();
-  // headdress
-  cx.fillStyle='#e8c060';
-  cx.beginPath(); cx.rect(-S*0.1,-S*0.09,S*0.06,S*0.05); cx.fill();
-  // eye
-  cx.fillStyle='#5a3a10';
-  cx.beginPath(); cx.ellipse(-S*0.065,-S*0.052,3,2,0,0,Math.PI*2); cx.fill();
-  cx.restore();
+  // Torre mattoncini — angolo in basso a destra
+  brick(S*0.60, S*0.80, S*0.33, S*0.09, '#E8302A', 3, 0.75);
+  brick(S*0.63, S*0.70, S*0.27, S*0.09, '#F5C400', 2, 0.75);
+  brick(S*0.66, S*0.60, S*0.20, S*0.09, '#2B8FD4', 2, 0.7);
+  brick(S*0.68, S*0.50, S*0.14, S*0.09, '#4CAF3F', 1, 0.65);
 
-  // ── SMALL DOTS/GEMS scattered ──
-  cx.save();
-  [[S*0.52,S*0.2,'#e85858'],[S*0.60,S*0.32,'#58a8e8'],[S*0.48,S*0.48,'#e85858'],
-   [S*0.70,S*0.48,'#58a8e8'],[S*0.55,S*0.78,'#e8c058']].forEach(([gx,gy,gc])=>{
-    cx.fillStyle=gc;
-    cx.beginPath(); cx.moveTo(gx,gy-6); cx.lineTo(gx+5,gy); cx.lineTo(gx,gy+6); cx.lineTo(gx-5,gy); cx.closePath(); cx.fill();
-    cx.fillStyle='rgba(255,255,255,0.5)';
-    cx.beginPath(); cx.moveTo(gx,gy-6); cx.lineTo(gx+5,gy); cx.lineTo(gx,gy); cx.closePath(); cx.fill();
-  });
-  cx.restore();
+  // Mattoncini sparsi — angolo in basso a sinistra
+  brick(S*0.03, S*0.76, S*0.22, S*0.09, '#F47E20', 2, 0.65);
+  brick(S*0.05, S*0.65, S*0.16, S*0.09, '#3DC4C0', 1, 0.6);
 
-  // ── GRID LINES (subtle) ──
+  // Mattoncini isolati in giro
+  brick(S*0.06, S*0.12, S*0.18, S*0.08, '#2B8FD4', 1, 0.55);
+  brick(S*0.70, S*0.08, S*0.20, S*0.08, '#E8302A', 2, 0.55);
+  brick(S*0.35, S*0.84, S*0.16, S*0.08, '#4CAF3F', 1, 0.55);
+  brick(S*0.44, S*0.06, S*0.16, S*0.08, '#F5C400', 1, 0.5);
+
+  // ── GRIGLIA sottile (linee pavimento) ──
   cx.save();
-  cx.globalAlpha = 0.08;
-  cx.strokeStyle = '#5a3a00'; cx.lineWidth = 1;
-  const cell = S/6;
+  cx.globalAlpha = 0.055;
+  cx.strokeStyle = '#b07830'; cx.lineWidth = 1;
+  const csz = S/6;
   for(let i=1;i<6;i++){
-    cx.beginPath(); cx.moveTo(i*cell,0); cx.lineTo(i*cell,S); cx.stroke();
-    cx.beginPath(); cx.moveTo(0,i*cell); cx.lineTo(S,i*cell); cx.stroke();
+    cx.beginPath(); cx.moveTo(i*csz,0); cx.lineTo(i*csz,S); cx.stroke();
+    cx.beginPath(); cx.moveTo(0,i*csz); cx.lineTo(S,i*csz); cx.stroke();
   }
   cx.restore();
 }
@@ -567,7 +917,7 @@ function drawBackground() {
 function renderAvail() {
   const row = document.getElementById('blocksRow');
   row.innerHTML = '';
-  const sz = 40;
+  const sz = 52;
   avail.forEach((block, i) => {
     const el = mkB(block, sz, sz, 'ablock');
     el.dataset.ai = i;
@@ -584,44 +934,187 @@ const SLOT_H = 38; // fallback
 function getBoardSizes() {
   const board = document.getElementById('boardRow');
   const app   = document.getElementById('app');
-
-  // Fixed board height: 3 rows * 56px + 2 gaps * 5px + 14px padding
-  const FIXED_BOARD_H = 3 * 56 + 2 * 5 + 14;
   const boardW = board.clientWidth || (app.clientWidth - 20);
-
-  const innerH = FIXED_BOARD_H - 14;
-  const slotH  = Math.floor((innerH - 2 * 5) / 3); // = 56px
-  const innerW = boardW - 14;
+  const innerW = boardW - 16;
   const slotW  = Math.floor((innerW - 3 * 5) / 4);
-  const bsiz   = Math.max(28, Math.min(slotW - 6, slotH - 10));
-
-  return { slotH, bsiz };
+  const slotH  = Math.max(42, Math.min(slotW, 58));
+  const bsiz   = Math.max(28, slotH - 10);
+  return { slotH, slotW, bsiz, innerW };
 }
 
 function renderBoard() {
   const g = document.getElementById('boardGrid');
   g.innerHTML = '';
-  const { slotH, bsiz } = getBoardSizes();
+  const { slotH, bsiz, innerW } = getBoardSizes();
 
-  for(let i=0; i<SLOTS; i++) {
-    const slot = document.createElement('div');
-    slot.className = 'pslot'; slot.dataset.slot = i;
-    slot.style.height = slotH + 'px';
+  const gapH = 22;
+  const totalH = 3 * slotH + 2 * gapH;
 
-    const inn = document.createElement('div');
-    inn.className = 'sinner';
-    inn.style.cssText = `width:100%;height:${bsiz}px;`;
+  // SVG per il connettore tra riga1 e riga2
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('id','boardTrack');
+  svg.setAttribute('viewBox',`0 0 ${innerW} ${totalH}`);
+  svg.setAttribute('preserveAspectRatio','none');
+  svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:0;';
+  g.style.position = 'relative';
+  g.appendChild(svg);
 
-    if(prog[i]) {
-      const be = mkB(prog[i], bsiz, bsiz, 'pblock');
-      be.dataset.si = i;
-      bindDrag(be, 'prog', i, bsiz);
-      inn.appendChild(be);
+  const slotsWrap = document.createElement('div');
+  slotsWrap.id = 'boardSlots';
+  slotsWrap.style.position = 'relative';
+  slotsWrap.style.zIndex = '1';
+  g.style.height = totalH + 'px';
+
+  const rowDefs = [
+    { idxs:[0,1,2,3], reverse:false, zone:'main' },
+    { idxs:[4,5,6,7], reverse:false, zone:'main' },
+    { idxs:[0,1,2,3], reverse:false, zone:'fn'   },
+  ];
+
+  rowDefs.forEach(({ idxs, reverse, zone }, rowIdx) => {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'board-row' + (reverse ? ' reverse' : '');
+    rowEl.style.cssText = `height:${slotH}px; gap:5px; padding:0 2px;`;
+    if(rowIdx > 0) rowEl.style.marginTop = gapH + 'px';
+
+    idxs.forEach(i => {
+      const arr = zone === 'fn' ? fnProg : prog;
+      const slot = document.createElement('div');
+      slot.className = 'pslot';
+      slot.dataset.slot = i; slot.dataset.zone = zone;
+      slot.style.height = slotH + 'px';
+
+      const inn = document.createElement('div');
+      inn.className = 'sinner';
+      inn.style.cssText = `width:100%;height:${bsiz}px;`;
+
+      if(arr[i]) {
+        const be = mkB(arr[i], bsiz, bsiz, 'pblock');
+        be.dataset.si = i; be.dataset.zone = zone;
+        bindDrag(be, zone === 'fn' ? 'fn' : 'prog', i, bsiz);
+        inn.appendChild(be);
+      }
+      const dot = document.createElement('div'); dot.className = 'dot';
+      const arrow = document.createElement('div');
+      arrow.className = 'slot-arrow'; arrow.textContent = '→';
+      slot.appendChild(inn); slot.appendChild(dot);
+      if(!arr[i]) slot.appendChild(arrow);
+      rowEl.appendChild(slot);
+    });
+    slotsWrap.appendChild(rowEl);
+  });
+
+  g.appendChild(slotsWrap);
+
+  // Traccia completa: riga1 → connettore → riga2
+  requestAnimationFrame(() => {
+    const y1  = slotH / 2;
+    const yM  = slotH + gapH / 2;
+    const y2  = slotH + gapH + slotH / 2;
+    const r   = gapH * 0.9;
+
+    const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+    p.setAttribute('d',
+      `M 0 ${y1}` +
+      ` H ${innerW}` +
+      ` L ${innerW} ${yM - r}` +
+      ` Q ${innerW} ${yM} ${innerW - r} ${yM}` +
+      ` L ${r} ${yM}` +
+      ` Q 0 ${yM} 0 ${yM + r}` +
+      ` L 0 ${y2}` +
+      ` H ${innerW}`
+    );
+    p.setAttribute('fill', 'none');
+    p.setAttribute('stroke', 'rgba(180,140,80,0.35)');
+    p.setAttribute('stroke-width', '3');
+    p.setAttribute('stroke-linecap', 'round');
+    p.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(p);
+
+    // Freccia inizio traccia main (sinistra riga1)
+    const as = slotH * 0.28;
+    function arrow(x, y, color) {
+      const a = document.createElementNS('http://www.w3.org/2000/svg','path');
+      a.setAttribute('d', `M ${x} ${y - as} Q ${x + as*0.3} ${y - as} ${x + as} ${y} Q ${x + as*0.3} ${y + as} ${x} ${y + as} Q ${x + as*0.5} ${y} ${x} ${y - as}`);
+      a.setAttribute('fill', color);
+      a.setAttribute('stroke', 'none');
+      svg.appendChild(a);
     }
-    const dot = document.createElement('div'); dot.className = 'dot';
-    slot.appendChild(inn); slot.appendChild(dot);
-    g.appendChild(slot);
+    arrow(2, y1, 'rgba(180,140,80,0.5)');
+
+    // Traccia riga fn
+    const y3 = 2 * (slotH + gapH) + slotH / 2;
+    const pFn = document.createElementNS('http://www.w3.org/2000/svg','path');
+    pFn.setAttribute('d', `M 0 ${y3} H ${innerW}`);
+    pFn.setAttribute('fill', 'none');
+    pFn.setAttribute('stroke', 'rgba(124,58,237,0.3)');
+    pFn.setAttribute('stroke-width', '3');
+    pFn.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(pFn);
+
+    // Freccia inizio traccia fn
+    arrow(2, y3, 'rgba(124,58,237,0.45)');
+    const ySep = 2 * slotH + 2 * gapH - gapH / 2;
+    const sep = document.createElementNS('http://www.w3.org/2000/svg','line');
+    sep.setAttribute('x1', '0'); sep.setAttribute('x2', innerW);
+    sep.setAttribute('y1', ySep); sep.setAttribute('y2', ySep);
+    sep.setAttribute('stroke', 'rgba(124,58,237,0.25)');
+    sep.setAttribute('stroke-width', '1.5');
+    sep.setAttribute('stroke-dasharray', '5 4');
+    svg.appendChild(sep);
+  });
+}
+
+// Legacy hook: board rendering is centralized in renderBoard().
+function renderFn() {}
+
+function drawTrack(svg, slotH, gapH, totalH, W, mainActive, fnActive) {
+  svg.innerHTML = '';
+  const pad = 8;
+  const cR = gapH / 2 + 2;
+
+  const y1 = slotH / 2;
+  const y2 = slotH + gapH + slotH / 2;
+  const y3 = 2 * (slotH + gapH) + slotH / 2;
+
+  const defs = document.createElementNS('http://www.w3.org/2000/svg','defs');
+  defs.innerHTML = `
+    <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="glowFn"><feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+  svg.appendChild(defs);
+
+  function path(d, lit, violet) {
+    const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+    p.setAttribute('d', d); p.setAttribute('fill','none');
+    p.setAttribute('stroke', lit ? (violet ? 'rgba(124,58,237,0.75)' : 'rgba(60,210,160,0.7)') : (violet ? 'rgba(124,58,237,0.18)' : 'rgba(180,140,80,0.18)'));
+    p.setAttribute('stroke-width','2'); p.setAttribute('stroke-linecap','round');
+    if(lit) p.setAttribute('filter', violet ? 'url(#glowFn)' : 'url(#glow)');
+    return p;
   }
+
+  const m = mainActive; // active main slot index
+  const f = fnActive;   // active fn slot index
+
+  // ── main row 1 (→) ──
+  svg.appendChild(path(`M ${pad} ${y1} H ${W-pad}`, m > 0, false));
+
+  // ── main row 2 (→) ──
+  svg.appendChild(path(`M ${pad} ${y2} H ${W-pad}`, m >= 4, false));
+
+  // ── divisore sottile tra main e fn ──
+  const ydiv = y2 + (y3 - y2) / 2;
+  const divLine = document.createElementNS('http://www.w3.org/2000/svg','line');
+  divLine.setAttribute('x1', '0'); divLine.setAttribute('x2', W);
+  divLine.setAttribute('y1', ydiv); divLine.setAttribute('y2', ydiv);
+  divLine.setAttribute('stroke', 'rgba(124,58,237,0.2)');
+  divLine.setAttribute('stroke-width', '1.5');
+  divLine.setAttribute('stroke-dasharray', '4 4');
+  svg.appendChild(divLine);
+
+  // ── fn row (→) ──
+  svg.appendChild(path(`M ${pad} ${y3} H ${W-pad}`, f >= 0, true));
 }
 
 // ═══ DRAG ═══
@@ -645,7 +1138,7 @@ function bindDrag(el, src, idx, sz) {
 }
 
 function startDg(cx,cy,src,idx,sz) {
-  const block = src==='avail' ? avail[idx] : prog[idx];
+  const block = src==='avail' ? avail[idx] : src==='fn' ? fnProg[idx] : prog[idx];
   if(!block) return;
   dg = {active:true, block, src, si:idx, hover:null};
   const g = document.getElementById('ghost');
@@ -654,7 +1147,8 @@ function startDg(cx,cy,src,idx,sz) {
   if(src==='avail') {
     document.querySelectorAll('.ablock').forEach(el=>{ if(+el.dataset.ai===idx) el.style.opacity='0.3'; });
   } else {
-    const s=document.querySelector(`.pslot[data-slot="${idx}"] .sinner`);
+    const zone = src==='fn' ? 'fn' : 'main';
+    const s=document.querySelector(`.pslot[data-zone="${zone}"][data-slot="${idx}"] .sinner`);
     if(s) s.style.opacity='0.3';
   }
 }
@@ -680,18 +1174,41 @@ function endDg(cx,cy) {
   const u=document.elementFromPoint(cx,cy);
   const slot=u?.closest('.pslot');
   if(slot) {
-    const ti=+slot.dataset.slot;
-    if(dg.src==='avail') prog[ti]={id:`${dg.block.dir}${idN++}`,...POOL[dg.block.dir]};
-    else if(dg.src==='prog'&&dg.si!==ti){ const tmp=prog[ti];prog[ti]=dg.block;prog[dg.si]=tmp; }
-  } else if(dg.src==='prog') prog[dg.si]=null;
+    const ti = +slot.dataset.slot;
+    const zone = slot.dataset.zone;
+    if(zone === 'fn') {
+      // blocchi function non possono stare nella fn zone
+      if(dg.block.dir === 'function') { dg.active=false; renderAvail(); renderBoard(); renderFn(); return; }
+      if(dg.src==='avail') fnProg[ti]={id:`${dg.block.dir}${idN++}`,...POOL[dg.block.dir]};
+      else if(dg.src==='fn'&&dg.si!==ti){ const tmp=fnProg[ti];fnProg[ti]=dg.block;fnProg[dg.si]=tmp; }
+      else if(dg.src==='prog'){ fnProg[ti]={...dg.block}; prog[dg.si]=null; }
+    } else {
+      if(dg.src==='avail') prog[ti]={id:`${dg.block.dir}${idN++}`,...POOL[dg.block.dir]};
+      else if(dg.src==='prog'&&dg.si!==ti){ const tmp=prog[ti];prog[ti]=dg.block;prog[dg.si]=tmp; }
+      else if(dg.src==='fn'){ prog[ti]={...dg.block}; fnProg[dg.si]=null; }
+    }
+  } else {
+    if(dg.src==='prog') prog[dg.si]=null;
+    else if(dg.src==='fn') fnProg[dg.si]=null;
+  }
   dg.active=false;
-  renderAvail(); renderBoard();
+  renderAvail(); renderBoard(); renderFn();
 }
 
 // ═══ GAME LOGIC ═══
-function hlSlot(i) {
-  document.querySelectorAll('.pslot').forEach(s=>s.classList.remove('active'));
-  document.querySelector(`.pslot[data-slot="${i}"]`)?.classList.add('active');
+function hlSlot(i, zone='main') {
+  if(zone === 'main') {
+    document.querySelectorAll('.pslot[data-zone="main"]').forEach(s => s.classList.remove('active','done'));
+    for(let j = 0; j < i; j++)
+      document.querySelector(`.pslot[data-zone="main"][data-slot="${j}"]`)?.classList.add('done');
+    document.querySelector(`.pslot[data-zone="main"][data-slot="${i}"]`)?.classList.add('active');
+  } else {
+    document.querySelectorAll('.pslot[data-zone="fn"]').forEach(s => s.classList.remove('fn-active','fn-done'));
+    for(let j = 0; j < i; j++)
+      document.querySelector(`.pslot[data-zone="fn"][data-slot="${j}"]`)?.classList.add('fn-done');
+    document.querySelector(`.pslot[data-zone="fn"][data-slot="${i}"]`)?.classList.add('fn-active');
+  }
+  // no SVG track to redraw
 }
 async function moveChar(dir) {
   if(dir==='forward') {
@@ -720,47 +1237,75 @@ async function moveChar(dir) {
 }
 async function run() {
   if(running||animating) return;
+  requestAppFullscreen();
   let last=-1;
   for(let i=0;i<SLOTS;i++) if(prog[i]) last=i;
   if(last===-1){sErr();return;}
   running=true;
   const btn=document.getElementById('runBtn');
-  btn.classList.add('running');
-  toast(''); sStart(); await sleep(400);
+  btn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="5" y="4" width="4" height="16" rx="1" fill="#111111"/><rect x="15" y="4" width="4" height="16" rx="1" fill="#111111"/></svg>';
+  toast(''); await sleep(200);
+  let won = false;
+
   for(let i=0;i<=last;i++) {
-    hlSlot(i); (i===last?sEnd():sStep()); await sleep(STEP_MS);
+    hlSlot(i, 'main'); await sleep(STEP_MS);
     if(prog[i]) {
-      await moveChar(prog[i].dir||prog[i].direction); await sleep(STEP_MS);
-      if(pos.x===GOAL.x&&pos.y===GOAL.y) {
-        await sleep(200); toast('🎉 Hai vinto!','win');
-        document.querySelectorAll('.pslot').forEach(s=>s.classList.remove('active'));
-        btn.classList.remove('running'); btn.textContent='▶'; running=false;
-        await sleep(800);
-        for(let j=0;j<SLOTS;j++) prog[j]=null;
-        renderBoard(); return;
+      if(prog[i].dir === 'function') {
+        // ── esegui sub-routine ──
+        let fnLast = -1;
+        for(let f=0;f<FSLOTS;f++) if(fnProg[f]) fnLast=f;
+        if(fnLast === -1) { sErr(); await sleep(300); }
+        else {
+          for(let f=0;f<=fnLast;f++) {
+            hlSlot(f, 'fn'); await sleep(STEP_MS);
+            if(fnProg[f]) {
+              sStep();
+              await moveChar(fnProg[f].dir||fnProg[f].direction); await sleep(STEP_MS);
+              if(pos.x===GOAL.x&&pos.y===GOAL.y) { won=true; break; }
+            }
+          }
+          document.querySelectorAll('.pslot[data-zone="fn"]').forEach(s=>s.classList.remove('fn-active','fn-done'));
+          if(won) break;
+        }
+      } else {
+        sStep();
+        await moveChar(prog[i].dir||prog[i].direction); await sleep(STEP_MS);
+        if(pos.x===GOAL.x&&pos.y===GOAL.y) { won=true; break; }
       }
     } else { await sleep(STEP_MS); }
   }
-  document.querySelectorAll('.pslot').forEach(s=>s.classList.remove('active'));
-  btn.classList.remove('running'); btn.textContent='▶'; running=false;
-  await sleep(400);
-  for(let j=0;j<SLOTS;j++) prog[j]=null;
-  renderBoard();
+
+  document.querySelectorAll('.pslot[data-zone="main"]').forEach(s=>s.classList.remove('active','done'));
+  document.querySelectorAll('.pslot[data-zone="fn"]').forEach(s=>s.classList.remove('fn-active','fn-done'));
+  btn.classList.remove('running'); btn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><polygon points="7,4 21,12 7,20" fill="#111111"/></svg>'; running=false;
+
+  if(won) {
+    sWin();
+    await sleep(1200);
+    for(let j=0;j<SLOTS;j++) prog[j]=null;
+    for(let j=0;j<FSLOTS;j++) fnProg[j]=null;
+    renderBoard(); renderFn();
+    moveGoal();
+  } else {
+    await sleep(400);
+    renderBoard(); renderFn();
+  }
 }
 
 // ═══ INIT ═══
 function init() {
+  syncViewportHeight();
   document.getElementById('gridWrap').style.position = 'relative';
   initGrid();
   renderAvail();
-  renderBoard(); // initial render with fallback sizes
+  renderBoard();
+  renderFn();
 
-  // Pass 1: let CSS lay out everything
   requestAnimationFrame(() => requestAnimationFrame(() => {
-    sizeGrid();           // set grid to exact square based on real bottom height
-    // Pass 2: now grid height is known, re-render board to fill remaining space
+    sizeGrid();
     requestAnimationFrame(() => {
       renderBoard();
+      renderFn();
       drawBackground();
       syncSprite();
       setupSpriteDrag();
@@ -770,21 +1315,75 @@ function init() {
 
 init();
 
+// ── Splash dismiss ──
+setTimeout(() => {
+  const splash = document.getElementById('splash');
+  splash.classList.add('hide');
+  setTimeout(() => splash.remove(), 500);
+}, 2200);
+
+// tap to skip
+document.getElementById('splash').addEventListener('pointerdown', () => {
+  const splash = document.getElementById('splash');
+  if(splash) { splash.classList.add('hide'); setTimeout(() => splash.remove(), 500); }
+});
+
 window.addEventListener('resize', () => {
+  syncViewportHeight();
   renderAvail();
   requestAnimationFrame(() => {
     sizeGrid();
     renderBoard();
+    renderFn();
     drawBackground();
     syncSprite();
   });
+});
+window.visualViewport?.addEventListener('resize', syncViewportHeight);
+window.visualViewport?.addEventListener('scroll', syncViewportHeight);
+document.addEventListener('pointerdown', requestAppFullscreen, { once: true });
+
+// ri-entra in fullscreen se l'utente torna sull'app (es. dopo notifica)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') requestAppFullscreen();
 });
 
 
 </script>
 <script>
-  if('serviceWorker' in navigator)
-    window.addEventListener('load', () => navigator.serviceWorker.register('service-worker.js'));
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', async () => {
+      try {
+        const reg = await navigator.serviceWorker.register('service-worker.js', {
+          updateViaCache: 'none'
+        });
+
+        // Force periodic update checks while testing packaged app builds.
+        reg.update();
+        setInterval(() => reg.update(), 30000);
+
+        if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        reg.addEventListener('updatefound', () => {
+          const worker = reg.installing;
+          if (!worker) return;
+          worker.addEventListener('statechange', () => {
+            if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+              worker.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+        });
+
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (refreshing) return;
+          refreshing = true;
+          window.location.reload();
+        });
+      } catch (err) {
+        console.error('Service worker registration failed:', err);
+      }
+    });
+  }
 </script>
 </body>
 </html>
