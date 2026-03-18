@@ -796,7 +796,7 @@ function renderBoard() {
   // Traccia completa: riga1 → connettore → riga2
   requestAnimationFrame(() => {
     const y1  = slotH / 2;
-    const yM  = slotH + gapH / 2;
+    const yM = slotH + gapH / 2;
     const y2  = slotH + gapH + slotH / 2;
     const r   = gapH * 0.9;
     const as = slotH * 0.28;
@@ -805,6 +805,40 @@ function renderBoard() {
     const endX = startX + 3 * (slotW + gapX);
     const leftX = startX;
     const leftR = Math.max(3, Math.min(r, 10));
+    const y3 = 2 * (slotH + gapH) + slotH / 2;
+
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    const trackMask = document.createElementNS('http://www.w3.org/2000/svg', 'mask');
+    trackMask.setAttribute('id', 'trackSlotMask');
+    trackMask.setAttribute('maskUnits', 'userSpaceOnUse');
+    trackMask.setAttribute('x', '0');
+    trackMask.setAttribute('y', '0');
+    trackMask.setAttribute('width', String(innerW));
+    trackMask.setAttribute('height', String(totalH));
+
+    const keepAll = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    keepAll.setAttribute('x', '0');
+    keepAll.setAttribute('y', '0');
+    keepAll.setAttribute('width', String(innerW));
+    keepAll.setAttribute('height', String(totalH));
+    keepAll.setAttribute('fill', 'white');
+    trackMask.appendChild(keepAll);
+
+    const rowYs = [0, slotH + gapH, 2 * (slotH + gapH)];
+    rowYs.forEach((rowY) => {
+      for (let i = 0; i < 4; i++) {
+        const cut = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        cut.setAttribute('x', String(rowPadX + i * (slotW + gapX)));
+        cut.setAttribute('y', String(rowY));
+        cut.setAttribute('width', String(slotW));
+        cut.setAttribute('height', String(slotH));
+        cut.setAttribute('rx', '10');
+        cut.setAttribute('fill', 'black');
+        trackMask.appendChild(cut);
+      }
+    });
+    defs.appendChild(trackMask);
+    svg.appendChild(defs);
 
     const p = document.createElementNS('http://www.w3.org/2000/svg','path');
     p.setAttribute('d',
@@ -822,6 +856,7 @@ function renderBoard() {
     p.setAttribute('stroke-width', '3');
     p.setAttribute('stroke-linecap', 'round');
     p.setAttribute('stroke-linejoin', 'round');
+    p.setAttribute('mask', 'url(#trackSlotMask)');
     svg.appendChild(p);
 
     // Freccia inizio traccia main (sinistra riga1)
@@ -835,13 +870,13 @@ function renderBoard() {
     arrow(arrowX, y1, 'rgba(180,140,80,0.5)');
 
     // Traccia riga fn
-    const y3 = 2 * (slotH + gapH) + slotH / 2;
     const pFn = document.createElementNS('http://www.w3.org/2000/svg','path');
     pFn.setAttribute('d', `M ${startX} ${y3} H ${endX}`);
     pFn.setAttribute('fill', 'none');
     pFn.setAttribute('stroke', 'rgba(43,143,212,0.35)');
     pFn.setAttribute('stroke-width', '3');
     pFn.setAttribute('stroke-linecap', 'round');
+    pFn.setAttribute('mask', 'url(#trackSlotMask)');
     svg.appendChild(pFn);
 
     // Freccia inizio traccia fn
@@ -853,6 +888,7 @@ function renderBoard() {
     sep.setAttribute('stroke', 'rgba(43,143,212,0.3)');
     sep.setAttribute('stroke-width', '1.5');
     sep.setAttribute('stroke-dasharray', '5 4');
+    sep.setAttribute('mask', 'url(#trackSlotMask)');
     svg.appendChild(sep);
     alignAvailBlocksToSlots();
   });
