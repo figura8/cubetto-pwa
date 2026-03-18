@@ -186,18 +186,20 @@
         availableBlocks: ['forward']
       },
       {
-        start: { x: 1, y: 4 },
-        goal: { x: 2, y: 3 },
-        startOri: 'up',
-        mainSlots: 3,
-        availableBlocks: ['forward', 'right']
-      },
-      {
-        start: { x: 4, y: 4 },
+        start: { x: 1, y: 3 },
         goal: { x: 3, y: 3 },
         startOri: 'up',
         mainSlots: 3,
-        availableBlocks: ['forward', 'left']
+        availableBlocks: ['forward', 'right'],
+        obstacles: [{ x: 1, y: 2 }]
+      },
+      {
+        start: { x: 4, y: 3 },
+        goal: { x: 2, y: 3 },
+        startOri: 'up',
+        mainSlots: 3,
+        availableBlocks: ['forward', 'left'],
+        obstacles: [{ x: 4, y: 2 }]
       },
       {
         start: { x: 1, y: 4 },
@@ -208,62 +210,75 @@
         obstacles: [{ x: 1, y: 3 }]
       },
       {
-        start: { x: 1, y: 3 },
-        goal: { x: 3, y: 3 },
-        startOri: 'right',
-        mainSlots: 1,
-        fnSlots: 3,
-        availableBlocks: ['forward', 'function']
-      },
-      {
-        start: { x: 1, y: 3 },
-        goal: { x: 3, y: 3 },
-        startOri: 'up',
-        mainSlots: 2,
-        fnSlots: 3,
-        availableBlocks: ['forward', 'right', 'function']
-      },
-      {
-        start: { x: 1, y: 3 },
+        start: { x: 0, y: 3 },
         goal: { x: 5, y: 3 },
         startOri: 'right',
-        mainSlots: 2,
-        fnSlots: 3,
+        mainSlots: 4,
+        fnSlots: 2,
         availableBlocks: ['forward', 'function']
       },
       {
         start: { x: 1, y: 4 },
-        goal: { x: 2, y: 3 },
+        goal: { x: 3, y: 4 },
         startOri: 'up',
-        mainSlots: 3,
+        mainSlots: 4,
+        fnSlots: 2,
+        availableBlocks: ['forward', 'right', 'function'],
+        obstacles: [{ x: 1, y: 3 }]
+      },
+      {
+        start: { x: 4, y: 4 },
+        goal: { x: 2, y: 4 },
+        startOri: 'up',
+        mainSlots: 4,
+        fnSlots: 2,
+        availableBlocks: ['forward', 'left', 'function'],
+        obstacles: [{ x: 4, y: 3 }]
+      },
+      {
+        start: { x: 1, y: 4 },
+        goal: { x: 4, y: 2 },
+        startOri: 'up',
+        mainSlots: 4,
         fnSlots: 3,
         availableBlocks: ['forward', 'left', 'right', 'function'],
-        obstacles: [{ x: 1, y: 3 }, { x: 3, y: 4 }]
+        obstacles: [{ x: 1, y: 3 }, { x: 3, y: 3 }]
       },
       {
         start: { x: 1, y: 4 },
         goal: { x: 3, y: 1 },
         startOri: 'up',
-        mainSlots: 3,
+        mainSlots: 4,
         fnSlots: 3,
-        availableBlocks: ['forward', 'left', 'right', 'function']
+        availableBlocks: ['forward', 'left', 'right', 'function'],
+        obstacles: [{ x: 1, y: 3 }, { x: 2, y: 2 }]
       },
       {
         start: { x: 4, y: 4 },
         goal: { x: 1, y: 1 },
         startOri: 'up',
-        mainSlots: 3,
-        fnSlots: 3,
-        availableBlocks: ['forward', 'left', 'right', 'function']
-      },
-      {
-        start: { x: 4, y: 4 },
-        goal: { x: 0, y: 3 },
-        startOri: 'up',
         mainSlots: 4,
         fnSlots: 3,
         availableBlocks: ['forward', 'left', 'right', 'function'],
-        obstacles: [{ x: 3, y: 3 }]
+        obstacles: [{ x: 4, y: 3 }, { x: 3, y: 2 }]
+      },
+      {
+        start: { x: 4, y: 4 },
+        goal: { x: 0, y: 2 },
+        startOri: 'up',
+        mainSlots: 4,
+        fnSlots: 4,
+        availableBlocks: ['forward', 'left', 'right', 'function'],
+        obstacles: [{ x: 3, y: 4 }, { x: 2, y: 3 }]
+      },
+      {
+        start: { x: 1, y: 4 },
+        goal: { x: 4, y: 0 },
+        startOri: 'up',
+        mainSlots: 4,
+        fnSlots: 4,
+        availableBlocks: ['forward', 'left', 'right', 'function'],
+        obstacles: [{ x: 4, y: 4 }, { x: 3, y: 2 }, { x: 3, y: 0 }]
       }
     ],
     sceneVars: {
