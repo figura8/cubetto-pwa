@@ -77,8 +77,22 @@ async function fadeTransition(ms = 560) {
   fade.classList.remove('show');
 }
 function syncViewportHeight() {
-  const h = window.visualViewport ? Math.round(window.visualViewport.height) : window.innerHeight;
+  const vv = window.visualViewport;
+  const h = vv ? Math.round(vv.height) : window.innerHeight;
+  const w = vv ? Math.round(vv.width) : window.innerWidth;
   document.documentElement.style.setProperty('--app-vh', `${h}px`);
+  document.documentElement.style.setProperty('--app-vw', `${w}px`);
+  document.body.classList.toggle('compact-ui', h < 740 || w < 360);
+  updateOrientationGuard();
+}
+function updateOrientationGuard() {
+  const portrait = window.matchMedia
+    ? window.matchMedia('(orientation: portrait)').matches
+    : window.innerHeight >= window.innerWidth;
+  const mobileLike = window.matchMedia
+    ? window.matchMedia('(pointer: coarse)').matches || Math.max(window.innerWidth, window.innerHeight) <= 1366
+    : true;
+  document.body.classList.toggle('landscape-block', !portrait && mobileLike);
 }
 async function requestAppFullscreen() {
   if (document.fullscreenElement) return;
@@ -190,7 +204,7 @@ function sizeGrid() {
   const botH  = bot.offsetHeight;
   const availH = appH - botH - 6 - 6 - 6; // gaps + padding
   const availW = wrap.clientWidth;
-  const sq = Math.floor(Math.min(availH, availW));
+  const sq = Math.max(120, Math.floor(Math.min(availH, availW)));
 
   grid.style.width  = sq + 'px';
   grid.style.height = sq + 'px';
@@ -791,6 +805,7 @@ window.addEventListener('resize', () => {
 });
 window.visualViewport?.addEventListener('resize', syncViewportHeight);
 window.visualViewport?.addEventListener('scroll', syncViewportHeight);
+window.addEventListener('orientationchange', syncViewportHeight);
 document.addEventListener('pointerdown', requestAppFullscreen);
 
 // ri-entra in fullscreen se l'utente torna sull'app (es. dopo notifica)

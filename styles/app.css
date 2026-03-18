@@ -4,6 +4,7 @@
     }
     :root {
       --app-vh: 100dvh;
+      --app-vw: 100vw;
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
       --scene-body-bg: radial-gradient(140% 90% at 50% 0%, #d6f2ff 0%, #dff2cf 45%, #bfdc9d 100%);
@@ -45,6 +46,10 @@
       max-width: 520px;
       margin: 0 auto;
     }
+    body.compact-ui #app {
+      padding: calc(4px + var(--safe-top)) 8px calc(8px + var(--safe-bottom));
+      gap: 6px;
+    }
 
     /* Header BÖKS */
     #header {
@@ -61,6 +66,7 @@
       text-shadow: 0 2px 0 rgba(130, 101, 56, 0.42), 0 4px 7px rgba(88, 64, 31, 0.2);
       transform: translateY(-0.5px);
     }
+    body.compact-ui .logo-letter { font-size: 1.45em; }
     .logo-b {
       color: #3f9a62;
     }
@@ -195,6 +201,10 @@
       min-height: 72px;
       box-shadow: 0 2px 0 #cdc2ab, 0 7px 14px rgba(95, 78, 52, 0.12), inset 0 1px 0 rgba(255,255,255,0.72);
     }
+    body.compact-ui #blocksRow {
+      min-height: 64px;
+      padding: 8px 10px;
+    }
     .ablock {
       flex-shrink: 0;
       touch-action: none;
@@ -218,6 +228,7 @@
       position: relative;
       box-shadow: 0 2px 0 #cdc2ab, 0 8px 14px rgba(95, 78, 52, 0.12), inset 0 1px 0 rgba(255,255,255,0.74);
     }
+    body.compact-ui #boardRow { padding: 8px; }
     #boardGrid {
       position: relative;
       width: 100%;
@@ -349,6 +360,11 @@
       -webkit-tap-highlight-color: transparent;
       padding: 0;
     }
+    body.compact-ui #runBtn {
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+    }
     #runBtn svg {
       transition: 0.1s ease-in-out;
       flex-shrink: 0;
@@ -405,6 +421,45 @@
       transition: opacity .55s ease;
     }
     #levelFade.show { opacity: 0.58; }
+
+    #rotateNotice {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: linear-gradient(180deg, #f0e7d5 0%, #e2f2d3 100%);
+      text-align: center;
+    }
+    #rotateNotice .rotate-card {
+      width: min(420px, calc(var(--app-vw) - 48px));
+      background: #fff9ea;
+      border: 2px solid #d2c9b4;
+      border-radius: 18px;
+      padding: 18px 14px;
+      box-shadow: 0 4px 16px rgba(95, 78, 52, 0.2);
+    }
+    #rotateNotice h2 {
+      color: #5f4e34;
+      font-size: 1.24rem;
+      margin-bottom: 8px;
+      font-family: 'Lilita One', cursive;
+      letter-spacing: 0.3px;
+    }
+    #rotateNotice p {
+      color: #6f6049;
+      font-size: 0.98rem;
+      line-height: 1.4;
+    }
+    body.landscape-block #rotateNotice { display: flex; }
+    body.landscape-block #app,
+    body.landscape-block #toast,
+    body.landscape-block #ghost {
+      visibility: hidden;
+      pointer-events: none;
+    }
 
     /* ── Splash screen ── */
     #splash {
