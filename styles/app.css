@@ -411,7 +411,7 @@
     #runBtn {
       width: 52px; height: 52px;
       flex-shrink: 0;
-      border-radius: 13px;
+      border-radius: 50%;
       border: 2px solid var(--panel-edge);
       outline: none;
       background: linear-gradient(180deg, #f6f0e3 0%, var(--panel-bg) 100%);
@@ -428,7 +428,7 @@
     body.compact-ui #runBtn {
       width: 46px;
       height: 46px;
-      border-radius: 12px;
+      border-radius: 50%;
     }
     #runBtn svg {
       transition: 0.1s ease-in-out;
@@ -612,7 +612,7 @@
       width: 52px;
       height: 52px;
       flex-shrink: 0;
-      border-radius: 13px;
+      border-radius: 50%;
       border: 2px solid var(--panel-edge);
       outline: none;
       background: linear-gradient(180deg, #f6f0e3 0%, var(--panel-bg) 100%);

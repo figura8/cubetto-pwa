@@ -47,6 +47,7 @@ let blockedCells = new Set();
 let activeMainSlots = SLOTS;
 let activeFnSlots = FSLOTS;
 let fnUnlockHintActive = false;
+let stepStartHintActive = false;
 let gameStarted = false;
 let debugVisible = true;
 document.body?.classList.add('prestart');
@@ -612,6 +613,7 @@ function applyTutorialStep(idx = 0) {
   activeMainSlots = Math.max(1, Math.min(SLOTS, step.mainSlots || SLOTS));
   activeFnSlots = Math.max(0, Math.min(FSLOTS, step.fnSlots ?? 0));
   fnUnlockHintActive = false;
+  stepStartHintActive = true;
   START = { ...(step.start || { x: 2, y: 2 }) };
   GOAL = { ...(step.goal || { x: 5, y: 5 }) };
   pos = { ...START };
@@ -656,10 +658,9 @@ function renderAvail() {
 
   avail.forEach((block, i) => {
     const el = mkB(block, sz, sz, 'ablock');
-    if (currentLevel === 'level1' && tutorialStepIndex === 0 && block.dir === 'forward') {
+    if (currentLevel === 'level1' && stepStartHintActive) {
       el.classList.add('tutorial-focus');
-    }
-    if (currentLevel === 'level1' && isFunctionTutorialStep()) {
+    } else if (currentLevel === 'level1' && isFunctionTutorialStep()) {
       if (!fnUnlockHintActive && block.dir === 'forward') {
         el.classList.add('tutorial-focus');
       }
@@ -996,6 +997,10 @@ function endDg(cx,cy) {
   if (isFunctionTutorialStep() && !fnUnlockHintActive) {
     const firstFnForwardPlaced = fnProg.some(b => (b?.dir || b?.direction) === 'forward');
     if (firstFnForwardPlaced) fnUnlockHintActive = true;
+  }
+  if (stepStartHintActive) {
+    const hasAnyPlacedBlock = prog.some(Boolean) || fnProg.some(Boolean);
+    if (hasAnyPlacedBlock) stepStartHintActive = false;
   }
   dg.active=false;
   renderAvail(); renderBoard(); renderFn();
