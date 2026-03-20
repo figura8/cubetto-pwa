@@ -1,6 +1,6 @@
 // "dev" = network-first (testing fast updates), "prod" = cache-first (better offline).
 const SW_MODE = "dev";
-const CACHE_VERSION = "v4";
+const CACHE_VERSION = "v5";
 const CACHE_NAME = `cubetto-${SW_MODE}-${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [
