@@ -34,6 +34,10 @@ const POOL = {
   right:    {dir:'right',    color:'#E8504A', dark:'#a02820', light:'#ff8a84'},
   function: {dir:'function', color:'#2B8FD4', dark:'#1a5a8a', light:'#8fd1ff'}
 };
+const CUSTOM_LEVELS_STORAGE_KEY = 'boks-custom-levels';
+const EDITOR_LEVELS_STORAGE_KEY = 'boks-editor-levels-v1';
+const CUSTOM_LEVEL_THEME = 'level1';
+const CUSTOM_ICONS = ['leaf', 'star', 'turtle', 'sun', 'moon', 'flower'];
 
 // ═══ STATE ═══
 let pos = {...START};
@@ -46,10 +50,28 @@ let tutorialStepIndex = 0;
 let blockedCells = new Set();
 let activeMainSlots = SLOTS;
 let activeFnSlots = FSLOTS;
+let mainSlotEnabled = Array(SLOTS).fill(true);
+let fnSlotEnabled = Array(FSLOTS).fill(true);
+let editorBlockEnabled = {
+  forward: false,
+  left: false,
+  right: false,
+  function: false
+};
 let fnUnlockHintActive = false;
 let stepStartHintActive = false;
 let gameStarted = false;
 let debugVisible = true;
+let editorMode = false;
+let currentCustomLevel = null;
+let selectedSaveIcon = CUSTOM_ICONS[0];
+let lastEditorSolutionCount = 0;
+let selectedEditorLevelId = null;
+let draggingEditorLevelId = null;
+const NEW_EDITOR_LEVEL_ID = '__new_editor_level__';
+let playerPlaced = true;
+let goalPlaced = true;
+let selectedElementTool = null;
 document.body?.classList.add('prestart');
 document.body?.classList.add('debug-visible');
 
@@ -199,6 +221,31 @@ function playLevelTransitionSfx() {
     });
   } catch (_) {}
 }
+function playWinSfx() {
+  try {
+    const c = FX();
+    const t = c.currentTime;
+    const notes = [784, 988, 1175, 1568];
+    notes.forEach((f, i) => {
+      const o = c.createOscillator();
+      const g = c.createGain();
+      const lp = c.createBiquadFilter();
+      o.type = i % 2 === 0 ? 'triangle' : 'square';
+      o.frequency.setValueAtTime(f, t + i * 0.07);
+      o.frequency.exponentialRampToValueAtTime(f * 1.012, t + i * 0.07 + 0.12);
+      lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(2200 + i * 180, t + i * 0.07);
+      g.gain.setValueAtTime(0.0001, t + i * 0.07);
+      g.gain.exponentialRampToValueAtTime(0.06, t + i * 0.07 + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.07 + 0.24);
+      o.connect(lp);
+      lp.connect(g);
+      g.connect(c.destination);
+      o.start(t + i * 0.07);
+      o.stop(t + i * 0.07 + 0.26);
+    });
+  } catch (_) {}
+}
 function playRunPressSfx() {
   try {
     const c = FX();
@@ -273,9 +320,11 @@ function syncViewportHeight() {
   const vv = window.visualViewport;
   const h = vv ? Math.round(vv.height) : window.innerHeight;
   const w = vv ? Math.round(vv.width) : window.innerWidth;
+  const finePointer = window.matchMedia ? window.matchMedia('(pointer: fine)').matches : false;
+  const desktopShort = finePointer && h < 820;
   document.documentElement.style.setProperty('--app-vh', `${h}px`);
   document.documentElement.style.setProperty('--app-vw', `${w}px`);
-  document.body.classList.toggle('compact-ui', h < 740 || w < 360);
+  document.body.classList.toggle('compact-ui', h < 740 || w < 360 || desktopShort);
   updateOrientationGuard();
 }
 function updateOrientationGuard() {
@@ -289,12 +338,8 @@ function updateOrientationGuard() {
 }
 async function requestAppFullscreen() {
   startPizzicatoBgm();
-  if (document.fullscreenElement) return;
-  const el = document.documentElement;
-  try {
-    if (el.requestFullscreen) await el.requestFullscreen({ navigationUI: 'hide' });
-    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-  } catch (_) {}
+  // Evita lo snap automatico a schermo intero al primo click.
+  // Se in futuro vuoi reintrodurlo, legalo a un'azione esplicita dell'utente.
   // blocca orientamento portrait su Android
   try {
     if (screen.orientation?.lock) await screen.orientation.lock('portrait');
@@ -379,7 +424,7 @@ function initGrid() {
       c.classList.remove(...DECOR_CLASSES);
       c.classList.add('obstacle-cell');
     }
-    if(x===GOAL.x && y===GOAL.y) {
+    if(goalPlaced && x===GOAL.x && y===GOAL.y) {
       c.classList.remove(...DECOR_CLASSES);
       c.classList.add('goal-cell');
       c.innerHTML = goalSVG();
@@ -396,13 +441,14 @@ function sizeGrid() {
   const grid  = document.getElementById('gameGrid');
   const app   = document.getElementById('app');
   const bot   = document.getElementById('bottom');
+  const desktopLike = window.matchMedia ? window.matchMedia('(pointer: fine)').matches : false;
 
   // Measure what bottom actually needs
   const appH  = app.clientHeight;
   const botH  = bot.offsetHeight;
   const availH = appH - botH - 6 - 6 - 6; // gaps + padding
   const availW = wrap.clientWidth;
-  const sq = Math.max(120, Math.floor(Math.min(availH, availW)));
+  const sq = Math.max(120, Math.floor(desktopLike ? availW : Math.min(availH, availW)));
 
   grid.style.width  = sq + 'px';
   grid.style.height = sq + 'px';
@@ -420,9 +466,18 @@ function cellPos(x, y) {
 }
 
 function syncSprite() {
-  const r = cellPos(pos.x, pos.y);
   const s = document.getElementById('sprite');
-  if(!r || !s) return;
+  if (!s) return;
+  if (!playerPlaced) {
+    s.innerHTML = '';
+    s.style.width = '0px';
+    s.style.height = '0px';
+    s.style.opacity = '0';
+    return;
+  }
+  const r = cellPos(pos.x, pos.y);
+  if(!r) return;
+  s.style.opacity = '1';
   s.style.left = r.l+'px'; s.style.top = r.t+'px';
   s.style.width = r.w+'px'; s.style.height = r.h+'px';
   s.innerHTML = svgRobot(ori);
@@ -458,7 +513,7 @@ async function animTo(tx, ty) {
 function setupSpriteDrag() {
   const s = document.getElementById('sprite');
   function start(cx,cy) {
-    if(running||animating) return false;
+    if(running||animating||!playerPlaced) return false;
     const g = document.getElementById('ghost');
     const w = s.offsetWidth;
     g.innerHTML = svgRobot(ori);
@@ -480,8 +535,17 @@ function setupSpriteDrag() {
     document.querySelectorAll('.cell.hi').forEach(c=>c.classList.remove('hi'));
     const u = document.elementFromPoint(cx,cy);
     const cell = u?.closest('.cell');
-    if(cell) await animTo(+cell.dataset.cx, +cell.dataset.cy);
+    if(cell) {
+      const tx = +cell.dataset.cx;
+      const ty = +cell.dataset.cy;
+      const blocked = isBlockedCell(tx, ty);
+      const overlapsGoal = goalPlaced && tx === GOAL.x && ty === GOAL.y;
+      if (!blocked && (!editorMode || !overlapsGoal)) {
+        await animTo(tx, ty);
+      }
+    }
     syncSprite();
+    refreshEditorDebug();
   }
   s.addEventListener('touchstart',e=>{
     e.preventDefault(); e.stopPropagation();
@@ -500,6 +564,193 @@ function setupSpriteDrag() {
   });
 }
 
+function setupGoalDrag() {
+  levelEditor.setupGoalDrag();
+}
+
+function normalizeLevelName(name = '') {
+  return name.trim().replace(/\s+/g, ' ').slice(0, 32);
+}
+
+function cloneCustomLevel(level) {
+  return JSON.parse(JSON.stringify(level));
+}
+
+function normalizePoint(point, fallback = null) {
+  if (point && Number.isFinite(point.x) && Number.isFinite(point.y)) {
+    return { x: point.x, y: point.y };
+  }
+  return fallback ? { ...fallback } : null;
+}
+
+function parseBlockedCellsToArray() {
+  return [...blockedCells].map(key => {
+    const [x, y] = key.split(',').map(Number);
+    return { x, y };
+  });
+}
+
+function customIconSVG(icon) {
+  const icons = {
+    leaf: '<svg viewBox="0 0 48 48" width="24" height="24" aria-hidden="true"><path d="M39 9C26 10 13 18 11 31c-1 7 6 10 12 8 10-2 18-14 16-30Z" fill="#71c85f" stroke="#3f8c33" stroke-width="2"/><path d="M16 32c6-4 12-10 18-18" fill="none" stroke="#3f8c33" stroke-width="2.2" stroke-linecap="round"/></svg>',
+    star: '<svg viewBox="0 0 48 48" width="24" height="24" aria-hidden="true"><path d="m24 6 5.2 10.5 11.6 1.7-8.4 8.2 2 11.6L24 32.4 13.6 38l2-11.6-8.4-8.2 11.6-1.7Z" fill="#ffd34d" stroke="#c39217" stroke-width="2"/></svg>',
+    turtle: '<svg viewBox="0 0 48 48" width="24" height="24" aria-hidden="true"><ellipse cx="24" cy="24" rx="12" ry="10" fill="#97dd75" stroke="#58a44a" stroke-width="2"/><circle cx="37" cy="24" r="4" fill="#97dd75" stroke="#58a44a" stroke-width="2"/><circle cx="18" cy="15" r="2.2" fill="#58a44a"/><circle cx="30" cy="15" r="2.2" fill="#58a44a"/><circle cx="17" cy="34" r="2.5" fill="#58a44a"/><circle cx="31" cy="34" r="2.5" fill="#58a44a"/></svg>',
+    sun: '<svg viewBox="0 0 48 48" width="24" height="24" aria-hidden="true"><circle cx="24" cy="24" r="9" fill="#ffcf40" stroke="#d79a14" stroke-width="2"/><g stroke="#d79a14" stroke-width="2.5" stroke-linecap="round"><path d="M24 5v7"/><path d="M24 36v7"/><path d="M5 24h7"/><path d="M36 24h7"/><path d="m10 10 5 5"/><path d="m33 33 5 5"/><path d="m38 10-5 5"/><path d="m15 33-5 5"/></g></svg>',
+    moon: '<svg viewBox="0 0 48 48" width="24" height="24" aria-hidden="true"><path d="M31 7c-8 2-14 10-14 19 0 6 3 11 8 14-9 1-18-6-18-16C7 14 16 6 27 6c1 0 3 0 4 1Z" fill="#7ea6df" stroke="#4f78b8" stroke-width="2"/></svg>',
+    flower: '<svg viewBox="0 0 48 48" width="24" height="24" aria-hidden="true"><circle cx="24" cy="24" r="4.5" fill="#f5c542"/><circle cx="24" cy="13" r="6" fill="#ffb3c8"/><circle cx="35" cy="24" r="6" fill="#ffd79d"/><circle cx="24" cy="35" r="6" fill="#d2f0ff"/><circle cx="13" cy="24" r="6" fill="#fff0a8"/></svg>'
+  };
+  return icons[icon] || icons.leaf;
+}
+
+function elementPaletteIcon(type) {
+  if (type === 'player') {
+    return customIconSVG('turtle').replace('width="24" height="24"', 'width="38" height="38"');
+  }
+  if (type === 'goal') {
+    return '<svg viewBox="0 0 48 48" width="38" height="38" aria-hidden="true"><path d="M39 9C26 10 13 18 11 31c-1 7 6 10 12 8 10-2 18-14 16-30Z" fill="#71c85f" stroke="#3f8c33" stroke-width="2"/><path d="M16 32c6-4 12-10 18-18" fill="none" stroke="#3f8c33" stroke-width="2.2" stroke-linecap="round"/></svg>';
+  }
+  return '<svg viewBox="0 0 48 48" width="38" height="38" aria-hidden="true"><rect x="10" y="12" width="28" height="22" rx="5" fill="#c8a271" stroke="#8c6744" stroke-width="2.2"/><path d="M13 20h22M13 26h22" stroke="#8c6744" stroke-width="2" stroke-linecap="round" opacity="0.65"/></svg>';
+}
+
+function buildCustomLevelThumbnail(level) {
+  const size = 96;
+  const cell = size / COLS;
+  const blocked = new Set((level.obstacles || []).map(o => `${o.x},${o.y}`));
+  const cells = [];
+
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      const key = `${x},${y}`;
+      const fill = blocked.has(key)
+        ? '#cdb38c'
+        : ((x + y) % 2 === 0 ? '#d8efb6' : '#cae69f');
+      const stroke = blocked.has(key) ? '#9d7b51' : '#9dc56b';
+      cells.push(`<rect x="${x * cell}" y="${y * cell}" width="${cell - 1}" height="${cell - 1}" rx="3" fill="${fill}" stroke="${stroke}" stroke-width="0.8"/>`);
+    }
+  }
+
+  const goalX = level.goal?.x * cell + cell / 2;
+  const goalY = level.goal?.y * cell + cell / 2;
+  const startX = level.start?.x * cell + cell / 2;
+  const startY = level.start?.y * cell + cell / 2;
+  const goalMarkup = level.goal
+    ? `<circle cx="${goalX}" cy="${goalY}" r="${cell * 0.24}" fill="#7fd765" stroke="#3f8c33" stroke-width="2"/>`
+    : '';
+  const startMarkup = level.start
+    ? `
+      <circle cx="${startX}" cy="${startY}" r="${cell * 0.22}" fill="#fff7ef" stroke="#5aa24e" stroke-width="2.2"/>
+      <circle cx="${startX - cell * 0.06}" cy="${startY - cell * 0.03}" r="${cell * 0.04}" fill="#2f2d2b"/>
+      <circle cx="${startX + cell * 0.06}" cy="${startY - cell * 0.03}" r="${cell * 0.04}" fill="#2f2d2b"/>
+      <path d="M ${startX - cell * 0.07} ${startY + cell * 0.07} Q ${startX} ${startY + cell * 0.13} ${startX + cell * 0.07} ${startY + cell * 0.07}" fill="none" stroke="#2f2d2b" stroke-width="1.4" stroke-linecap="round"/>
+    `
+    : '';
+
+  return `
+    <svg viewBox="0 0 ${size} ${size}" width="100%" height="100%" aria-hidden="true">
+      <rect x="0" y="0" width="${size}" height="${size}" rx="12" fill="#edf7d9"/>
+      ${cells.join('')}
+      ${goalMarkup}
+      ${startMarkup}
+    </svg>
+  `;
+}
+
+function readCustomLevels() {
+  try {
+    const raw = localStorage.getItem(EDITOR_LEVELS_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (!Array.isArray(parsed) || !parsed.length) {
+      const seeded = buildInitialEditorLevels();
+      writeCustomLevels(seeded);
+      return seeded;
+    }
+    return parsed.map(normalizeCustomLevel);
+  } catch (_) {
+    const seeded = buildInitialEditorLevels();
+    writeCustomLevels(seeded);
+    return seeded;
+  }
+}
+
+function writeCustomLevels(levels) {
+  localStorage.setItem(EDITOR_LEVELS_STORAGE_KEY, JSON.stringify(levels));
+}
+
+function normalizeSlotArray(source = [], length) {
+  return Array.from({ length }, (_, idx) => !!source[idx]);
+}
+
+function normalizeEnabledBlocks(source = {}) {
+  return {
+    forward: !!source.forward,
+    left: !!source.left,
+    right: !!source.right,
+    function: !!source.function
+  };
+}
+
+function normalizeCustomLevel(level) {
+  return {
+    id: level.id || `custom-${Date.now()}`,
+    number: level.number ?? null,
+    baseStepIndex: level.baseStepIndex ?? null,
+    name: normalizeLevelName(level.name || 'Livello custom') || 'Livello custom',
+    icon: CUSTOM_ICONS.includes(level.icon) ? level.icon : CUSTOM_ICONS[0],
+    baseLevel: level.baseLevel || CUSTOM_LEVEL_THEME,
+    start: normalizePoint(level.start),
+    goal: normalizePoint(level.goal),
+    startOri: level.startOri || 'right',
+    obstacles: Array.isArray(level.obstacles) ? level.obstacles : [],
+    mainSlotEnabled: normalizeSlotArray(level.mainSlotEnabled, SLOTS),
+    fnSlotEnabled: normalizeSlotArray(level.fnSlotEnabled, FSLOTS),
+    enabledBlocks: normalizeEnabledBlocks(level.enabledBlocks || {})
+  };
+}
+
+function findCustomLevel(levelId) {
+  return readCustomLevels().find(level => level.id === levelId) || null;
+}
+
+function tutorialStepToEditorLevel(step, idx) {
+  const mainCount = Math.max(0, Math.min(SLOTS, step.mainSlots ?? SLOTS));
+  const fnCount = Math.max(0, Math.min(FSLOTS, step.fnSlots ?? 0));
+  return normalizeCustomLevel({
+    id: `level1-step-${idx + 1}`,
+    number: idx + 1,
+    baseStepIndex: idx,
+    name: `Livello ${idx + 1}`,
+    icon: CUSTOM_ICONS[idx % CUSTOM_ICONS.length],
+    baseLevel: CUSTOM_LEVEL_THEME,
+    start: { ...(step.start || { x: 2, y: 2 }) },
+    goal: { ...(step.goal || { x: 5, y: 5 }) },
+    startOri: step.startOri || 'right',
+    obstacles: step.obstacles || [],
+    mainSlotEnabled: Array.from({ length: SLOTS }, (_, i) => i < mainCount),
+    fnSlotEnabled: Array.from({ length: FSLOTS }, (_, i) => i < fnCount),
+    enabledBlocks: normalizeEnabledBlocks(
+      Object.fromEntries(Object.keys(POOL).map(dir => [dir, (step.availableBlocks || []).includes(dir)]))
+    )
+  });
+}
+
+function editorLevelToTutorialStep(level) {
+  const normalized = normalizeCustomLevel(level);
+  return {
+    start: normalized.start ? { ...normalized.start } : null,
+    goal: normalized.goal ? { ...normalized.goal } : null,
+    startOri: normalized.startOri || 'right',
+    mainSlots: normalized.mainSlotEnabled.filter(Boolean).length,
+    fnSlots: normalized.fnSlotEnabled.filter(Boolean).length,
+    availableBlocks: Object.keys(normalized.enabledBlocks).filter(dir => normalized.enabledBlocks[dir]),
+    obstacles: normalized.obstacles || []
+  };
+}
+
+function buildInitialEditorLevels() {
+  const steps = LEVELS.level1?.tutorialSteps || [];
+  return steps.map((step, idx) => tutorialStepToEditorLevel(step, idx));
+}
+
 // ═══ PROCEDURAL BACKGROUND ═══
 
 // ═══ LEVELS / THEMES ═══
@@ -509,6 +760,10 @@ let currentLevel = localStorage.getItem(LEVEL_STORAGE_KEY) || 'level1';
 if (!LEVELS[currentLevel]) currentLevel = LEVELS.level1 ? 'level1' : Object.keys(LEVELS)[0];
 
 function getLevel() {
+  if (currentCustomLevel) {
+    const baseId = currentCustomLevel.baseLevel || CUSTOM_LEVEL_THEME;
+    return LEVELS[baseId] || LEVELS.level1 || null;
+  }
   return LEVELS[currentLevel] || LEVELS.level1 || null;
 }
 function applyLevelSceneVars() {
@@ -521,6 +776,7 @@ function applyLevelSceneVars() {
 }
 function setLevel(levelId, { persist = true } = {}) {
   if (!LEVELS[levelId]) return false;
+  currentCustomLevel = null;
   currentLevel = levelId;
   applyLevelSceneVars();
   if (persist) localStorage.setItem(LEVEL_STORAGE_KEY, levelId);
@@ -535,8 +791,24 @@ function ensureDebugBadge() {
   document.body.appendChild(badge);
   return badge;
 }
+function updateRunAvailability() {
+  const btn = document.getElementById('runBtn');
+  if (!btn) return;
+  const locked = !!(editorMode && (!playerPlaced || !goalPlaced));
+  btn.classList.toggle('editor-run-locked', locked);
+  btn.disabled = locked;
+  btn.setAttribute('aria-disabled', locked ? 'true' : 'false');
+}
 function updateDebugBadge() {
   const badge = ensureDebugBadge();
+  if (editorMode) {
+    badge.textContent = `Editor | Program ${countEnabledMainSlots()}/${SLOTS} | Function ${countEnabledFnSlots()}/${FSLOTS} | Soluzioni possibili: ${lastEditorSolutionCount}`;
+    return;
+  }
+  if (currentCustomLevel) {
+    badge.textContent = `${currentCustomLevel.name} | Livello custom`;
+    return;
+  }
   const lv = getLevel();
   const steps = getTutorialSteps();
   if (steps.length) {
@@ -545,6 +817,11 @@ function updateDebugBadge() {
   }
   badge.textContent = `${lv?.name || currentLevel} | Single level`;
 }
+
+function setSlotMasks(mainCount = SLOTS, fnCount = FSLOTS) {
+  mainSlotEnabled = Array.from({ length: SLOTS }, (_, i) => i < mainCount);
+  fnSlotEnabled = Array.from({ length: FSLOTS }, (_, i) => i < fnCount);
+}
 function toggleDebugBadge() {
   debugVisible = !debugVisible;
   document.body.classList.toggle('debug-visible', debugVisible);
@@ -552,6 +829,7 @@ function toggleDebugBadge() {
 }
 function debugStepJump(delta) {
   if (running || animating) return;
+  if (editorMode) return;
   if (currentLevel !== 'level1') return;
   const steps = getTutorialSteps();
   if (!steps.length) return;
@@ -579,7 +857,109 @@ function setAvailableBlocks(blocks = ['forward', 'right', 'left']) {
   });
   idN += blocks.length;
 }
+const editorSolver = window.BOKS_EDITOR_SOLVER({
+  getMainSlotEnabled: () => mainSlotEnabled,
+  getFnSlotEnabled: () => fnSlotEnabled,
+  setActiveMainSlots: value => { activeMainSlots = value; },
+  setActiveFnSlots: value => { activeFnSlots = value; },
+  getAvail: () => avail,
+  getBoardMeta: () => ({ cols: COLS, rows: ROWS }),
+  isBlockedCell,
+  getGoal: () => GOAL,
+  getPlayer: () => ({ pos, ori })
+});
+const levelEditor = window.BOKS_LEVEL_EDITOR({
+  isEditorMode: () => editorMode,
+  setEditorModeFlag: value => { editorMode = value; },
+  isBusy: () => running || animating,
+  getEditorBlockEnabled: () => editorBlockEnabled,
+  resetEditorBlockEnabled: () => {
+    editorBlockEnabled = { forward: false, left: false, right: false, function: false };
+  },
+  getMainSlotEnabled: () => mainSlotEnabled,
+  getFnSlotEnabled: () => fnSlotEnabled,
+  getProg: () => prog,
+  getFnProg: () => fnProg,
+  getActiveMainSlots: () => activeMainSlots,
+  getActiveFnSlots: () => activeFnSlots,
+  setSlotMasks,
+  setAvailableBlocks,
+  resetPrograms,
+  setFnUnlockHintActive: value => { fnUnlockHintActive = value; },
+  setStepStartHintActive: value => { stepStartHintActive = value; },
+  renderAvail: () => renderAvail(),
+  renderBoard: () => renderBoard(),
+  renderFn: () => renderFn(),
+  refreshEditorValues: () => refreshEditorValues(),
+  refreshEditorDebug: () => refreshEditorDebug(),
+  updateDebugBadge,
+  mkB,
+  bindDrag,
+  getPool: () => POOL,
+  getAvail: () => avail,
+  goalSVG,
+  initGrid,
+  drawBackground,
+  syncSprite,
+  isBlockedCell,
+  hasGoal: () => goalPlaced,
+  getPlayer: () => ({ pos, ori }),
+  setGoal: value => { GOAL = value; }
+});
+function countEnabledMainSlots() {
+  return editorSolver.countEnabledMainSlots();
+}
+
+function countEnabledFnSlots() {
+  return editorSolver.countEnabledFnSlots();
+}
+
+function refreshEditorValues() {
+  editorSolver.refreshEditorValues();
+}
+
+function countEditorSolutions() {
+  if (!playerPlaced || !goalPlaced) return 0;
+  return editorSolver.countEditorSolutions();
+}
+
+function refreshEditorDebug() {
+  if (!editorMode) return;
+  refreshEditorValues();
+  lastEditorSolutionCount = countEditorSolutions();
+  updateDebugBadge();
+  updateRunAvailability();
+  renderElementPalette();
+}
+
+function syncEditorAvailableBlocks() {
+  levelEditor.syncEditorAvailableBlocks();
+}
+
+function toggleEditorBlock(dir) {
+  levelEditor.toggleEditorBlock(dir);
+}
+
+function setEditorMode(enabled) {
+  levelEditor.setEditorMode(enabled);
+  if (enabled) {
+    refreshEditorDebug();
+  } else {
+    selectedElementTool = null;
+    lastEditorSolutionCount = 0;
+    updateRunAvailability();
+    renderElementPalette();
+  }
+}
+
+function toggleEditorSlot(zone, idx) {
+  levelEditor.toggleEditorSlot(zone, idx);
+}
 function getTutorialSteps() {
+  if (currentCustomLevel) return [];
+  if (currentLevel === 'level1') {
+    return readCustomLevels().map(editorLevelToTutorialStep);
+  }
   const lv = getLevel();
   return lv?.tutorialSteps || [];
 }
@@ -597,7 +977,7 @@ function isFunctionTutorialStep() {
 function resetPlayerToStepStart() {
   const step = getCurrentTutorialStep();
   pos = { ...START };
-  ori = step?.startOri || 'right';
+  ori = currentCustomLevel?.startOri || step?.startOri || 'right';
   const sprite = document.getElementById('sprite');
   if (sprite) {
     sprite.getAnimations().forEach(a => a.cancel());
@@ -610,12 +990,18 @@ function applyTutorialStep(idx = 0) {
   if (!steps.length) return false;
   tutorialStepIndex = ((idx % steps.length) + steps.length) % steps.length;
   const step = steps[tutorialStepIndex];
-  activeMainSlots = Math.max(1, Math.min(SLOTS, step.mainSlots || SLOTS));
+  activeMainSlots = Math.max(0, Math.min(SLOTS, step.mainSlots ?? SLOTS));
   activeFnSlots = Math.max(0, Math.min(FSLOTS, step.fnSlots ?? 0));
+  setSlotMasks(activeMainSlots, activeFnSlots);
   fnUnlockHintActive = false;
   stepStartHintActive = true;
-  START = { ...(step.start || { x: 2, y: 2 }) };
-  GOAL = { ...(step.goal || { x: 5, y: 5 }) };
+  selectedElementTool = null;
+  const normalizedStart = normalizePoint(step.start);
+  const normalizedGoal = normalizePoint(step.goal);
+  playerPlaced = !!normalizedStart;
+  goalPlaced = !!normalizedGoal;
+  START = normalizedStart || { x: 2, y: 2 };
+  GOAL = normalizedGoal || { x: 5, y: 5 };
   pos = { ...START };
   animating = false;
   ori = step.startOri || 'right';
@@ -643,7 +1029,485 @@ function applyTutorialStep(idx = 0) {
     syncSprite();
   });
   updateDebugBadge();
+  renderElementPalette();
   return true;
+}
+
+function applyCustomLevel(level, { openEditor = false } = {}) {
+  const normalized = normalizeCustomLevel(level);
+  currentCustomLevel = cloneCustomLevel(normalized);
+  selectedEditorLevelId = normalized.id;
+  currentLevel = 'custom';
+  applyLevelSceneVars();
+
+  playerPlaced = !!normalized.start;
+  goalPlaced = !!normalized.goal;
+  START = normalized.start ? { ...normalized.start } : { x: 2, y: 2 };
+  GOAL = normalized.goal ? { ...normalized.goal } : { x: 5, y: 5 };
+  pos = { ...START };
+  ori = normalized.startOri || 'right';
+  animating = false;
+  running = false;
+  tutorialStepIndex = 0;
+  fnUnlockHintActive = false;
+  stepStartHintActive = false;
+  selectedElementTool = null;
+  mainSlotEnabled = normalizeSlotArray(normalized.mainSlotEnabled, SLOTS);
+  fnSlotEnabled = normalizeSlotArray(normalized.fnSlotEnabled, FSLOTS);
+  editorBlockEnabled = normalizeEnabledBlocks(normalized.enabledBlocks);
+  refreshEditorValues();
+  setBlockedCells(normalized.obstacles || []);
+  resetPrograms();
+  setAvailableBlocks(Object.keys(editorBlockEnabled).filter(dir => editorBlockEnabled[dir]));
+  editorMode = !!openEditor;
+  document.body.classList.toggle('editor-mode', editorMode);
+  initGrid();
+  renderAvail();
+  renderBoard();
+  renderFn();
+  drawBackground();
+  const sprite = document.getElementById('sprite');
+  if (sprite) {
+    sprite.getAnimations().forEach(a => a.cancel());
+    sprite.classList.remove('moving');
+  }
+  syncSprite();
+  if (editorMode) refreshEditorDebug();
+  else {
+    lastEditorSolutionCount = 0;
+    updateRunAvailability();
+  }
+  updateDebugBadge();
+  renderElementPalette();
+}
+
+function collectCurrentEditorLevel() {
+  return normalizeCustomLevel({
+    id: currentCustomLevel?.id || selectedEditorLevelId || `custom-${Date.now()}`,
+    number: currentCustomLevel?.number ?? null,
+    baseStepIndex: currentCustomLevel?.baseStepIndex ?? null,
+    name: currentCustomLevel?.name || 'Livello custom',
+    icon: currentCustomLevel?.icon || selectedSaveIcon,
+    baseLevel: currentCustomLevel?.baseLevel || CUSTOM_LEVEL_THEME,
+    start: playerPlaced ? { ...pos } : null,
+    goal: goalPlaced ? { ...GOAL } : null,
+    startOri: ori,
+    obstacles: parseBlockedCellsToArray(),
+    mainSlotEnabled: [...mainSlotEnabled],
+    fnSlotEnabled: [...fnSlotEnabled],
+    enabledBlocks: { ...editorBlockEnabled }
+  });
+}
+
+function renderElementPalette() {
+  const panel = document.getElementById('elementPalettePanel');
+  const palette = document.getElementById('elementPalette');
+  if (!panel || !palette) return;
+  panel.style.display = editorMode ? 'block' : 'none';
+  if (!editorMode) {
+    palette.innerHTML = '';
+    return;
+  }
+
+  const tools = [
+    {
+      key: 'player',
+      label: 'Giocatore',
+      present: playerPlaced,
+      hint: playerPlaced ? 'Presente: sposta o tocca per rimuovere' : 'Tocca e piazza sulla griglia'
+    },
+    {
+      key: 'goal',
+      label: 'Foglia',
+      present: goalPlaced,
+      hint: goalPlaced ? 'Presente: sposta o tocca per rimuovere' : 'Tocca e piazza sulla griglia'
+    },
+    {
+      key: 'brick',
+      label: 'Mattone',
+      present: false,
+      hint: 'Tocca celle per aggiungere o rimuovere'
+    }
+  ];
+
+  palette.innerHTML = '';
+  tools.forEach(tool => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'element-tool' + (selectedElementTool === tool.key ? ' active' : '') + (tool.present ? ' placed' : '');
+    btn.dataset.tool = tool.key;
+    btn.innerHTML = `
+      <span class="element-tool-icon">${elementPaletteIcon(tool.key)}</span>
+      <span class="element-tool-label">${tool.label}</span>
+      <span class="element-tool-status">${tool.key === 'brick' ? 'TOGGLE' : (tool.present ? 'PRESENTE' : 'AGGIUNGI')}</span>
+      <span class="element-tool-hint">${tool.hint}</span>
+    `;
+    btn.addEventListener('click', () => {
+      selectedElementTool = selectedElementTool === tool.key ? null : tool.key;
+      renderElementPalette();
+    });
+    palette.appendChild(btn);
+  });
+}
+
+function applyEditorBoardChanges() {
+  initGrid();
+  drawBackground();
+  syncSprite();
+  refreshEditorDebug();
+}
+
+function startBlankEditorLevel() {
+  selectedEditorLevelId = NEW_EDITOR_LEVEL_ID;
+  currentCustomLevel = null;
+  currentLevel = CUSTOM_LEVEL_THEME;
+  applyLevelSceneVars();
+  playerPlaced = false;
+  goalPlaced = false;
+  selectedElementTool = null;
+  START = { x: 2, y: 2 };
+  GOAL = { x: 5, y: 5 };
+  pos = { ...START };
+  ori = 'right';
+  setBlockedCells([]);
+  resetPrograms();
+  mainSlotEnabled = Array(SLOTS).fill(false);
+  fnSlotEnabled = Array(FSLOTS).fill(false);
+  editorBlockEnabled = { forward: false, left: false, right: false, function: false };
+  setAvailableBlocks([]);
+  refreshEditorValues();
+  applyEditorBoardChanges();
+  renderAvail();
+  renderBoard();
+  renderFn();
+  renderCustomLevels();
+}
+
+function setupEditorElementPlacement() {
+  const grid = document.getElementById('gameGrid');
+  const sprite = document.getElementById('sprite');
+  if (!grid || grid.dataset.editorPlacementBound === 'true') return;
+  grid.dataset.editorPlacementBound = 'true';
+  let suppressNextClick = false;
+
+  function moveBrick(fromX, fromY, toX, toY) {
+    const fromKey = cellKey(fromX, fromY);
+    const toKey = cellKey(toX, toY);
+    const isPlayerCell = playerPlaced && pos.x === toX && pos.y === toY;
+    const isGoalCell = goalPlaced && GOAL.x === toX && GOAL.y === toY;
+    if (!blockedCells.has(fromKey) || isPlayerCell || isGoalCell || blockedCells.has(toKey)) return;
+    blockedCells.delete(fromKey);
+    blockedCells.add(toKey);
+    applyEditorBoardChanges();
+  }
+
+  function setupBrickDrag(startX, startY, clientX, clientY) {
+    if (!editorMode || running || animating || !isBlockedCell(startX, startY)) return false;
+    const sourceCell = document.querySelector(`.cell[data-cx="${startX}"][data-cy="${startY}"]`);
+    const size = sourceCell?.getBoundingClientRect().width || 48;
+    const ghost = document.getElementById('ghost');
+    ghost.innerHTML = elementPaletteIcon('brick');
+    ghost.style.cssText = `display:block;width:${size}px;height:${size}px;left:${clientX}px;top:${clientY}px;`;
+    if (sourceCell) sourceCell.style.opacity = '0.25';
+    return true;
+  }
+
+  function moveBrickGhost(clientX, clientY) {
+    const ghost = document.getElementById('ghost');
+    ghost.style.left = clientX + 'px';
+    ghost.style.top = clientY + 'px';
+    ghost.style.display = 'none';
+    const under = document.elementFromPoint(clientX, clientY);
+    ghost.style.display = 'block';
+    document.querySelectorAll('.cell.hi').forEach(c => c.classList.remove('hi'));
+    under?.closest('.cell')?.classList.add('hi');
+  }
+
+  function endBrickDrag(startX, startY, clientX, clientY, moved) {
+    document.getElementById('ghost').style.display = 'none';
+    document.querySelectorAll('.cell.hi').forEach(c => c.classList.remove('hi'));
+    document.querySelector(`.cell[data-cx="${startX}"][data-cy="${startY}"]`)?.style.removeProperty('opacity');
+    if (!moved) return;
+    suppressNextClick = true;
+    const under = document.elementFromPoint(clientX, clientY);
+    const cell = under?.closest('.cell');
+    if (!cell) return;
+    const toX = Number(cell.dataset.cx);
+    const toY = Number(cell.dataset.cy);
+    if (toX === startX && toY === startY) return;
+    moveBrick(startX, startY, toX, toY);
+  }
+
+  grid.addEventListener('click', e => {
+    if (!editorMode || running || animating) return;
+    if (suppressNextClick) {
+      suppressNextClick = false;
+      return;
+    }
+    const cell = e.target?.closest('.cell');
+    if (!cell) return;
+
+    const x = Number(cell.dataset.cx);
+    const y = Number(cell.dataset.cy);
+    const isPlayerCell = playerPlaced && pos.x === x && pos.y === y;
+    const isGoalCell = goalPlaced && GOAL.x === x && GOAL.y === y;
+    const isBlocked = isBlockedCell(x, y);
+
+    if (selectedElementTool === 'player') {
+      if (playerPlaced) {
+        if (isPlayerCell) {
+          playerPlaced = false;
+          selectedElementTool = null;
+          applyEditorBoardChanges();
+        }
+        return;
+      }
+      if (isBlocked || isGoalCell) return;
+      playerPlaced = true;
+      START = { x, y };
+      pos = { x, y };
+      selectedElementTool = null;
+      applyEditorBoardChanges();
+      return;
+    }
+
+    if (selectedElementTool === 'goal') {
+      if (goalPlaced) {
+        if (isGoalCell) {
+          goalPlaced = false;
+          selectedElementTool = null;
+          applyEditorBoardChanges();
+        }
+        return;
+      }
+      if (isBlocked || isPlayerCell) return;
+      goalPlaced = true;
+      GOAL = { x, y };
+      selectedElementTool = null;
+      applyEditorBoardChanges();
+      return;
+    }
+
+    if (selectedElementTool === 'brick') {
+      if (isPlayerCell || isGoalCell) return;
+      const key = cellKey(x, y);
+      if (isBlocked) blockedCells.delete(key);
+      else blockedCells.add(key);
+      applyEditorBoardChanges();
+      return;
+    }
+
+    if (isBlocked) {
+      blockedCells.delete(cellKey(x, y));
+      applyEditorBoardChanges();
+    }
+  });
+
+  sprite?.addEventListener('click', () => {
+    if (!editorMode || !playerPlaced || selectedElementTool !== 'player' || running || animating) return;
+    playerPlaced = false;
+    selectedElementTool = null;
+    applyEditorBoardChanges();
+  });
+
+  grid.addEventListener('touchstart', e => {
+    const cell = e.target?.closest('.cell.obstacle-cell');
+    if (!cell) return;
+    const startX = Number(cell.dataset.cx);
+    const startY = Number(cell.dataset.cy);
+    const touch = e.touches[0];
+    if (!setupBrickDrag(startX, startY, touch.clientX, touch.clientY)) return;
+    let moved = false;
+    e.preventDefault();
+    e.stopPropagation();
+    const mm = ev => {
+      ev.preventDefault();
+      moved = true;
+      moveBrickGhost(ev.touches[0].clientX, ev.touches[0].clientY);
+    };
+    const mu = ev => {
+      ev.preventDefault();
+      endBrickDrag(startX, startY, ev.changedTouches[0].clientX, ev.changedTouches[0].clientY, moved);
+      grid.removeEventListener('touchmove', mm);
+      grid.removeEventListener('touchend', mu);
+      grid.removeEventListener('touchcancel', mu);
+    };
+    grid.addEventListener('touchmove', mm, { passive: false });
+    grid.addEventListener('touchend', mu, { passive: false });
+    grid.addEventListener('touchcancel', mu, { passive: false });
+  }, { passive: false });
+
+  grid.addEventListener('mousedown', e => {
+    const cell = e.target?.closest('.cell.obstacle-cell');
+    if (!cell) return;
+    const startX = Number(cell.dataset.cx);
+    const startY = Number(cell.dataset.cy);
+    if (!setupBrickDrag(startX, startY, e.clientX, e.clientY)) return;
+    let moved = false;
+    e.preventDefault();
+    const mm = ev => {
+      moved = true;
+      moveBrickGhost(ev.clientX, ev.clientY);
+    };
+    const mu = ev => {
+      endBrickDrag(startX, startY, ev.clientX, ev.clientY, moved);
+      document.removeEventListener('mousemove', mm);
+      document.removeEventListener('mouseup', mu);
+    };
+    document.addEventListener('mousemove', mm);
+    document.addEventListener('mouseup', mu);
+  });
+}
+
+function renderIconPicker() {
+  const picker = document.getElementById('iconPicker');
+  if (!picker) return;
+  picker.innerHTML = '';
+  CUSTOM_ICONS.forEach(icon => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'icon-choice' + (selectedSaveIcon === icon ? ' active' : '');
+    btn.dataset.icon = icon;
+    btn.innerHTML = customIconSVG(icon);
+    btn.addEventListener('click', () => {
+      selectedSaveIcon = icon;
+      renderIconPicker();
+    });
+    picker.appendChild(btn);
+  });
+}
+
+function openSaveLevelModal() {
+  saveCurrentEditorLevel();
+}
+
+function closeSaveLevelModal() {
+  const modal = document.getElementById('saveLevelModal');
+  modal?.classList.remove('show');
+  modal?.setAttribute('aria-hidden', 'true');
+}
+
+function saveCurrentEditorLevel() {
+  if (!editorMode) return;
+  const levelId = selectedEditorLevelId || currentCustomLevel?.id;
+  if (!levelId) {
+    toast('Seleziona un livello');
+    return;
+  }
+  const level = collectCurrentEditorLevel();
+  const levels = readCustomLevels();
+  if (levelId === NEW_EDITOR_LEVEL_ID) {
+    const newLevel = normalizeCustomLevel({
+      ...level,
+      id: `custom-${Date.now()}`,
+      number: levels.length + 1,
+      baseStepIndex: null,
+      name: `Livello ${levels.length + 1}`
+    });
+    levels.push(newLevel);
+    writeCustomLevels(levels);
+    currentCustomLevel = cloneCustomLevel(newLevel);
+    selectedEditorLevelId = newLevel.id;
+    renderCustomLevels();
+    renderElementPalette();
+    toast('Nuovo livello salvato');
+    return;
+  }
+  const idx = levels.findIndex(entry => entry.id === levelId);
+  if (idx === -1) {
+    toast('Livello non trovato');
+    return;
+  }
+  levels[idx] = normalizeCustomLevel({
+    ...levels[idx],
+    ...level,
+    id: levels[idx].id,
+    number: levels[idx].number,
+    baseStepIndex: levels[idx].baseStepIndex,
+    name: levels[idx].name
+  });
+  writeCustomLevels(levels);
+  currentCustomLevel = cloneCustomLevel(levels[idx]);
+  selectedEditorLevelId = levels[idx].id;
+  renderCustomLevels();
+  renderElementPalette();
+  toast('Livello salvato');
+}
+
+function renderCustomLevels() {
+  const list = document.getElementById('customLevelsList');
+  if (!list) return;
+  const levels = readCustomLevels();
+  list.innerHTML = '';
+  if (!levels.length) return;
+
+  levels.forEach((level, index) => {
+    const normalized = normalizeCustomLevel(level);
+    const tile = document.createElement('button');
+    tile.type = 'button';
+    tile.className = 'editor-level-tile' + (selectedEditorLevelId === normalized.id ? ' active' : '');
+    tile.draggable = true;
+    tile.dataset.levelId = normalized.id;
+    tile.textContent = String(index + 1);
+    tile.title = `Livello ${index + 1}`;
+    tile.addEventListener('click', () => {
+      selectedEditorLevelId = normalized.id;
+      if (editorMode) {
+        applyCustomLevel(normalized, { openEditor: true });
+        renderCustomLevels();
+        return;
+      }
+      openAppFromGate({
+        openEditor: true,
+        onOpen: () => {
+          selectedEditorLevelId = normalized.id;
+          applyCustomLevel(normalized, { openEditor: true });
+          renderCustomLevels();
+        }
+      });
+    });
+    tile.addEventListener('dragstart', () => {
+      draggingEditorLevelId = normalized.id;
+      tile.classList.add('dragging');
+    });
+    tile.addEventListener('dragend', () => {
+      draggingEditorLevelId = null;
+      tile.classList.remove('dragging');
+      list.querySelectorAll('.editor-level-tile').forEach(el => el.classList.remove('drop-target'));
+    });
+    tile.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (!draggingEditorLevelId || draggingEditorLevelId === normalized.id) return;
+      tile.classList.add('drop-target');
+    });
+    tile.addEventListener('dragleave', () => tile.classList.remove('drop-target'));
+    tile.addEventListener('drop', e => {
+      e.preventDefault();
+      tile.classList.remove('drop-target');
+      if (!draggingEditorLevelId || draggingEditorLevelId === normalized.id) return;
+      const current = readCustomLevels();
+      const from = current.findIndex(entry => entry.id === draggingEditorLevelId);
+      const to = current.findIndex(entry => entry.id === normalized.id);
+      if (from === -1 || to === -1) return;
+      const [moved] = current.splice(from, 1);
+      current.splice(to, 0, moved);
+      writeCustomLevels(current);
+      renderCustomLevels();
+    });
+    list.appendChild(tile);
+  });
+
+  const emptyTile = document.createElement('button');
+  emptyTile.type = 'button';
+  emptyTile.className = 'editor-level-tile editor-level-tile-empty' + (selectedEditorLevelId === NEW_EDITOR_LEVEL_ID ? ' active' : '');
+  emptyTile.dataset.levelId = NEW_EDITOR_LEVEL_ID;
+  emptyTile.textContent = '+';
+  emptyTile.title = 'Nuovo livello';
+  emptyTile.addEventListener('click', () => {
+    startBlankEditorLevel();
+    toast('Slot nuovo livello selezionato');
+  });
+  list.appendChild(emptyTile);
 }
 
 function goalSVG() { const lv = getLevel(); return lv?.renderGoal ? lv.renderGoal() : ''; }
@@ -656,11 +1520,18 @@ function renderAvail() {
   row.innerHTML = '';
   const sz = 52;
 
+  if (editorMode) {
+    levelEditor.renderEditorAvail(row, sz);
+    return;
+  }
+
+  row.classList.remove('editor-blocks-row');
+
   avail.forEach((block, i) => {
     const el = mkB(block, sz, sz, 'ablock');
-    if (currentLevel === 'level1' && stepStartHintActive) {
+    if (!editorMode && currentLevel === 'level1' && stepStartHintActive) {
       el.classList.add('tutorial-focus');
-    } else if (currentLevel === 'level1' && isFunctionTutorialStep()) {
+    } else if (!editorMode && currentLevel === 'level1' && isFunctionTutorialStep()) {
       if (!fnUnlockHintActive && block.dir === 'forward') {
         el.classList.add('tutorial-focus');
       }
@@ -681,6 +1552,7 @@ function renderAvail() {
 function alignAvailBlocksToSlots() {
   const row = document.getElementById('blocksRow');
   if (!row) return;
+  if (editorMode) return;
   const blocks = Array.from(row.querySelectorAll('.ablock'));
   if (!blocks.length) return;
   const rowRect = row.getBoundingClientRect();
@@ -716,22 +1588,25 @@ const SLOT_H = 38; // fallback
 function getBoardSizes() {
   const board = document.getElementById('boardRow');
   const app   = document.getElementById('app');
+  const compact = document.body.classList.contains('compact-ui');
   const boardW = board.clientWidth || (app.clientWidth - 20);
   const innerW = boardW - 16;
-  const rowPadX = 12;
-  const gapX = 11;
+  const rowPadX = compact ? 10 : 12;
+  const gapX = compact ? 8 : 11;
   const slotW  = Math.floor((innerW - rowPadX * 2 - gapX * 3) / 4);
-  const slotH  = Math.max(36, Math.min(slotW - 5, 50));
+  const slotHMin = compact ? 30 : 36;
+  const slotHMax = compact ? 42 : 50;
+  const slotH  = Math.max(slotHMin, Math.min(slotW - (compact ? 7 : 5), slotHMax));
   const bsiz   = Math.max(32, Math.min(slotH - 6, slotW - 8));
-  return { slotH, slotW, bsiz, innerW, rowPadX, gapX };
+  return { slotH, slotW, bsiz, innerW, rowPadX, gapX, compact };
 }
 
 function renderBoard() {
   const g = document.getElementById('boardGrid');
   g.innerHTML = '';
-  const { slotH, slotW, bsiz, innerW, rowPadX, gapX } = getBoardSizes();
+  const { slotH, slotW, bsiz, innerW, rowPadX, gapX, compact } = getBoardSizes();
 
-  const gapH = 22;
+  const gapH = compact ? 16 : 22;
   const totalH = 3 * slotH + 2 * gapH;
 
   // SVG per il connettore tra riga1 e riga2
@@ -766,18 +1641,25 @@ function renderBoard() {
       const slot = document.createElement('div');
       slot.className = 'pslot';
       slot.dataset.slot = i; slot.dataset.zone = zone;
-      if (zone === 'main' && i >= activeMainSlots) slot.classList.add('locked');
-      if (zone === 'fn' && i >= activeFnSlots) slot.classList.add('locked');
+      const enabled = zone === 'main' ? mainSlotEnabled[i] : fnSlotEnabled[i];
+      if (!enabled) slot.classList.add('locked');
       slot.style.height = slotH + 'px';
       const wellSize = Math.max(28, Math.round(bsiz * 0.96));
       const blockSize = Math.max(30, Math.round(wellSize * 1.06));
       slot.style.setProperty('--well-size', `${wellSize}px`);
+      if (editorMode) {
+        slot.addEventListener('click', e => {
+          if (dg.active) return;
+          if (e.target.closest('.pblock')) return;
+          toggleEditorSlot(zone, i);
+        });
+      }
 
       const inn = document.createElement('div');
       inn.className = 'sinner';
       inn.style.cssText = `width:${blockSize}px;height:${blockSize}px;`;
 
-      if(arr[i]) {
+      if(enabled && arr[i]) {
         slot.classList.add('filled');
         const be = mkB(arr[i], blockSize, blockSize, 'pblock');
         be.dataset.si = i; be.dataset.zone = zone;
@@ -1005,12 +1887,12 @@ function endDg(cx,cy) {
   if(slot) {
     const ti = +slot.dataset.slot;
     const zone = slot.dataset.zone;
-    if(zone === 'main' && ti >= activeMainSlots) {
+    if(zone === 'main' && !mainSlotEnabled[ti]) {
       dg.active=false;
       renderAvail(); renderBoard(); renderFn();
       return;
     }
-    if(zone === 'fn' && ti >= activeFnSlots) {
+    if(zone === 'fn' && !fnSlotEnabled[ti]) {
       dg.active=false;
       renderAvail(); renderBoard(); renderFn();
       return;
@@ -1040,6 +1922,7 @@ function endDg(cx,cy) {
   }
   dg.active=false;
   renderAvail(); renderBoard(); renderFn();
+  refreshEditorDebug();
 }
 
 // ═══ GAME LOGIC ═══
@@ -1091,6 +1974,8 @@ async function moveChar(dir) {
 }
 async function run() {
   if(!gameStarted || running || animating) return;
+  if (!playerPlaced || !goalPlaced) return;
+  const runStartState = editorMode ? { pos: { ...pos }, ori } : null;
   requestAppFullscreen();
   sizeGrid();
   drawBackground();
@@ -1098,7 +1983,13 @@ async function run() {
   await nextFrame();
   syncSprite();
   let last=-1;
-  for(let i=0;i<activeMainSlots;i++) if(prog[i]) last=i;
+  const activeMainIndexes = mainSlotEnabled
+    .map((enabled, idx) => enabled ? idx : -1)
+    .filter(idx => idx !== -1);
+  const activeFnIndexes = fnSlotEnabled
+    .map((enabled, idx) => enabled ? idx : -1)
+    .filter(idx => idx !== -1);
+  for (const i of activeMainIndexes) if (prog[i]) last = i;
   if(last===-1){return;}
   running=true;
   playRunPressSfx();
@@ -1107,20 +1998,22 @@ async function run() {
   toast(''); await sleep(200);
   let won = false;
 
-  for(let i=0;i<=last;i++) {
+  for (const i of activeMainIndexes) {
+    if (i > last) break;
     hlSlot(i, 'main'); await sleep(STEP_MS);
     if(prog[i]) {
       if(prog[i].dir === 'function') {
         // ── esegui sub-routine ──
         let fnLast = -1;
-        for(let f=0;f<FSLOTS;f++) if(fnProg[f]) fnLast=f;
+        for(const f of activeFnIndexes) if(fnProg[f]) fnLast=f;
         if(fnLast === -1) { await sleep(300); }
         else {
-          for(let f=0;f<=fnLast;f++) {
+          for (const f of activeFnIndexes) {
+            if (f > fnLast) break;
             hlSlot(f, 'fn'); await sleep(STEP_MS);
             if(fnProg[f]) {
               await moveChar(fnProg[f].dir||fnProg[f].direction); await sleep(STEP_MS);
-              if(pos.x===GOAL.x&&pos.y===GOAL.y) { won=true; break; }
+              if(goalPlaced && pos.x===GOAL.x&&pos.y===GOAL.y) { won=true; break; }
             }
           }
           document.querySelectorAll('.pslot[data-zone="fn"]').forEach(s=>s.classList.remove('fn-active','fn-done'));
@@ -1128,7 +2021,7 @@ async function run() {
         }
       } else {
         await moveChar(prog[i].dir||prog[i].direction); await sleep(STEP_MS);
-        if(pos.x===GOAL.x&&pos.y===GOAL.y) { won=true; break; }
+        if(goalPlaced && pos.x===GOAL.x&&pos.y===GOAL.y) { won=true; break; }
       }
     } else { await sleep(STEP_MS); }
   }
@@ -1139,7 +2032,19 @@ async function run() {
   resetPrograms();
 
   if(won) {
-    if (currentLevel === 'level1') {
+    playWinSfx();
+    if (editorMode) {
+      await sleep(900);
+      resetPrograms();
+      if (runStartState) {
+        pos = { ...runStartState.pos };
+        ori = runStartState.ori;
+        syncSprite();
+      }
+      renderBoard(); renderFn();
+      return;
+    }
+    if (!currentCustomLevel && currentLevel === 'level1') {
       playLevelTransitionSfx();
       await fadeTransition(620);
       const steps = getTutorialSteps();
@@ -1158,11 +2063,17 @@ async function run() {
     }
     await sleep(1200);
     resetPrograms();
+    resetPlayerToStepStart();
     renderBoard(); renderFn();
-    moveGoal();
   } else {
     await sleep(400);
-    resetPlayerToStepStart();
+    if (editorMode && runStartState) {
+      pos = { ...runStartState.pos };
+      ori = runStartState.ori;
+      syncSprite();
+    } else {
+      resetPlayerToStepStart();
+    }
     renderBoard(); renderFn();
   }
 }
@@ -1176,6 +2087,7 @@ function init() {
   if (!applyTutorialStep(0)) {
     activeMainSlots = SLOTS;
     activeFnSlots = FSLOTS;
+    setSlotMasks(activeMainSlots, activeFnSlots);
     setAvailableBlocks(['forward', 'right', 'left', 'function']);
     initGrid();
     renderAvail();
@@ -1191,15 +2103,25 @@ function init() {
       drawBackground();
       syncSprite();
       setupSpriteDrag();
+      setupGoalDrag();
+      setupEditorElementPlacement();
     });
   }));
   updateDebugBadge();
+  refreshEditorValues();
+  updateRunAvailability();
+  const initialLevels = readCustomLevels();
+  if (!selectedEditorLevelId && initialLevels.length) selectedEditorLevelId = initialLevels[0].id;
+  renderCustomLevels();
+  renderElementPalette();
+  renderIconPicker();
 }
 
 init();
 
 function showStartGate() {
   document.body.classList.add('prestart');
+  renderCustomLevels();
   document.getElementById('startGate')?.classList.add('show');
 }
 function dismissSplash() {
@@ -1209,7 +2131,7 @@ function dismissSplash() {
   splash.classList.add('hide');
   setTimeout(() => splash.remove(), 500);
 }
-function startGameFromGate() {
+function openAppFromGate({ openEditor = false, onOpen = null } = {}) {
   if (gameStarted) return;
   gameStarted = true;
   const gate = document.getElementById('startGate');
@@ -1220,8 +2142,26 @@ function startGameFromGate() {
   setTimeout(() => gate?.classList.remove('show', 'hiding'), gateFadeMs);
   setTimeout(() => {
     document.body.classList.remove('prestart');
+    if (onOpen) onOpen();
+    else setEditorMode(openEditor);
     fadeInPizzicatoBgm(2200);
   }, gateFadeMs + backgroundHoldMs);
+}
+function startGameFromGate() {
+  openAppFromGate({ openEditor: false });
+}
+function startEditorFromGate() {
+  openAppFromGate({ openEditor: true });
+}
+function exitEditorMode() {
+  if (!editorMode || running || animating) return;
+  closeSaveLevelModal();
+  if (getTutorialSteps().length) {
+    setEditorMode(false);
+    applyTutorialStep(tutorialStepIndex);
+    return;
+  }
+  setEditorMode(false);
 }
 
 // ── Splash dismiss ──
@@ -1230,8 +2170,23 @@ setTimeout(dismissSplash, 2200);
 // tap to skip
 document.getElementById('splash')?.addEventListener('pointerdown', dismissSplash);
 document.getElementById('startGameBtn')?.addEventListener('click', startGameFromGate);
+document.getElementById('startEditorBtn')?.addEventListener('click', startEditorFromGate);
+document.getElementById('saveLevelBtn')?.addEventListener('click', openSaveLevelModal);
+document.getElementById('exitEditorBtn')?.addEventListener('click', exitEditorMode);
+document.getElementById('cancelSaveLevelBtn')?.addEventListener('click', closeSaveLevelModal);
+document.getElementById('confirmSaveLevelBtn')?.addEventListener('click', saveCurrentEditorLevel);
+document.getElementById('saveLevelModal')?.addEventListener('click', e => {
+  if (e.target?.id === 'saveLevelModal') closeSaveLevelModal();
+});
+document.getElementById('levelNameInput')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveCurrentEditorLevel();
+});
 document.addEventListener('keydown', e => {
   const key = (e.key || '').toLowerCase();
+  if (key === 'escape') {
+    closeSaveLevelModal();
+    return;
+  }
   if (key === 'l') {
     toggleDebugBadge();
     return;
@@ -1254,6 +2209,7 @@ window.addEventListener('resize', () => {
     renderFn();
     drawBackground();
     syncSprite();
+    refreshEditorDebug();
   });
 });
 window.visualViewport?.addEventListener('resize', syncViewportHeight);

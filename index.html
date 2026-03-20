@@ -30,19 +30,38 @@
   <div class="start-title">
     <span style="color:#3F9A62;text-shadow:0 5px 0 #2b6f46;">B</span><span style="color:#FF3B3B;text-shadow:0 5px 0 #a81f1f;">Ö</span><span style="color:#FFD31A;text-shadow:0 5px 0 #b18400;">K</span><span style="color:#2B8FD4;text-shadow:0 5px 0 #1a5a8a;">S</span>
   </div>
-  <button id="startGameBtn" type="button" aria-label="Play">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M12 12 L12 7.5 A4.5 4.5 0 0 1 16.5 12 Z" fill="#2B8FD4"/>
-      <path d="M12 12 L16.5 12 A4.5 4.5 0 0 1 12 16.5 Z" fill="#FFD31A"/>
-      <path d="M12 12 L12 16.5 A4.5 4.5 0 0 1 7.5 12 Z" fill="#FF3B3B"/>
-      <path d="M12 12 L7.5 12 A4.5 4.5 0 0 1 12 7.5 Z" fill="#3F9A62"/>
-    </svg>
-  </button>
+  <div class="start-actions">
+    <button id="startGameBtn" type="button" aria-label="Play">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 12 L12 7.5 A4.5 4.5 0 0 1 16.5 12 Z" fill="#2B8FD4"/>
+        <path d="M12 12 L16.5 12 A4.5 4.5 0 0 1 12 16.5 Z" fill="#FFD31A"/>
+        <path d="M12 12 L12 16.5 A4.5 4.5 0 0 1 7.5 12 Z" fill="#FF3B3B"/>
+        <path d="M12 12 L7.5 12 A4.5 4.5 0 0 1 12 7.5 Z" fill="#3F9A62"/>
+      </svg>
+    </button>
+    <button id="startEditorBtn" type="button">Level Editor</button>
+  </div>
 </div>
   <div id="app">
   <!-- BÖKS header -->
   <div id="header">
     <span class="logo-letter logo-b">B</span><span class="logo-letter logo-o">Ö</span><span class="logo-letter logo-k">K</span><span class="logo-letter logo-s">S</span>
+  </div>
+  <div id="editorToolbar" aria-label="Level editor controls">
+    <button id="saveLevelBtn" type="button">Salva</button>
+    <button id="exitEditorBtn" type="button">Esci</button>
+  </div>
+  <div id="customLevelsPanel" aria-label="I miei livelli">
+    <div class="custom-levels-head">
+      <h3>Livelli</h3>
+    </div>
+    <div id="customLevelsList"></div>
+  </div>
+  <div id="elementPalettePanel" aria-label="Elementi del livello">
+    <div class="custom-levels-head">
+      <h3>Elementi</h3>
+    </div>
+    <div id="elementPalette"></div>
   </div>
   <!-- Row 1: grid (flexible) -->
   <div id="gridWrap">
@@ -68,8 +87,27 @@
 <div id="ghost"></div>
 <div id="toast"></div>
 <div id="levelFade"></div>
+<div id="saveLevelModal" aria-hidden="true">
+  <div class="save-level-card" role="dialog" aria-modal="true" aria-labelledby="saveLevelTitle">
+    <h2 id="saveLevelTitle">Salva livello</h2>
+    <label class="save-field" for="levelNameInput">
+      <span>Nome</span>
+      <input id="levelNameInput" type="text" maxlength="32" placeholder="Es. Giro Corto">
+    </label>
+    <div class="save-field">
+      <span>Icona</span>
+      <div id="iconPicker"></div>
+    </div>
+    <div class="save-actions">
+      <button id="cancelSaveLevelBtn" type="button">Annulla</button>
+      <button id="confirmSaveLevelBtn" type="button">Salva livello</button>
+    </div>
+  </div>
+</div>
 
   <script src="js/levels/level1.js"></script>
+  <script src="js/editor/solver.js"></script>
+  <script src="js/editor/level-editor.js"></script>
   <script src="js/core/game.js"></script>
   <script src="js/core/sw-register.js"></script>
 </body>

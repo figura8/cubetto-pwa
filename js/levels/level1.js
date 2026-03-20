@@ -15,31 +15,31 @@
     const deg = rot[o];
     return `<svg width="100%" height="100%" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
       <g transform="rotate(${deg} 36 36)">
-        <rect x="1" y="1" width="70" height="70" fill="#dcf3c8" rx="10" stroke="#95bf66" stroke-width="1"/>
-        <ellipse cx="22" cy="19" rx="8" ry="6" fill="#5abf4a" transform="rotate(-20 22 19)"/>
-        <ellipse cx="22" cy="19" rx="5" ry="3.5" fill="#72d95e" transform="rotate(-20 22 19)"/>
-        <ellipse cx="22" cy="53" rx="8" ry="6" fill="#5abf4a" transform="rotate(20 22 53)"/>
-        <ellipse cx="22" cy="53" rx="5" ry="3.5" fill="#72d95e" transform="rotate(20 22 53)"/>
-        <ellipse cx="38" cy="19" rx="8" ry="6" fill="#5abf4a" transform="rotate(20 38 19)"/>
-        <ellipse cx="38" cy="19" rx="5" ry="3.5" fill="#72d95e" transform="rotate(20 38 19)"/>
-        <ellipse cx="38" cy="53" rx="8" ry="6" fill="#5abf4a" transform="rotate(-20 38 53)"/>
-        <ellipse cx="38" cy="53" rx="5" ry="3.5" fill="#72d95e" transform="rotate(-20 38 53)"/>
-        <ellipse cx="30" cy="37" rx="19" ry="16" fill="#3a7a2e"/>
-        <ellipse cx="30" cy="35" rx="19" ry="16" fill="#4CAF3F"/>
-        <ellipse cx="27" cy="29" rx="10" ry="6" fill="#72d95e" opacity="0.5"/>
-        <ellipse cx="30" cy="35" rx="12" ry="9" fill="#3a8a2e" opacity="0.5"/>
-        <ellipse cx="30" cy="35" rx="7" ry="5" fill="#4CAF3F"/>
-        <ellipse cx="26" cy="31" rx="3" ry="2" fill="#3a8a2e" opacity="0.4"/>
-        <ellipse cx="34" cy="31" rx="3" ry="2" fill="#3a8a2e" opacity="0.4"/>
-        <ellipse cx="30" cy="39" rx="3" ry="2" fill="#3a8a2e" opacity="0.4"/>
-        <ellipse cx="52" cy="36" rx="10" ry="9" fill="#3a7a2e"/>
-        <ellipse cx="51" cy="35" rx="10" ry="9" fill="#4CAF3F"/>
-        <ellipse cx="48" cy="31" rx="5" ry="3" fill="#72d95e" opacity="0.5"/>
-        <circle cx="54" cy="33" r="2.5" fill="#fff"/>
-        <circle cx="54.5" cy="33.5" r="1.4" fill="#222"/>
-        <circle cx="55" cy="32.8" r="0.5" fill="#fff"/>
-        <ellipse cx="14" cy="37" rx="6" ry="4" fill="#3a7a2e"/>
-        <ellipse cx="14" cy="36" rx="6" ry="4" fill="#4CAF3F"/>
+        <defs>
+          <radialGradient id="boks-body" cx="30%" cy="22%" r="78%">
+            <stop offset="0%" stop-color="#d9ffbf"/>
+            <stop offset="52%" stop-color="#a3f19a"/>
+            <stop offset="100%" stop-color="#76d978"/>
+          </radialGradient>
+          <linearGradient id="boks-leg" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#79d56e"/>
+            <stop offset="100%" stop-color="#5ab958"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="36" cy="62" rx="18" ry="4.8" fill="rgba(72,121,54,0.18)"/>
+        <rect x="10" y="8" width="52" height="50" rx="16" fill="url(#boks-body)"/>
+        <rect x="10" y="8" width="52" height="50" rx="16" fill="none" stroke="#88cf7a" stroke-width="1.4"/>
+        <ellipse cx="24" cy="18" rx="11" ry="7" fill="rgba(255,255,255,0.26)" transform="rotate(-24 24 18)"/>
+        <ellipse cx="40" cy="13" rx="12" ry="5" fill="rgba(255,255,255,0.08)"/>
+        <rect x="19" y="54" width="11" height="11" rx="5.5" fill="url(#boks-leg)"/>
+        <rect x="42" y="54" width="11" height="11" rx="5.5" fill="url(#boks-leg)"/>
+        <circle cx="26" cy="31" r="3.7" fill="#2f2d2b"/>
+        <circle cx="46" cy="31" r="3.7" fill="#2f2d2b"/>
+        <circle cx="27.1" cy="29.8" r="1" fill="rgba(255,255,255,0.78)"/>
+        <circle cx="47.1" cy="29.8" r="1" fill="rgba(255,255,255,0.78)"/>
+        <circle cx="18.5" cy="39" r="3.3" fill="#efd8a1" opacity="0.95"/>
+        <circle cx="53.5" cy="39" r="3.3" fill="#efd8a1" opacity="0.95"/>
+        <path d="M31 39 C33.2 42 38.8 42 41 39" fill="none" stroke="#2f2d2b" stroke-width="2.2" stroke-linecap="round"/>
       </g>
     </svg>`;
   }
