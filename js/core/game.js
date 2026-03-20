@@ -959,6 +959,10 @@ function toggleEditorSlot(zone, idx) {
 }
 function getTutorialSteps() {
   if (currentCustomLevel) return [];
+  if (!LEVEL_EDITOR_ENABLED) {
+    const lv = getLevel();
+    return lv?.tutorialSteps || [];
+  }
   if (currentLevel === 'level1') {
     return readCustomLevels().map(editorLevelToTutorialStep);
   }
