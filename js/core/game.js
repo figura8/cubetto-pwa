@@ -38,6 +38,7 @@ const CUSTOM_LEVELS_STORAGE_KEY = 'boks-custom-levels';
 const EDITOR_LEVELS_STORAGE_KEY = 'boks-editor-levels-v1';
 const CUSTOM_LEVEL_THEME = 'level1';
 const CUSTOM_ICONS = ['leaf', 'star', 'turtle', 'sun', 'moon', 'flower'];
+const LEVEL_EDITOR_ENABLED = false;
 
 // ═══ STATE ═══
 let pos = {...START};
@@ -941,6 +942,7 @@ function toggleEditorBlock(dir) {
 }
 
 function setEditorMode(enabled) {
+  if (!LEVEL_EDITOR_ENABLED && enabled) return;
   levelEditor.setEditorMode(enabled);
   if (enabled) {
     refreshEditorDebug();
@@ -1378,6 +1380,7 @@ function renderIconPicker() {
 }
 
 function openSaveLevelModal() {
+  if (!LEVEL_EDITOR_ENABLED) return;
   saveCurrentEditorLevel();
 }
 
@@ -1388,7 +1391,7 @@ function closeSaveLevelModal() {
 }
 
 function saveCurrentEditorLevel() {
-  if (!editorMode) return;
+  if (!LEVEL_EDITOR_ENABLED || !editorMode) return;
   const levelId = selectedEditorLevelId || currentCustomLevel?.id;
   if (!levelId) {
     toast('Seleziona un livello');
@@ -1436,7 +1439,7 @@ function saveCurrentEditorLevel() {
 
 function renderCustomLevels() {
   const list = document.getElementById('customLevelsList');
-  if (!list) return;
+  if (!list || !LEVEL_EDITOR_ENABLED) return;
   const levels = readCustomLevels();
   list.innerHTML = '';
   if (!levels.length) return;
@@ -2145,6 +2148,7 @@ function dismissSplash() {
 function openAppFromGate({ openEditor = false, onOpen = null } = {}) {
   if (gameStarted) return;
   gameStarted = true;
+  const shouldOpenEditor = LEVEL_EDITOR_ENABLED && openEditor;
   const gate = document.getElementById('startGate');
   const gateFadeMs = 1100;
   const backgroundHoldMs = 500;
@@ -2154,7 +2158,7 @@ function openAppFromGate({ openEditor = false, onOpen = null } = {}) {
   setTimeout(() => {
     document.body.classList.remove('prestart');
     if (onOpen) onOpen();
-    else setEditorMode(openEditor);
+    else setEditorMode(shouldOpenEditor);
     fadeInPizzicatoBgm(2200);
   }, gateFadeMs + backgroundHoldMs);
 }
@@ -2162,6 +2166,7 @@ function startGameFromGate() {
   openAppFromGate({ openEditor: false });
 }
 function startEditorFromGate() {
+  if (!LEVEL_EDITOR_ENABLED) return;
   openAppFromGate({ openEditor: true });
 }
 function exitEditorMode() {
