@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exportedAt": "2026-03-20T19:49:21.364Z",
+  "exportedAt": "2026-03-20T19:52:41.594Z",
   "levels": [
     {
       "id": "level1-step-1",
@@ -222,7 +222,7 @@
       "number": 6,
       "baseStepIndex": 5,
       "name": "Livello 6",
-      "icon": "flower",
+      "icon": "leaf",
       "baseLevel": "level1",
       "start": {
         "x": 1,
