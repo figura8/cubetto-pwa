@@ -711,6 +711,12 @@ function findCustomLevel(levelId) {
   return readCustomLevels().find(level => level.id === levelId) || null;
 }
 
+function getEditorLevelIdForTutorialStep(idx = tutorialStepIndex) {
+  const levels = readCustomLevels();
+  const match = levels.find(level => (level.baseStepIndex ?? null) === idx);
+  return match?.id || `level1-step-${idx + 1}`;
+}
+
 function tutorialStepToEditorLevel(step, idx) {
   const mainCount = Math.max(0, Math.min(SLOTS, step.mainSlots ?? SLOTS));
   const fnCount = Math.max(0, Math.min(FSLOTS, step.fnSlots ?? 0));
@@ -961,7 +967,7 @@ function toggleEditorSlot(zone, idx) {
 function getTutorialSteps() {
   if (currentCustomLevel) return [];
   if (currentLevel === 'level1') {
-    return getOfficialTutorialSteps();
+    return readCustomLevels().map(editorLevelToTutorialStep);
   }
   const lv = getLevel();
   return lv?.tutorialSteps || [];
@@ -992,6 +998,7 @@ function applyTutorialStep(idx = 0) {
   const steps = getTutorialSteps();
   if (!steps.length) return false;
   tutorialStepIndex = ((idx % steps.length) + steps.length) % steps.length;
+  selectedEditorLevelId = getEditorLevelIdForTutorialStep(tutorialStepIndex);
   const step = steps[tutorialStepIndex];
   activeMainSlots = Math.max(0, Math.min(SLOTS, step.mainSlots ?? SLOTS));
   activeFnSlots = Math.max(0, Math.min(FSLOTS, step.fnSlots ?? 0));
@@ -1392,7 +1399,9 @@ function closeSaveLevelModal() {
 
 function saveCurrentEditorLevel() {
   if (!editorMode) return;
-  const levelId = selectedEditorLevelId || currentCustomLevel?.id;
+  const levelId = currentCustomLevel?.id
+    || selectedEditorLevelId
+    || (currentLevel === 'level1' ? getEditorLevelIdForTutorialStep(tutorialStepIndex) : null);
   if (!levelId) {
     toast('Seleziona un livello');
     return;
@@ -1411,10 +1420,11 @@ function saveCurrentEditorLevel() {
     writeCustomLevels(levels);
     currentCustomLevel = cloneCustomLevel(newLevel);
     selectedEditorLevelId = newLevel.id;
+    applyCustomLevel(newLevel, { openEditor: true });
     renderCustomLevels();
     renderElementPalette();
-    toast('Nuovo livello salvato');
-    return;
+    toast('Livello salvato e aggiornato nel gioco');
+    return newLevel;
   }
   const idx = levels.findIndex(entry => entry.id === levelId);
   if (idx === -1) {
@@ -1430,11 +1440,23 @@ function saveCurrentEditorLevel() {
     name: levels[idx].name
   });
   writeCustomLevels(levels);
-  currentCustomLevel = cloneCustomLevel(levels[idx]);
-  selectedEditorLevelId = levels[idx].id;
+  const savedLevel = levels[idx];
+  selectedEditorLevelId = savedLevel.id;
+  if (savedLevel.baseStepIndex != null) {
+    currentCustomLevel = null;
+    currentLevel = 'level1';
+    applyLevelSceneVars();
+    tutorialStepIndex = savedLevel.baseStepIndex;
+    applyTutorialStep(savedLevel.baseStepIndex);
+    refreshEditorDebug();
+  } else {
+    currentCustomLevel = cloneCustomLevel(savedLevel);
+    applyCustomLevel(savedLevel, { openEditor: true });
+  }
   renderCustomLevels();
   renderElementPalette();
-  toast('Livello salvato');
+  toast('Livello salvato e aggiornato nel gioco');
+  return savedLevel;
 }
 
 function renderCustomLevels() {
@@ -2170,12 +2192,21 @@ function startEditorFromGate() {
 function exitEditorMode() {
   if (!editorMode || running || animating) return;
   closeSaveLevelModal();
-  if (getTutorialSteps().length) {
-    setEditorMode(false);
-    applyTutorialStep(tutorialStepIndex);
+  if (currentCustomLevel) {
+    applyCustomLevel(currentCustomLevel, { openEditor: false });
     return;
   }
   setEditorMode(false);
+  if (getTutorialSteps().length) {
+    applyTutorialStep(tutorialStepIndex);
+    return;
+  }
+  renderAvail();
+  renderBoard();
+  renderFn();
+  drawBackground();
+  syncSprite();
+  updateDebugBadge();
 }
 
 // ── Splash dismiss ──
