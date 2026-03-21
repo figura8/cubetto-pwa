@@ -10,8 +10,7 @@ const PRECACHE_URLS = [
   "./data/editor-levels.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
-  "./icons/boks-apple-touch-icon.png",
-  "./icons/favicon.png"
+  "./icons/boks-apple-touch-icon.png"
 ];
 
 self.addEventListener("install", event => {
