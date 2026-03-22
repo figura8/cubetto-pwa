@@ -2413,10 +2413,13 @@ function showStartGate() {
 }
 function dismissSplash() {
   const splash = document.getElementById('splash');
-  if (!splash) return;
+  if (!splash) {
+    showStartGate();
+    return;
+  }
   showStartGate();
   splash.classList.add('hide');
-  setTimeout(() => splash.remove(), 250);
+  setTimeout(() => splash.remove(), 120);
 }
 function openAppFromGate({ openEditor = false, onOpen = null } = {}) {
   if (gameStarted) return;

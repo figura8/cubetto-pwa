@@ -673,20 +673,16 @@
     #splash {
       position: fixed; inset: 0; z-index: 9999;
       background:
-        radial-gradient(110% 90% at 50% 15%, #fff7e8 0%, #efe5cf 55%, #e0d1b6 100%);
+        radial-gradient(120% 95% at 50% 0%, #fbf5e8 0%, #efe5cf 56%, #e4d8c3 100%);
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       gap: 0;
-      transition: opacity 0.5s ease;
+      transition: opacity 0.18s ease;
     }
     #splash.hide { opacity: 0; pointer-events: none; }
     #splash-logo { display: none; }
     .splash-stage {
-      width: min(360px, calc(100vw - 48px));
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 18px;
+      display: none;
     }
     .splash-track {
       width: 100%;
