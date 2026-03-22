@@ -74,6 +74,25 @@ Obiettivo della sessione:
 - Comando utile per aggiornare il numero build prima di pubblicare:
   - `powershell -ExecutionPolicy Bypass -File scripts\stamp-build.ps1`
 
+8. Sostituzione della tartaruga con il personaggio dell'icona
+- La tartaruga placeholder e stata sostituita con il personaggio identico dell'icona.
+- E stato creato l'asset:
+  - `icons/boks-character.png`
+- Il renderer del personaggio e stato aggiornato in:
+  - `js/levels/level1.js`
+- L'animazione base del personaggio e stata aggiunta in:
+  - `styles/app.css`
+- Poi il personaggio e stato ingrandito per aumentare la presenza nel tabellone.
+- L'ombra sotto il personaggio e stata rimossa.
+
+9. Strumenti locali per test rapido tra gioco ed editor
+- Durante i test locali e stato aggiunto un bottone rapido `Editor` dentro il gioco.
+- E stata aggiunta anche la shortcut da tastiera `E`.
+- Il bottone e la shortcut ora funzionano come toggle:
+  - entri nell'editor sul livello corrente
+  - ripremi e torni al livello che stavi testando
+- Questo e pensato come strumento di lavoro locale per iterare senza tornare ogni volta al menu iniziale.
+
 ## Commit fatti
 
 - `6d2523b` `Add controlled black launch screen`
@@ -82,6 +101,8 @@ Obiettivo della sessione:
 - `5e33f46` `Remove launch hold and add build stamp badge`
 - `146258f` `Show build date and time in badge`
 - `046b45c` `Remove intermediate splash loading state`
+- `8c4ef1a` `Replace turtle with icon character sprite`
+- `6a24b3b` `Scale up main character sprite`
 
 Sono stati pushati su `origin/main`.
 
@@ -122,3 +143,5 @@ Oppure:
 - controllare che il badge mostri sempre la build nuova dopo ogni push
 - decidere in seguito se tornare a Netlify oppure restare su GitHub Pages
 - decidere se tenere `main` come branch pubblicato o tornare a usare `live` come branch release
+- rifinire ancora scala, animazione e feeling del personaggio principale
+- decidere se il toggle rapido `Editor/Gioco` deve restare solo locale o diventare parte del flusso normale

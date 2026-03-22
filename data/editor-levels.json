@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exportedAt": "2026-03-20T19:52:41.594Z",
+  "exportedAt": "2026-03-22T19:01:27.068Z",
   "levels": [
     {
       "id": "level1-step-1",
@@ -282,8 +282,8 @@
       "mainSlotEnabled": [
         true,
         true,
-        true,
-        true,
+        false,
+        false,
         false,
         false,
         false,

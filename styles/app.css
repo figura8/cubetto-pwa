@@ -141,6 +141,35 @@
       display: flex; align-items: center; gap: 1px;
       letter-spacing: 0.5px;
     }
+    #quickEditorBtn {
+      position: absolute;
+      top: calc(8px + var(--safe-top));
+      right: 12px;
+      z-index: 260;
+      display: none;
+      min-width: 78px;
+      min-height: 36px;
+      padding: 0 12px;
+      border: 2px solid var(--panel-edge);
+      border-radius: 999px;
+      background: linear-gradient(180deg, #fff6df 0%, var(--panel-bg) 100%);
+      color: #5f4e34;
+      font-family: 'Fredoka', system-ui, sans-serif;
+      font-size: 0.82rem;
+      font-weight: 700;
+      box-shadow: 0 3px 0 #cdc2ab, 0 6px 10px rgba(95, 78, 52, 0.16);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body:not(.prestart) #quickEditorBtn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #quickEditorBtn:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #cdc2ab, 0 3px 7px rgba(95, 78, 52, 0.14);
+    }
     .logo-letter {
       font-family: 'Lilita One', cursive;
       font-size: 1.62em;
@@ -285,17 +314,6 @@
       width: 100%;
       height: 100%;
     }
-    .boks-hero__shadow {
-      position: absolute;
-      left: 50%;
-      bottom: 10%;
-      width: 46%;
-      height: 12%;
-      border-radius: 999px;
-      background: rgba(36, 27, 21, 0.16);
-      filter: blur(2px);
-      transform: translateX(-50%);
-    }
     .boks-hero__motion {
       position: absolute;
       inset: 0;
@@ -306,8 +324,8 @@
       transform-origin: 50% 68%;
     }
     .boks-hero__rotator {
-      width: 104%;
-      height: 104%;
+      width: 132%;
+      height: 132%;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -325,8 +343,7 @@
     #sprite.moving .boks-hero__motion {
       animation: heroStrideFloat 0.28s ease-in-out infinite;
     }
-    #ghost .boks-hero__motion,
-    #ghost .boks-hero__shadow {
+    #ghost .boks-hero__motion {
       animation: none;
       opacity: 0.92;
     }
@@ -1265,6 +1282,12 @@
       letter-spacing: 0.05em;
     }
     @media (max-width: 460px) {
+      #quickEditorBtn {
+        min-width: 72px;
+        min-height: 34px;
+        padding: 0 10px;
+        font-size: 0.78rem;
+      }
       #editorToolbar {
         flex-wrap: wrap;
         justify-content: center;

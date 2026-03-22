@@ -471,6 +471,18 @@ function cellPos(x, y) {
   return { l: cr.left-wr.left, t: cr.top-wr.top, w: cr.width, h: cr.height };
 }
 
+function spriteRectFromCellRect(r) {
+  const scale = 1.42;
+  const width = r.w * scale;
+  const height = r.h * scale;
+  return {
+    l: r.l - ((width - r.w) / 2),
+    t: r.t - ((height - r.h) / 2) - (r.h * 0.04),
+    w: width,
+    h: height
+  };
+}
+
 function syncSprite() {
   const s = document.getElementById('sprite');
   if (!s) return;
@@ -483,9 +495,10 @@ function syncSprite() {
   }
   const r = cellPos(pos.x, pos.y);
   if(!r) return;
+  const sr = spriteRectFromCellRect(r);
   s.style.opacity = '1';
-  s.style.left = r.l+'px'; s.style.top = r.t+'px';
-  s.style.width = r.w+'px'; s.style.height = r.h+'px';
+  s.style.left = sr.l+'px'; s.style.top = sr.t+'px';
+  s.style.width = sr.w+'px'; s.style.height = sr.h+'px';
   s.innerHTML = svgRobot(ori);
 }
 
@@ -503,13 +516,15 @@ async function animTo(tx, ty) {
     to = cellPos(tx, ty);
   }
   if(!fr || !to) { pos={x:tx,y:ty}; syncSprite(); animating=false; return; }
+  const sfr = spriteRectFromCellRect(fr);
+  const sto = spriteRectFromCellRect(to);
   s.classList.add('moving');
   const a = s.animate(
-    [{left:fr.l+'px',top:fr.t+'px'},{left:to.l+'px',top:to.t+'px'}],
+    [{left:sfr.l+'px',top:sfr.t+'px'},{left:sto.l+'px',top:sto.t+'px'}],
     {duration:MOVE_MS, easing:'cubic-bezier(.2,.9,.2,1)', fill:'forwards'}
   );
   await a.finished.catch(()=>{});
-  s.style.left=to.l+'px'; s.style.top=to.t+'px';
+  s.style.left=sto.l+'px'; s.style.top=sto.t+'px';
   a.cancel();
   s.classList.remove('moving');
   pos={x:tx,y:ty}; animating=false;
@@ -522,8 +537,9 @@ function setupSpriteDrag() {
     if(!editorMode||running||animating||!playerPlaced) return false;
     const g = document.getElementById('ghost');
     const w = s.offsetWidth;
+    const h = s.offsetHeight;
     g.innerHTML = svgRobot(ori);
-    g.style.cssText = `display:block;width:${w}px;height:${w}px;left:${cx}px;top:${cy}px;`;
+    g.style.cssText = `display:block;width:${w}px;height:${h}px;left:${cx}px;top:${cy}px;`;
     s.style.opacity = '0.3'; return true;
   }
   function move(cx,cy) {
@@ -1205,6 +1221,7 @@ function setEditorMode(enabled) {
     updateRunAvailability();
     renderElementPalette();
   }
+  updateQuickEditorButton();
 }
 
 function toggleEditorSlot(zone, idx) {
@@ -2443,9 +2460,53 @@ function startGameFromGate() {
 function startEditorFromGate() {
   openAppFromGate({ openEditor: true });
 }
+function updateQuickEditorButton() {
+  const btn = document.getElementById('quickEditorBtn');
+  if (!btn) return;
+  btn.textContent = editorMode ? 'Gioco' : 'Editor';
+  btn.setAttribute(
+    'aria-label',
+    editorMode ? 'Torna al livello in gioco' : 'Apri editor con il livello corrente'
+  );
+}
+function toggleEditorFromCurrentLevel() {
+  if (editorMode) {
+    exitEditorMode();
+    return;
+  }
+  enterEditorFromCurrentLevel();
+}
+function enterEditorFromCurrentLevel() {
+  if (running || animating) {
+    toast('Aspetta che il movimento finisca');
+    return;
+  }
+  closeSaveLevelModal();
+  if (currentCustomLevel) {
+    applyCustomLevel(currentCustomLevel, { openEditor: true });
+    return;
+  }
+  if (currentLevel === 'level1') {
+    const tutorialLevel = findCustomLevel(getEditorLevelIdForTutorialStep(tutorialStepIndex));
+    if (tutorialLevel) {
+      applyCustomLevel(tutorialLevel, { openEditor: true });
+      return;
+    }
+  }
+  setEditorMode(true);
+}
 function exitEditorMode() {
   if (!editorMode || running || animating) return;
   closeSaveLevelModal();
+  if (currentCustomLevel?.baseStepIndex != null) {
+    const stepIndex = currentCustomLevel.baseStepIndex;
+    currentCustomLevel = null;
+    currentLevel = 'level1';
+    applyLevelSceneVars();
+    setEditorMode(false);
+    applyTutorialStep(stepIndex);
+    return;
+  }
   if (currentCustomLevel) {
     applyCustomLevel(currentCustomLevel, { openEditor: false });
     return;
@@ -2469,6 +2530,7 @@ setTimeout(dismissSplash, 0);
 // tap to skip
 document.getElementById('startGameBtn')?.addEventListener('click', startGameFromGate);
 document.getElementById('startEditorBtn')?.addEventListener('click', startEditorFromGate);
+document.getElementById('quickEditorBtn')?.addEventListener('click', toggleEditorFromCurrentLevel);
 document.getElementById('saveLevelBtn')?.addEventListener('click', openSaveLevelModal);
 document.getElementById('exportLevelsBtn')?.addEventListener('click', exportEditorLevels);
 document.getElementById('importLevelsBtn')?.addEventListener('click', openImportLevelsPicker);
@@ -2493,9 +2555,16 @@ document.getElementById('levelNameInput')?.addEventListener('keydown', e => {
   if (e.key === 'Enter') saveCurrentEditorLevel();
 });
 document.addEventListener('keydown', e => {
+  const tag = e.target?.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) return;
   const key = (e.key || '').toLowerCase();
   if (key === 'escape') {
     closeSaveLevelModal();
+    return;
+  }
+  if (key === 'e' && !document.body.classList.contains('prestart')) {
+    e.preventDefault();
+    toggleEditorFromCurrentLevel();
     return;
   }
   if (key === 'l') {
@@ -2526,6 +2595,7 @@ window.addEventListener('resize', () => {
 window.visualViewport?.addEventListener('resize', syncViewportHeight);
 window.visualViewport?.addEventListener('scroll', syncViewportHeight);
 window.addEventListener('orientationchange', syncViewportHeight);
+updateQuickEditorButton();
 
 // ri-entra in fullscreen se l'utente torna sull'app (es. dopo notifica)
 document.addEventListener('visibilitychange', () => {
