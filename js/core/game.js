@@ -1107,9 +1107,7 @@ function toggleEditorSlot(zone, idx) {
 function getTutorialSteps() {
   if (currentCustomLevel) return [];
   if (currentLevel === 'level1') {
-    return LEVEL_EDITOR_ENABLED
-      ? readCustomLevels().map(editorLevelToTutorialStep)
-      : getOfficialTutorialSteps();
+    return readCustomLevels().map(editorLevelToTutorialStep);
   }
   const lv = getLevel();
   return lv?.tutorialSteps || [];
@@ -2258,7 +2256,7 @@ async function run() {
 
 // ═══ INIT ═══
 async function init() {
-  if (LEVEL_EDITOR_ENABLED) await loadEditorLevelsSource();
+  await loadEditorLevelsSource();
   syncViewportHeight();
   currentLevel = 'level1';
   setLevel('level1', { persist: false });
