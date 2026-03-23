@@ -55,6 +55,7 @@ let tutorialStepIndex = 0;
 let blockedCells = new Set();
 let activeMainSlots = SLOTS;
 let activeFnSlots = FSLOTS;
+let characterAction = 'idle';
 let mainSlotEnabled = Array(SLOTS).fill(true);
 let fnSlotEnabled = Array(FSLOTS).fill(true);
 let editorBlockEnabled = {
@@ -483,6 +484,27 @@ function spriteRectFromCellRect(r) {
   };
 }
 
+function getCharacterRenderState(overrides = {}) {
+  return {
+    direction: overrides.direction || ori,
+    action: overrides.action || characterAction
+  };
+}
+
+function setCharacterAction(action = 'idle') {
+  characterAction = action;
+}
+
+function resetSpritePresentation() {
+  const sprite = document.getElementById('sprite');
+  setCharacterAction('idle');
+  if (sprite) {
+    sprite.getAnimations().forEach(a => a.cancel());
+    sprite.classList.remove('moving');
+  }
+  return sprite;
+}
+
 function syncSprite() {
   const s = document.getElementById('sprite');
   if (!s) return;
@@ -499,7 +521,7 @@ function syncSprite() {
   s.style.opacity = '1';
   s.style.left = sr.l+'px'; s.style.top = sr.t+'px';
   s.style.width = sr.w+'px'; s.style.height = sr.h+'px';
-  s.innerHTML = svgRobot(ori);
+  s.innerHTML = svgRobot(getCharacterRenderState());
 }
 
 async function animTo(tx, ty) {
@@ -515,7 +537,13 @@ async function animTo(tx, ty) {
     fr = cellPos(pos.x, pos.y);
     to = cellPos(tx, ty);
   }
-  if(!fr || !to) { pos={x:tx,y:ty}; syncSprite(); animating=false; return; }
+  if(!fr || !to) {
+    pos={x:tx,y:ty};
+    setCharacterAction('idle');
+    syncSprite();
+    animating=false;
+    return;
+  }
   const sfr = spriteRectFromCellRect(fr);
   const sto = spriteRectFromCellRect(to);
   s.classList.add('moving');
@@ -527,7 +555,10 @@ async function animTo(tx, ty) {
   s.style.left=sto.l+'px'; s.style.top=sto.t+'px';
   a.cancel();
   s.classList.remove('moving');
-  pos={x:tx,y:ty}; animating=false;
+  pos={x:tx,y:ty};
+  setCharacterAction('idle');
+  syncSprite();
+  animating=false;
 }
 
 // ═══ SPRITE DRAG ═══
@@ -538,7 +569,7 @@ function setupSpriteDrag() {
     const g = document.getElementById('ghost');
     const w = s.offsetWidth;
     const h = s.offsetHeight;
-    g.innerHTML = svgRobot(ori);
+    g.innerHTML = svgRobot(getCharacterRenderState());
     g.style.cssText = `display:block;width:${w}px;height:${h}px;left:${cx}px;top:${cy}px;`;
     s.style.opacity = '0.3'; return true;
   }
@@ -1250,11 +1281,7 @@ function resetPlayerToStepStart() {
   const step = getCurrentTutorialStep();
   pos = { ...START };
   ori = currentCustomLevel?.startOri || step?.startOri || 'right';
-  const sprite = document.getElementById('sprite');
-  if (sprite) {
-    sprite.getAnimations().forEach(a => a.cancel());
-    sprite.classList.remove('moving');
-  }
+  resetSpritePresentation();
   syncSprite();
 }
 function applyTutorialStep(idx = 0) {
@@ -1286,11 +1313,7 @@ function applyTutorialStep(idx = 0) {
   renderBoard();
   renderFn();
   drawBackground();
-  const sprite = document.getElementById('sprite');
-  if (sprite) {
-    sprite.getAnimations().forEach(a => a.cancel());
-    sprite.classList.remove('moving');
-  }
+  const sprite = resetSpritePresentation();
   syncSprite();
   requestAnimationFrame(() => {
     sizeGrid();
@@ -1299,6 +1322,7 @@ function applyTutorialStep(idx = 0) {
       sprite.getAnimations().forEach(a => a.cancel());
       sprite.classList.remove('moving');
     }
+    setCharacterAction('idle');
     syncSprite();
   });
   updateDebugBadge();
@@ -1339,11 +1363,7 @@ function applyCustomLevel(level, { openEditor = false } = {}) {
   renderBoard();
   renderFn();
   drawBackground();
-  const sprite = document.getElementById('sprite');
-  if (sprite) {
-    sprite.getAnimations().forEach(a => a.cancel());
-    sprite.classList.remove('moving');
-  }
+  resetSpritePresentation();
   syncSprite();
   if (editorMode) refreshEditorDebug();
   else {
@@ -1442,6 +1462,7 @@ function startBlankEditorLevel() {
   GOAL = { x: 5, y: 5 };
   pos = { ...START };
   ori = 'right';
+  setCharacterAction('idle');
   setBlockedCells([]);
   resetPrograms();
   mainSlotEnabled = Array(SLOTS).fill(false);
@@ -2245,6 +2266,8 @@ async function moveChar(dir) {
       await sleep(120);
       return;
     }
+    setCharacterAction('move');
+    syncSprite();
     await animTo(p.x,p.y); await sleep(80);
   } else {
     playTurnSfx(dir);
@@ -2253,6 +2276,8 @@ async function moveChar(dir) {
       : {up:'right',right:'down',down:'left',left:'up'}[ori];
     const deg = dir==='left' ? -90 : 90;
     const s = document.getElementById('sprite');
+    setCharacterAction('turn');
+    syncSprite();
     // animate rotation
     const anim = s.animate(
       [{transform:'rotate(0deg)'},{transform:`rotate(${deg}deg)`}],
@@ -2261,6 +2286,7 @@ async function moveChar(dir) {
     await anim.finished.catch(()=>{});
     anim.cancel(); // reset transform so syncSprite takes over
     ori = newOri;
+    setCharacterAction('idle');
     syncSprite();
   }
 }

@@ -10,20 +10,15 @@
     </svg>`;
   }
 
-  function svgRobotLevel1(o) {
-    const rot = { right: 0, down: 90, left: 180, up: 270 };
-    const deg = rot[o] ?? 0;
-    const build = document.body?.dataset.build || 'dev';
-    return `
-      <div class="boks-hero" style="--hero-rotation:${deg}deg;">
-        <span class="boks-hero__shadow" aria-hidden="true"></span>
-        <span class="boks-hero__motion" aria-hidden="true">
-          <span class="boks-hero__rotator">
-            <img class="boks-hero__img" src="icons/boks-character.png?v=${encodeURIComponent(build)}" alt=""/>
-          </span>
-        </span>
-      </div>
-    `;
+  function renderCharacterLevel1(state) {
+    const resolvedState = typeof state === 'string'
+      ? { direction: state, action: 'idle' }
+      : { action: 'idle', ...(state || {}) };
+    return window.BOKS_CHARACTER_RENDERER?.render({
+      characterId: 'boks',
+      action: resolvedState.action,
+      direction: resolvedState.direction
+    }) || '';
   }
 
   function drawBackgroundLevel1() {
@@ -145,7 +140,7 @@
   }
 
   window.goalSVGLevel1 = goalSVGLevel1;
-  window.svgRobotLevel1 = svgRobotLevel1;
+  window.renderCharacterLevel1 = renderCharacterLevel1;
   window.drawBackgroundLevel1 = drawBackgroundLevel1;
 
   window.BOKS_LEVELS = window.BOKS_LEVELS || {};
@@ -279,7 +274,7 @@
       if ((x * 5 + y) % 9 === 0) cell.classList.add('decor-stone');
     },
     renderGoal: goalSVGLevel1,
-    renderSprite: svgRobotLevel1,
+    renderSprite: renderCharacterLevel1,
     renderBackground: drawBackgroundLevel1
   };
 })();
