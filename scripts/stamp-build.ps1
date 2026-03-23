@@ -1,9 +1,14 @@
-$ErrorActionPreference = 'Stop'
-
 [CmdletBinding()]
 param(
-  [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot)
+  [string]$RepoRoot
 )
+
+$ErrorActionPreference = 'Stop'
+
+$scriptRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+if (-not $RepoRoot) {
+  $RepoRoot = Split-Path -Parent $scriptRoot
+}
 
 $repoRoot = (Resolve-Path $RepoRoot).Path
 $indexPath = Join-Path $repoRoot 'index.html'

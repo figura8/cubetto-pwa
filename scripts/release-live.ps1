@@ -1,16 +1,23 @@
 [CmdletBinding()]
 param(
-  [string]$MainWorktreePath = (Split-Path -Parent $PSScriptRoot),
-  [string]$LiveWorktreePath = (Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) 'cubetto-pwa'),
+  [string]$MainWorktreePath,
+  [string]$LiveWorktreePath,
   [string]$RemoteName = 'origin',
   [switch]$Push
 )
 
 $ErrorActionPreference = 'Stop'
 
+$scriptRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+if (-not $MainWorktreePath) {
+  $MainWorktreePath = Split-Path -Parent $scriptRoot
+}
+if (-not $LiveWorktreePath) {
+  $LiveWorktreePath = Join-Path (Split-Path -Parent (Split-Path -Parent $scriptRoot)) 'cubetto-pwa'
+}
+
 $mainWorktreePath = (Resolve-Path $MainWorktreePath).Path
 $liveWorktreePath = (Resolve-Path $LiveWorktreePath).Path
-$scriptRoot = $PSScriptRoot
 
 function Invoke-Git {
   param(
@@ -21,7 +28,7 @@ function Invoke-Git {
 
   & git -C $RepoPath @Args
   if ($LASTEXITCODE -ne 0) {
-    throw "Comando git fallito in $RepoPath: git $($Args -join ' ')"
+    throw "Comando git fallito in ${RepoPath}: git $($Args -join ' ')"
   }
 }
 
@@ -34,7 +41,7 @@ function Get-GitOutput {
 
   $output = & git -C $RepoPath @Args
   if ($LASTEXITCODE -ne 0) {
-    throw "Comando git fallito in $RepoPath: git $($Args -join ' ')"
+    throw "Comando git fallito in ${RepoPath}: git $($Args -join ' ')"
   }
   return ($output | Out-String).Trim()
 }
