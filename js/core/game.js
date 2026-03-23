@@ -78,7 +78,6 @@ const NEW_EDITOR_LEVEL_ID = '__new_editor_level__';
 let playerPlaced = true;
 let goalPlaced = true;
 let selectedElementTool = null;
-let editorLevelsCache = [];
 document.body?.classList.add('prestart');
 document.body?.classList.add('debug-visible');
 
@@ -708,231 +707,72 @@ function buildCustomLevelThumbnail(level) {
   `;
 }
 
+const levelStorage = window.BOKS_LEVEL_STORAGE({
+  customIcons: CUSTOM_ICONS,
+  customLevelTheme: CUSTOM_LEVEL_THEME,
+  editorLevelsFileHandleKey: EDITOR_LEVELS_FILE_HANDLE_KEY,
+  editorLevelsFilePath: EDITOR_LEVELS_FILE_PATH,
+  editorLevelsStorageKey: EDITOR_LEVELS_STORAGE_KEY,
+  editorLevelsSuggestedName: EDITOR_LEVELS_FILE_PICKER_SUGGESTED_NAME,
+  fileHandleDbName: FILE_HANDLE_DB_NAME,
+  fileHandleStoreName: FILE_HANDLE_STORE_NAME,
+  fnSlots: FSLOTS,
+  getOfficialTutorialSteps,
+  getTutorialStepIndex: () => tutorialStepIndex,
+  pool: POOL,
+  slots: SLOTS
+});
+
 function readCustomLevels() {
-  if (editorLevelsCache.length) return editorLevelsCache.map(normalizeCustomLevel);
-  try {
-    const raw = localStorage.getItem(EDITOR_LEVELS_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : null;
-    if (!Array.isArray(parsed) || !parsed.length) {
-      const seeded = buildInitialEditorLevels();
-      editorLevelsCache = seeded.map(normalizeCustomLevel);
-      return editorLevelsCache.map(normalizeCustomLevel);
-    }
-    editorLevelsCache = parsed.map(normalizeCustomLevel);
-    return editorLevelsCache.map(normalizeCustomLevel);
-  } catch (_) {
-    const seeded = buildInitialEditorLevels();
-    editorLevelsCache = seeded.map(normalizeCustomLevel);
-    return editorLevelsCache.map(normalizeCustomLevel);
-  }
+  return levelStorage.readCustomLevels();
 }
 
 function writeCustomLevels(levels) {
-  editorLevelsCache = levels.map(normalizeCustomLevel);
-  localStorage.setItem(EDITOR_LEVELS_STORAGE_KEY, JSON.stringify(editorLevelsCache));
+  return levelStorage.writeCustomLevels(levels);
 }
 
 function exportableLevelsPayload(levels = readCustomLevels()) {
-  return {
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    levels: levels.map(level => normalizeCustomLevel(level))
-  };
+  return levelStorage.exportableLevelsPayload(levels);
 }
 
 function normalizeSlotArray(source = [], length) {
-  return Array.from({ length }, (_, idx) => !!source[idx]);
+  return levelStorage.normalizeSlotArray(source, length);
 }
 
 function normalizeEnabledBlocks(source = {}) {
-  return {
-    forward: !!source.forward,
-    left: !!source.left,
-    right: !!source.right,
-    function: !!source.function
-  };
+  return levelStorage.normalizeEnabledBlocks(source);
 }
 
 function normalizeCustomLevel(level) {
-  return {
-    id: level.id || `custom-${Date.now()}`,
-    number: level.number ?? null,
-    baseStepIndex: level.baseStepIndex ?? null,
-    name: normalizeLevelName(level.name || 'Livello custom') || 'Livello custom',
-    icon: CUSTOM_ICONS.includes(level.icon) ? level.icon : CUSTOM_ICONS[0],
-    baseLevel: level.baseLevel || CUSTOM_LEVEL_THEME,
-    start: normalizePoint(level.start),
-    goal: normalizePoint(level.goal),
-    startOri: level.startOri || 'right',
-    obstacles: Array.isArray(level.obstacles) ? level.obstacles : [],
-    mainSlotEnabled: normalizeSlotArray(level.mainSlotEnabled, SLOTS),
-    fnSlotEnabled: normalizeSlotArray(level.fnSlotEnabled, FSLOTS),
-    enabledBlocks: normalizeEnabledBlocks(level.enabledBlocks || {})
-  };
+  return levelStorage.normalizeCustomLevel(level);
 }
 
 function findCustomLevel(levelId) {
-  return readCustomLevels().find(level => level.id === levelId) || null;
+  return levelStorage.findCustomLevel(levelId);
 }
 
 function getEditorLevelIdForTutorialStep(idx = tutorialStepIndex) {
-  const levels = readCustomLevels();
-  const match = levels.find(level => (level.baseStepIndex ?? null) === idx);
-  return match?.id || `level1-step-${idx + 1}`;
+  return levelStorage.getEditorLevelIdForTutorialStep(idx);
 }
 
 function tutorialStepToEditorLevel(step, idx) {
-  const mainCount = Math.max(0, Math.min(SLOTS, step.mainSlots ?? SLOTS));
-  const fnCount = Math.max(0, Math.min(FSLOTS, step.fnSlots ?? 0));
-  return normalizeCustomLevel({
-    id: `level1-step-${idx + 1}`,
-    number: idx + 1,
-    baseStepIndex: idx,
-    name: `Livello ${idx + 1}`,
-    icon: CUSTOM_ICONS[idx % CUSTOM_ICONS.length],
-    baseLevel: CUSTOM_LEVEL_THEME,
-    start: { ...(step.start || { x: 2, y: 2 }) },
-    goal: { ...(step.goal || { x: 5, y: 5 }) },
-    startOri: step.startOri || 'right',
-    obstacles: step.obstacles || [],
-    mainSlotEnabled: Array.from({ length: SLOTS }, (_, i) => i < mainCount),
-    fnSlotEnabled: Array.from({ length: FSLOTS }, (_, i) => i < fnCount),
-    enabledBlocks: normalizeEnabledBlocks(
-      Object.fromEntries(Object.keys(POOL).map(dir => [dir, (step.availableBlocks || []).includes(dir)]))
-    )
-  });
+  return levelStorage.tutorialStepToEditorLevel(step, idx);
 }
 
 function editorLevelToTutorialStep(level) {
-  const normalized = normalizeCustomLevel(level);
-  return {
-    start: normalized.start ? { ...normalized.start } : null,
-    goal: normalized.goal ? { ...normalized.goal } : null,
-    startOri: normalized.startOri || 'right',
-    mainSlots: normalized.mainSlotEnabled.filter(Boolean).length,
-    fnSlots: normalized.fnSlotEnabled.filter(Boolean).length,
-    availableBlocks: Object.keys(normalized.enabledBlocks).filter(dir => normalized.enabledBlocks[dir]),
-    obstacles: normalized.obstacles || []
-  };
+  return levelStorage.editorLevelToTutorialStep(level);
 }
 
 function buildInitialEditorLevels() {
-  const steps = getOfficialTutorialSteps();
-  return steps.map((step, idx) => tutorialStepToEditorLevel(step, idx));
-}
-
-function isProjectSaveSupported() {
-  return !!(window.isSecureContext && window.showSaveFilePicker && window.indexedDB && (
-    window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1'
-  ));
-}
-
-function openFileHandleDb() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(FILE_HANDLE_DB_NAME, 1);
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains(FILE_HANDLE_STORE_NAME)) {
-        db.createObjectStore(FILE_HANDLE_STORE_NAME);
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-async function getStoredFileHandle() {
-  if (!isProjectSaveSupported()) return null;
-  const db = await openFileHandleDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(FILE_HANDLE_STORE_NAME, 'readonly');
-    const store = tx.objectStore(FILE_HANDLE_STORE_NAME);
-    const request = store.get(EDITOR_LEVELS_FILE_HANDLE_KEY);
-    request.onsuccess = () => resolve(request.result || null);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-async function storeFileHandle(handle) {
-  if (!isProjectSaveSupported()) return;
-  const db = await openFileHandleDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(FILE_HANDLE_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(FILE_HANDLE_STORE_NAME);
-    const request = store.put(handle, EDITOR_LEVELS_FILE_HANDLE_KEY);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-  });
-}
-
-async function ensureProjectFilePermission(handle) {
-  if (!handle) return false;
-  if ((await handle.queryPermission({ mode: 'readwrite' })) === 'granted') return true;
-  return (await handle.requestPermission({ mode: 'readwrite' })) === 'granted';
-}
-
-async function requestProjectLevelsFileHandle() {
-  if (!isProjectSaveSupported()) return null;
-  const handle = await window.showSaveFilePicker({
-    suggestedName: EDITOR_LEVELS_FILE_PICKER_SUGGESTED_NAME,
-    types: [{
-      description: 'JSON levels file',
-      accept: { 'application/json': ['.json'] }
-    }]
-  });
-  await storeFileHandle(handle);
-  return handle;
-}
-
-async function getProjectLevelsFileHandle({ promptIfMissing = false } = {}) {
-  if (!isProjectSaveSupported()) return null;
-  let handle = await getStoredFileHandle();
-  if (handle && await ensureProjectFilePermission(handle)) return handle;
-  if (!promptIfMissing) return null;
-  handle = await requestProjectLevelsFileHandle();
-  if (handle && await ensureProjectFilePermission(handle)) return handle;
-  return null;
-}
-
-async function writeProjectLevelsFile(levels, { promptIfMissing = false } = {}) {
-  const handle = await getProjectLevelsFileHandle({ promptIfMissing });
-  if (!handle) return false;
-  const writable = await handle.createWritable();
-  await writable.write(JSON.stringify(exportableLevelsPayload(levels), null, 2));
-  await writable.close();
-  return true;
+  return levelStorage.buildInitialEditorLevels();
 }
 
 async function loadEditorLevelsSource() {
-  try {
-    const response = await fetch(EDITOR_LEVELS_FILE_PATH, { cache: 'no-store' });
-    if (response.ok) {
-      const payload = await response.json();
-      const levels = Array.isArray(payload) ? payload : payload?.levels;
-      if (Array.isArray(levels) && levels.length) {
-        writeCustomLevels(levels);
-        return;
-      }
-    }
-  } catch (_) {}
-  const fallback = readCustomLevels();
-  if (fallback.length) {
-    editorLevelsCache = fallback.map(normalizeCustomLevel);
-    return;
-  }
-  writeCustomLevels(buildInitialEditorLevels());
+  return levelStorage.loadEditorLevelsSource();
 }
 
 async function persistEditorLevels(levels, { promptIfMissing = false } = {}) {
-  writeCustomLevels(levels);
-  if (!isProjectSaveSupported()) return { projectFileSaved: false, localOnly: true };
-  try {
-    const projectFileSaved = await writeProjectLevelsFile(levels, { promptIfMissing });
-    return { projectFileSaved, localOnly: !projectFileSaved };
-  } catch (_err) {
-    return { projectFileSaved: false, localOnly: true };
-  }
+  return levelStorage.persistEditorLevels(levels, { promptIfMissing });
 }
 
 function syncEditorStateAfterLevelsChange(levels, { preferredLevelId = null } = {}) {

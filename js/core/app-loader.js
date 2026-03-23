@@ -21,6 +21,7 @@
     'js/core/character/character-renderer.js',
     'js/levels/level1.js',
     'js/editor/solver.js',
+    'js/editor/level-storage.js',
     'js/editor/level-editor.js',
     'js/core/game.js',
     'js/core/sw-register.js'
