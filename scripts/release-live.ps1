@@ -58,6 +58,26 @@ function Assert-CleanWorktree {
   }
 }
 
+function New-BackupBranchIfDiverged {
+  param(
+    [string]$RepoPath,
+    [string]$BranchName,
+    [string]$RemoteName
+  )
+
+  $aheadBehind = Get-GitOutput $RepoPath 'rev-list' '--left-right' '--count' "${BranchName}...${RemoteName}/${BranchName}"
+  $ahead, $behind = $aheadBehind -split '\s+'
+
+  if ([int]$ahead -le 0 -or [int]$behind -le 0) {
+    return
+  }
+
+  $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+  $backupBranch = "backup/${BranchName}-${timestamp}"
+  Invoke-Git $RepoPath 'branch' $backupBranch $BranchName
+  Write-Output "Creato backup locale ${backupBranch} prima di riallineare ${BranchName}."
+}
+
 if (-not (Test-Path (Join-Path $mainWorktreePath '.git'))) {
   throw "Main worktree non valido: $mainWorktreePath"
 }
@@ -91,7 +111,8 @@ if ([int]$mainBehind -ne 0) {
   throw "Il branch main locale e indietro rispetto a $RemoteName/main. Allinealo prima della release live."
 }
 
-Invoke-Git $liveWorktreePath 'pull' '--ff-only' $RemoteName 'live'
+New-BackupBranchIfDiverged -RepoPath $liveWorktreePath -BranchName 'live' -RemoteName $RemoteName
+Invoke-Git $liveWorktreePath 'reset' '--hard' "$RemoteName/live"
 Invoke-Git $liveWorktreePath 'merge' '-X' 'theirs' '--no-edit' "$RemoteName/main"
 
 & pwsh -ExecutionPolicy Bypass -File (Join-Path $scriptRoot 'stamp-build.ps1') -RepoRoot $liveWorktreePath
