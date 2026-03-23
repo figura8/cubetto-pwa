@@ -36,11 +36,6 @@
     badge.textContent = '';
   }
 
-  const startSubtitle = document.querySelector('#startGate .start-subtitle');
-  if (startSubtitle && !editorEnabled) {
-    startSubtitle.textContent = 'Tocca play per iniziare il percorso.';
-  }
-
   const files = [
     'assets/animations/characters/boks/manifest.js',
     'js/core/character/character-renderer.js',

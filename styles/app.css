@@ -835,43 +835,17 @@
       opacity: 0;
       pointer-events: none;
     }
-    #startGate .start-card {
-      width: min(420px, calc(100vw - 48px));
-      padding: 28px 24px 22px;
-      border-radius: 30px;
-      background: rgba(255, 249, 234, 0.9);
-      border: 2px solid rgba(210, 201, 180, 0.86);
-      box-shadow: 0 4px 24px rgba(95, 78, 52, 0.14);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      backdrop-filter: blur(8px);
-    }
-    #startGate .start-eyebrow {
-      color: #8e7d62;
-      font-size: 0.78rem;
-      font-weight: 700;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-    }
     #startGate .start-title {
       display: flex;
       align-items: center;
       gap: 2px;
+      margin-bottom: 8px;
     }
     #startGate .start-title span {
       font-family: 'Lilita One', cursive, Arial Black, sans-serif;
       font-size: min(22vw, 110px);
       line-height: 1;
       display: inline-block;
-    }
-    #startGate .start-subtitle {
-      max-width: 24ch;
-      color: #6d5d44;
-      font-size: 0.95rem;
-      line-height: 1.35;
-      text-align: center;
     }
     #startGate .start-actions {
       display: flex;
