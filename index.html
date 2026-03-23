@@ -12,8 +12,16 @@
   <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
   <link rel="apple-touch-icon" href="icons/boks-apple-touch-icon.png">
   <link rel="stylesheet" href="styles/app.css">
+  <link rel="stylesheet" href="styles/character.css">
 </head>
-<body class="prestart" data-build="2026-03-20-project-save">
+<body
+  class="prestart"
+  data-build="20260323-112456"
+  data-release-channel="main"
+  data-editor-enabled="true"
+  data-debug-tools-enabled="true"
+  data-build-badge-enabled="true"
+>
 
 <!-- Splash screen -->
 <div id="splash">
@@ -56,51 +64,59 @@
     </button>
   </div>
 </div>
+<button id="quickEditorBtn" type="button" aria-label="Apri editor con il livello corrente">Editor</button>
   <div id="app">
-  <!-- BÖKS header -->
-  <div id="header">
-    <span class="logo-letter logo-b">B</span><span class="logo-letter logo-o">Ö</span><span class="logo-letter logo-k">K</span><span class="logo-letter logo-s">S</span>
-  </div>
-  <div id="editorToolbar" aria-label="Level editor controls">
-    <button id="saveLevelBtn" type="button">Salva</button>
-    <button id="exitEditorBtn" type="button" aria-label="Torna al gioco">Torna al gioco</button>
-  </div>
-  <div id="customLevelsPanel" aria-label="I miei livelli">
-    <div class="custom-levels-head">
-      <h3>Livelli</h3>
-    </div>
-    <div id="customLevelsList"></div>
-  </div>
-  <div id="elementPalettePanel" aria-label="Elementi del livello">
-    <div class="custom-levels-head">
-      <h3>Elementi</h3>
-    </div>
-    <div id="elementPalette"></div>
-  </div>
-  <!-- Row 1: grid (flexible) -->
-  <div id="gridWrap">
-    <canvas id="bgCanvas" style="position:absolute;inset:0;pointer-events:none;border-radius:7px;"></canvas>
-    <div id="gameGrid"></div>
-    <div id="sprite"></div>
-  </div>
+    <div id="editorLayout">
+      <div id="editorSide">
+        <div id="editorToolbar" aria-label="Level editor controls">
+          <button id="saveLevelBtn" type="button">Salva</button>
+          <button id="exitEditorBtn" type="button" aria-label="Torna al gioco">Torna al gioco</button>
+        </div>
+        <div id="customLevelsPanel" aria-label="I miei livelli">
+          <div class="custom-levels-head">
+            <h3>Livelli</h3>
+          </div>
+          <div id="customLevelsList"></div>
+        </div>
+        <div id="elementPalettePanel" aria-label="Elementi del livello">
+          <div class="custom-levels-head">
+            <h3>Elementi</h3>
+          </div>
+          <div id="elementPalette"></div>
+        </div>
+      </div>
+      <div id="editorMain">
+        <!-- BÖKS header -->
+        <div id="header">
+          <span class="logo-letter logo-b">B</span><span class="logo-letter logo-o">Ö</span><span class="logo-letter logo-k">K</span><span class="logo-letter logo-s">S</span>
+        </div>
+        <!-- Row 1: grid (flexible) -->
+        <div id="gridWrap">
+          <canvas id="bgCanvas" style="position:absolute;inset:0;pointer-events:none;border-radius:7px;"></canvas>
+          <div id="gameGrid"></div>
+          <div id="sprite"></div>
+        </div>
 
-  <!-- Row 2: fixed bottom section -->
-  <div id="bottom">
-    <div id="blocksRow"></div>
-    <div id="boardRow"><div id="boardGrid"></div></div>
-    <button id="runBtn" onclick="run()" onmousedown="this.blur()">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <path d="M12 12 L12 7.5 A4.5 4.5 0 0 1 16.5 12 Z" fill="#2B8FD4"/>
-        <path d="M12 12 L16.5 12 A4.5 4.5 0 0 1 12 16.5 Z" fill="#FFD31A"/>
-        <path d="M12 12 L12 16.5 A4.5 4.5 0 0 1 7.5 12 Z" fill="#FF3B3B"/>
-        <path d="M12 12 L7.5 12 A4.5 4.5 0 0 1 12 7.5 Z" fill="#3F9A62"/>
-      </svg>
-    </button>
-  </div>
+        <!-- Row 2: fixed bottom section -->
+        <div id="bottom">
+          <div id="blocksRow"></div>
+          <div id="boardRow"><div id="boardGrid"></div></div>
+          <button id="runBtn" onclick="run()" onmousedown="this.blur()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M12 12 L12 7.5 A4.5 4.5 0 0 1 16.5 12 Z" fill="#2B8FD4"/>
+              <path d="M12 12 L16.5 12 A4.5 4.5 0 0 1 12 16.5 Z" fill="#FFD31A"/>
+              <path d="M12 12 L12 16.5 A4.5 4.5 0 0 1 7.5 12 Z" fill="#FF3B3B"/>
+              <path d="M12 12 L7.5 12 A4.5 4.5 0 0 1 12 7.5 Z" fill="#3F9A62"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
 </div>
 <div id="ghost"></div>
 <div id="toast"></div>
 <div id="levelFade"></div>
+<div id="buildBadge" aria-label="Build version"></div>
 <div id="saveLevelModal" aria-hidden="true">
   <div class="save-level-card" role="dialog" aria-modal="true" aria-labelledby="saveLevelTitle">
     <h2 id="saveLevelTitle">Salva livello</h2>
@@ -119,10 +135,6 @@
   </div>
 </div>
 
-  <script src="js/levels/level1.js?v=20260320-project-save"></script>
-  <script src="js/editor/solver.js?v=20260320-project-save"></script>
-  <script src="js/editor/level-editor.js?v=20260320-project-save"></script>
-  <script src="js/core/game.js?v=20260320-project-save"></script>
-  <script src="js/core/sw-register.js?v=20260320-project-save"></script>
+  <script src="js/core/app-loader.js"></script>
 </body>
 </html>

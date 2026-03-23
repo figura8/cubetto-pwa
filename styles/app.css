@@ -52,6 +52,18 @@
       gap: 8px;
       transform: translateX(-50%);
     }
+    #editorLayout,
+    #editorMain {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    #editorSide {
+      width: 100%;
+      display: contents;
+    }
     @media (pointer: fine) {
       html, body {
         overflow-y: auto;
@@ -68,58 +80,82 @@
       }
       @media (min-width: 1120px) {
         body.editor-mode {
-          --editor-left-col: max(20px, calc(50% - 564px));
-          --editor-left-w: 280px;
-        }
-        body.editor-mode #customLevelsPanel {
-          position: fixed;
-          left: var(--editor-left-col);
-          top: 132px;
-          width: var(--editor-left-w);
-          max-width: var(--editor-left-w);
-          max-height: calc(var(--app-vh) - 332px);
-          z-index: 400;
-        }
-        body.editor-mode #customLevelsList {
-          max-height: calc(var(--app-vh) - 404px);
-        }
-        body.editor-mode #elementPalettePanel {
-          position: fixed;
-          left: var(--editor-left-col);
-          bottom: 24px;
-          width: var(--editor-left-w);
-          max-width: var(--editor-left-w);
-          z-index: 400;
+          --editor-sidebar-w: 280px;
+          --editor-main-w: 460px;
+          --editor-shell-w: calc(var(--editor-sidebar-w) + var(--editor-main-w) + 24px);
         }
         body.editor-mode #app {
-          width: 520px;
-          margin-left: auto;
-          margin-right: auto;
+          width: min(var(--editor-shell-w), calc(100vw - 32px));
+          max-width: none;
+          padding-top: calc(104px + var(--safe-top));
         }
         body.editor-mode #debugBadge {
-          left: var(--editor-left-col);
+          left: max(16px, calc(50% - (min(var(--editor-shell-w), calc(100vw - 32px)) / 2)));
           top: 20px;
           transform: none;
-          width: var(--editor-left-w);
+          width: var(--editor-sidebar-w);
+          max-width: var(--editor-sidebar-w);
           white-space: normal;
           pointer-events: none;
         }
+        body.editor-mode #editorLayout {
+          display: grid;
+          grid-template-columns: var(--editor-sidebar-w) var(--editor-main-w);
+          align-items: start;
+          justify-content: center;
+          gap: 0 24px;
+        }
+        body.editor-mode #editorSide {
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
+          gap: 16px;
+          width: 100%;
+        }
+        body.editor-mode #editorMain {
+          width: var(--editor-main-w);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+        }
         body.editor-mode #header,
-        body.editor-mode #editorToolbar,
         body.editor-mode #gridWrap,
         body.editor-mode #bottom {
           width: 100%;
-          max-width: 520px;
+          max-width: var(--editor-main-w);
         }
         body.editor-mode #editorToolbar {
-          position: fixed;
-          left: var(--editor-left-col);
-          top: 76px;
-          width: var(--editor-left-w);
-          max-width: var(--editor-left-w);
-          min-height: 44px;
-          justify-content: flex-start;
-          z-index: 401;
+          position: static;
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          min-height: 0;
+          width: 100%;
+          max-width: none;
+          padding: 0;
+          gap: 10px;
+        }
+        body.editor-mode #customLevelsPanel {
+          position: static;
+          width: 100%;
+          max-width: none;
+          max-height: none;
+          align-self: start;
+        }
+        body.editor-mode #customLevelsList {
+          max-height: none;
+        }
+        body.editor-mode #elementPalettePanel {
+          position: static;
+          width: 100%;
+          max-width: none;
+          align-self: start;
+        }
+        body.editor-mode #header {
+          justify-content: center;
+          align-self: center;
+          padding-top: 0;
+          margin-bottom: 4px;
         }
         body.editor-mode #customLevelsPanel .custom-levels-head {
           position: sticky;
@@ -137,9 +173,42 @@
 
     /* Header BÖKS */
     #header {
+      width: 100%;
       flex-shrink: 0;
-      display: flex; align-items: center; gap: 1px;
+      display: flex; align-items: center; justify-content: center; gap: 1px;
       letter-spacing: 0.5px;
+    }
+    #quickEditorBtn {
+      position: fixed;
+      top: calc(48px + var(--safe-top));
+      left: 10px;
+      z-index: 12001;
+      display: none;
+      min-width: 78px;
+      min-height: 36px;
+      padding: 0 12px;
+      border: 2px solid var(--panel-edge);
+      border-radius: 999px;
+      background: linear-gradient(180deg, #fff6df 0%, var(--panel-bg) 100%);
+      color: #5f4e34;
+      font-family: 'Fredoka', system-ui, sans-serif;
+      font-size: 0.82rem;
+      font-weight: 700;
+      box-shadow: 0 3px 0 #cdc2ab, 0 6px 10px rgba(95, 78, 52, 0.16);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body:not(.prestart):not(.editor-mode) #quickEditorBtn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    body.editor-mode #quickEditorBtn {
+      display: none;
+    }
+    #quickEditorBtn:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #cdc2ab, 0 3px 7px rgba(95, 78, 52, 0.14);
     }
     .logo-letter {
       font-family: 'Lilita One', cursive;
@@ -280,12 +349,6 @@
     }
     body.editor-mode #sprite { cursor: grab; }
     body.editor-mode #sprite:active { cursor: grabbing; }
-    #sprite.moving { animation: wg .18s linear infinite; }
-    @keyframes wg {
-      0%,100% { transform: rotate(0deg); }
-      30%      { transform: rotate(-3deg) translateY(-1px); }
-      70%      { transform: rotate(3deg)  translateY(-1px); }
-    }
 
     #bottom {
       width: 100%;
@@ -593,6 +656,9 @@
     body.debug-visible #debugBadge {
       display: block;
     }
+    body.debug-tools-disabled #debugBadge {
+      display: none !important;
+    }
 
     #buildBadge {
       position: fixed;
@@ -608,9 +674,22 @@
       font-size: 0.68rem;
       font-weight: 600;
       letter-spacing: 0.04em;
+      line-height: 1.3;
+      text-align: right;
       box-shadow: 0 4px 12px rgba(0,0,0,0.08);
       pointer-events: none;
       user-select: none;
+      white-space: pre-line;
+    }
+    body.build-badge-disabled #buildBadge {
+      display: none;
+    }
+    body.editor-disabled #startEditorBtn,
+    body.editor-disabled #quickEditorBtn,
+    body.editor-disabled #editorToolbar,
+    body.editor-disabled #customLevelsPanel,
+    body.editor-disabled #elementPalettePanel {
+      display: none !important;
     }
 
     #rotateNotice {
@@ -670,20 +749,16 @@
     #splash {
       position: fixed; inset: 0; z-index: 9999;
       background:
-        radial-gradient(110% 90% at 50% 15%, #fff7e8 0%, #efe5cf 55%, #e0d1b6 100%);
+        radial-gradient(120% 95% at 50% 0%, #fbf5e8 0%, #efe5cf 56%, #e4d8c3 100%);
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       gap: 0;
-      transition: opacity 0.5s ease;
+      transition: opacity 0.18s ease;
     }
     #splash.hide { opacity: 0; pointer-events: none; }
     #splash-logo { display: none; }
     .splash-stage {
-      width: min(360px, calc(100vw - 48px));
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 18px;
+      display: none;
     }
     .splash-track {
       width: 100%;
@@ -733,22 +808,6 @@
       border-radius: inherit;
       background: linear-gradient(90deg, #3f9a62 0%, #2b8fd4 100%);
       animation: splashLoad 1.15s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-    }
-
-    /* Override per branch di test: schermata nera all'avvio */
-    #splash {
-      display: block;
-      background: #000;
-      opacity: 1;
-      pointer-events: auto;
-      transition: opacity 0.9s ease;
-    }
-    #splash.hide {
-      opacity: 0;
-      pointer-events: none;
-    }
-    #splash > * {
-      display: none !important;
     }
 
     #startGate {
@@ -1122,6 +1181,16 @@
     body.editor-mode #editorToolbar {
       display: flex;
     }
+    #editorToolbar button {
+      width: 100%;
+      min-height: 40px;
+      justify-self: stretch;
+    }
+    @media (pointer: fine) and (min-width: 1120px) {
+      body.editor-mode #editorToolbar {
+        display: grid;
+      }
+    }
     #exitEditorBtn {
       min-width: 74px;
       padding: 0 12px;
@@ -1222,6 +1291,12 @@
       letter-spacing: 0.05em;
     }
     @media (max-width: 460px) {
+      #quickEditorBtn {
+        min-width: 72px;
+        min-height: 34px;
+        padding: 0 10px;
+        font-size: 0.78rem;
+      }
       #editorToolbar {
         flex-wrap: wrap;
         justify-content: center;

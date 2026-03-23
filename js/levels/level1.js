@@ -10,40 +10,15 @@
     </svg>`;
   }
 
-  function svgRobotLevel1(o) {
-    const rot = { right: 0, down: 90, left: 180, up: 270 };
-    const deg = rot[o];
-    return `<svg width="100%" height="100%" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
-      <g transform="rotate(${deg} 36 36)">
-        <defs>
-          <linearGradient id="turtle-shell" x1="18%" y1="16%" x2="82%" y2="84%">
-            <stop offset="0%" stop-color="#a7e877"/>
-            <stop offset="100%" stop-color="#5ca84c"/>
-          </radialGradient>
-          <linearGradient id="turtle-skin" x1="20%" y1="18%" x2="80%" y2="82%">
-            <stop offset="0%" stop-color="#c2f396"/>
-            <stop offset="100%" stop-color="#79c95f"/>
-          </linearGradient>
-        </defs>
-        <ellipse cx="35" cy="60" rx="18" ry="5" fill="rgba(68,107,50,0.18)"/>
-        <ellipse cx="34" cy="36" rx="19" ry="15" fill="url(#turtle-shell)" stroke="#4c8b3d" stroke-width="2.2"/>
-        <path d="M24 27c5-4 14-6 22-3 4 2 7 5 10 9-6-2-11-4-17-4-6 0-11 1-17 5 0-3 1-5 2-7Z" fill="rgba(255,255,255,0.34)"/>
-        <circle cx="56" cy="36" r="8" fill="url(#turtle-skin)" stroke="#4c8b3d" stroke-width="2"/>
-        <circle cx="58.5" cy="34" r="1.5" fill="#24311f"/>
-        <circle cx="58.3" cy="38.7" r="1.2" fill="#24311f" opacity="0.82"/>
-        <path d="M52 41c2.5 2.3 6 2.3 8.3 0" fill="none" stroke="#24311f" stroke-width="1.7" stroke-linecap="round"/>
-        <ellipse cx="22" cy="24" rx="4.4" ry="5.4" fill="url(#turtle-skin)" stroke="#4c8b3d" stroke-width="1.8"/>
-        <ellipse cx="18" cy="35" rx="4.6" ry="5.6" fill="url(#turtle-skin)" stroke="#4c8b3d" stroke-width="1.8"/>
-        <ellipse cx="23" cy="48" rx="4.6" ry="5.6" fill="url(#turtle-skin)" stroke="#4c8b3d" stroke-width="1.8"/>
-        <ellipse cx="41" cy="49" rx="4.6" ry="5.6" fill="url(#turtle-skin)" stroke="#4c8b3d" stroke-width="1.8"/>
-        <path d="M14 36 8 40 14 43" fill="none" stroke="#4c8b3d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="28" cy="31" r="3.4" fill="#7fc95f"/>
-        <circle cx="40.5" cy="29.5" r="3.2" fill="#7fc95f"/>
-        <circle cx="45" cy="38" r="3.1" fill="#7fc95f"/>
-        <circle cx="31" cy="41.5" r="3.1" fill="#7fc95f"/>
-        <circle cx="39" cy="46" r="3" fill="#7fc95f"/>
-      </g>
-    </svg>`;
+  function renderCharacterLevel1(state) {
+    const resolvedState = typeof state === 'string'
+      ? { direction: state, action: 'idle' }
+      : { action: 'idle', ...(state || {}) };
+    return window.BOKS_CHARACTER_RENDERER?.render({
+      characterId: 'boks',
+      action: resolvedState.action,
+      direction: resolvedState.direction
+    }) || '';
   }
 
   function drawBackgroundLevel1() {
@@ -165,7 +140,7 @@
   }
 
   window.goalSVGLevel1 = goalSVGLevel1;
-  window.svgRobotLevel1 = svgRobotLevel1;
+  window.renderCharacterLevel1 = renderCharacterLevel1;
   window.drawBackgroundLevel1 = drawBackgroundLevel1;
 
   window.BOKS_LEVELS = window.BOKS_LEVELS || {};
@@ -299,7 +274,7 @@
       if ((x * 5 + y) % 9 === 0) cell.classList.add('decor-stone');
     },
     renderGoal: goalSVGLevel1,
-    renderSprite: svgRobotLevel1,
+    renderSprite: renderCharacterLevel1,
     renderBackground: drawBackgroundLevel1
   };
 })();

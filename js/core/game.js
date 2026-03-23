@@ -43,8 +43,9 @@ const FILE_HANDLE_STORE_NAME = 'handles';
 const EDITOR_LEVELS_FILE_HANDLE_KEY = 'editor-levels-project-file';
 const CUSTOM_LEVEL_THEME = 'level1';
 const CUSTOM_ICONS = ['leaf', 'star', 'turtle', 'sun', 'moon', 'flower'];
-const LEVEL_EDITOR_ENABLED = false;
-const DEBUG_TOOLS_ENABLED = false;
+const RUNTIME_CONFIG = window.BOKS_RUNTIME_CONFIG || {};
+const LEVEL_EDITOR_ENABLED = RUNTIME_CONFIG.editorEnabled !== false;
+const DEBUG_TOOLS_ENABLED = RUNTIME_CONFIG.debugToolsEnabled !== false;
 
 // ═══ STATE ═══
 let pos = {...START};
@@ -57,6 +58,7 @@ let tutorialStepIndex = 0;
 let blockedCells = new Set();
 let activeMainSlots = SLOTS;
 let activeFnSlots = FSLOTS;
+let characterAction = 'idle';
 let mainSlotEnabled = Array(SLOTS).fill(true);
 let fnSlotEnabled = Array(FSLOTS).fill(true);
 let editorBlockEnabled = {
@@ -79,7 +81,6 @@ const NEW_EDITOR_LEVEL_ID = '__new_editor_level__';
 let playerPlaced = true;
 let goalPlaced = true;
 let selectedElementTool = null;
-let editorLevelsCache = [];
 document.body?.classList.add('prestart');
 if (DEBUG_TOOLS_ENABLED) document.body?.classList.add('debug-visible');
 
@@ -473,6 +474,39 @@ function cellPos(x, y) {
   return { l: cr.left-wr.left, t: cr.top-wr.top, w: cr.width, h: cr.height };
 }
 
+function spriteRectFromCellRect(r) {
+  const scale = 1.42;
+  const width = r.w * scale;
+  const height = r.h * scale;
+  return {
+    l: r.l - ((width - r.w) / 2),
+    t: r.t - ((height - r.h) / 2) - (r.h * 0.04),
+    w: width,
+    h: height
+  };
+}
+
+function getCharacterRenderState(overrides = {}) {
+  return {
+    direction: overrides.direction || ori,
+    action: overrides.action || characterAction
+  };
+}
+
+function setCharacterAction(action = 'idle') {
+  characterAction = action;
+}
+
+function resetSpritePresentation() {
+  const sprite = document.getElementById('sprite');
+  setCharacterAction('idle');
+  if (sprite) {
+    sprite.getAnimations().forEach(a => a.cancel());
+    sprite.classList.remove('moving');
+  }
+  return sprite;
+}
+
 function syncSprite() {
   const s = document.getElementById('sprite');
   if (!s) return;
@@ -485,10 +519,11 @@ function syncSprite() {
   }
   const r = cellPos(pos.x, pos.y);
   if(!r) return;
+  const sr = spriteRectFromCellRect(r);
   s.style.opacity = '1';
-  s.style.left = r.l+'px'; s.style.top = r.t+'px';
-  s.style.width = r.w+'px'; s.style.height = r.h+'px';
-  s.innerHTML = svgRobot(ori);
+  s.style.left = sr.l+'px'; s.style.top = sr.t+'px';
+  s.style.width = sr.w+'px'; s.style.height = sr.h+'px';
+  s.innerHTML = svgRobot(getCharacterRenderState());
 }
 
 async function animTo(tx, ty) {
@@ -504,17 +539,28 @@ async function animTo(tx, ty) {
     fr = cellPos(pos.x, pos.y);
     to = cellPos(tx, ty);
   }
-  if(!fr || !to) { pos={x:tx,y:ty}; syncSprite(); animating=false; return; }
+  if(!fr || !to) {
+    pos={x:tx,y:ty};
+    setCharacterAction('idle');
+    syncSprite();
+    animating=false;
+    return;
+  }
+  const sfr = spriteRectFromCellRect(fr);
+  const sto = spriteRectFromCellRect(to);
   s.classList.add('moving');
   const a = s.animate(
-    [{left:fr.l+'px',top:fr.t+'px'},{left:to.l+'px',top:to.t+'px'}],
+    [{left:sfr.l+'px',top:sfr.t+'px'},{left:sto.l+'px',top:sto.t+'px'}],
     {duration:MOVE_MS, easing:'cubic-bezier(.2,.9,.2,1)', fill:'forwards'}
   );
   await a.finished.catch(()=>{});
-  s.style.left=to.l+'px'; s.style.top=to.t+'px';
+  s.style.left=sto.l+'px'; s.style.top=sto.t+'px';
   a.cancel();
   s.classList.remove('moving');
-  pos={x:tx,y:ty}; animating=false;
+  pos={x:tx,y:ty};
+  setCharacterAction('idle');
+  syncSprite();
+  animating=false;
 }
 
 // ═══ SPRITE DRAG ═══
@@ -524,8 +570,9 @@ function setupSpriteDrag() {
     if(!editorMode||running||animating||!playerPlaced) return false;
     const g = document.getElementById('ghost');
     const w = s.offsetWidth;
-    g.innerHTML = svgRobot(ori);
-    g.style.cssText = `display:block;width:${w}px;height:${w}px;left:${cx}px;top:${cy}px;`;
+    const h = s.offsetHeight;
+    g.innerHTML = svgRobot(getCharacterRenderState());
+    g.style.cssText = `display:block;width:${w}px;height:${h}px;left:${cx}px;top:${cy}px;`;
     s.style.opacity = '0.3'; return true;
   }
   function move(cx,cy) {
@@ -663,231 +710,72 @@ function buildCustomLevelThumbnail(level) {
   `;
 }
 
+const levelStorage = window.BOKS_LEVEL_STORAGE({
+  customIcons: CUSTOM_ICONS,
+  customLevelTheme: CUSTOM_LEVEL_THEME,
+  editorLevelsFileHandleKey: EDITOR_LEVELS_FILE_HANDLE_KEY,
+  editorLevelsFilePath: EDITOR_LEVELS_FILE_PATH,
+  editorLevelsStorageKey: EDITOR_LEVELS_STORAGE_KEY,
+  editorLevelsSuggestedName: EDITOR_LEVELS_FILE_PICKER_SUGGESTED_NAME,
+  fileHandleDbName: FILE_HANDLE_DB_NAME,
+  fileHandleStoreName: FILE_HANDLE_STORE_NAME,
+  fnSlots: FSLOTS,
+  getOfficialTutorialSteps,
+  getTutorialStepIndex: () => tutorialStepIndex,
+  pool: POOL,
+  slots: SLOTS
+});
+
 function readCustomLevels() {
-  if (editorLevelsCache.length) return editorLevelsCache.map(normalizeCustomLevel);
-  try {
-    const raw = localStorage.getItem(EDITOR_LEVELS_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : null;
-    if (!Array.isArray(parsed) || !parsed.length) {
-      const seeded = buildInitialEditorLevels();
-      editorLevelsCache = seeded.map(normalizeCustomLevel);
-      return editorLevelsCache.map(normalizeCustomLevel);
-    }
-    editorLevelsCache = parsed.map(normalizeCustomLevel);
-    return editorLevelsCache.map(normalizeCustomLevel);
-  } catch (_) {
-    const seeded = buildInitialEditorLevels();
-    editorLevelsCache = seeded.map(normalizeCustomLevel);
-    return editorLevelsCache.map(normalizeCustomLevel);
-  }
+  return levelStorage.readCustomLevels();
 }
 
 function writeCustomLevels(levels) {
-  editorLevelsCache = levels.map(normalizeCustomLevel);
-  localStorage.setItem(EDITOR_LEVELS_STORAGE_KEY, JSON.stringify(editorLevelsCache));
+  return levelStorage.writeCustomLevels(levels);
 }
 
 function exportableLevelsPayload(levels = readCustomLevels()) {
-  return {
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    levels: levels.map(level => normalizeCustomLevel(level))
-  };
+  return levelStorage.exportableLevelsPayload(levels);
 }
 
 function normalizeSlotArray(source = [], length) {
-  return Array.from({ length }, (_, idx) => !!source[idx]);
+  return levelStorage.normalizeSlotArray(source, length);
 }
 
 function normalizeEnabledBlocks(source = {}) {
-  return {
-    forward: !!source.forward,
-    left: !!source.left,
-    right: !!source.right,
-    function: !!source.function
-  };
+  return levelStorage.normalizeEnabledBlocks(source);
 }
 
 function normalizeCustomLevel(level) {
-  return {
-    id: level.id || `custom-${Date.now()}`,
-    number: level.number ?? null,
-    baseStepIndex: level.baseStepIndex ?? null,
-    name: normalizeLevelName(level.name || 'Livello custom') || 'Livello custom',
-    icon: CUSTOM_ICONS.includes(level.icon) ? level.icon : CUSTOM_ICONS[0],
-    baseLevel: level.baseLevel || CUSTOM_LEVEL_THEME,
-    start: normalizePoint(level.start),
-    goal: normalizePoint(level.goal),
-    startOri: level.startOri || 'right',
-    obstacles: Array.isArray(level.obstacles) ? level.obstacles : [],
-    mainSlotEnabled: normalizeSlotArray(level.mainSlotEnabled, SLOTS),
-    fnSlotEnabled: normalizeSlotArray(level.fnSlotEnabled, FSLOTS),
-    enabledBlocks: normalizeEnabledBlocks(level.enabledBlocks || {})
-  };
+  return levelStorage.normalizeCustomLevel(level);
 }
 
 function findCustomLevel(levelId) {
-  return readCustomLevels().find(level => level.id === levelId) || null;
+  return levelStorage.findCustomLevel(levelId);
 }
 
 function getEditorLevelIdForTutorialStep(idx = tutorialStepIndex) {
-  const levels = readCustomLevels();
-  const match = levels.find(level => (level.baseStepIndex ?? null) === idx);
-  return match?.id || `level1-step-${idx + 1}`;
+  return levelStorage.getEditorLevelIdForTutorialStep(idx);
 }
 
 function tutorialStepToEditorLevel(step, idx) {
-  const mainCount = Math.max(0, Math.min(SLOTS, step.mainSlots ?? SLOTS));
-  const fnCount = Math.max(0, Math.min(FSLOTS, step.fnSlots ?? 0));
-  return normalizeCustomLevel({
-    id: `level1-step-${idx + 1}`,
-    number: idx + 1,
-    baseStepIndex: idx,
-    name: `Livello ${idx + 1}`,
-    icon: CUSTOM_ICONS[idx % CUSTOM_ICONS.length],
-    baseLevel: CUSTOM_LEVEL_THEME,
-    start: { ...(step.start || { x: 2, y: 2 }) },
-    goal: { ...(step.goal || { x: 5, y: 5 }) },
-    startOri: step.startOri || 'right',
-    obstacles: step.obstacles || [],
-    mainSlotEnabled: Array.from({ length: SLOTS }, (_, i) => i < mainCount),
-    fnSlotEnabled: Array.from({ length: FSLOTS }, (_, i) => i < fnCount),
-    enabledBlocks: normalizeEnabledBlocks(
-      Object.fromEntries(Object.keys(POOL).map(dir => [dir, (step.availableBlocks || []).includes(dir)]))
-    )
-  });
+  return levelStorage.tutorialStepToEditorLevel(step, idx);
 }
 
 function editorLevelToTutorialStep(level) {
-  const normalized = normalizeCustomLevel(level);
-  return {
-    start: normalized.start ? { ...normalized.start } : null,
-    goal: normalized.goal ? { ...normalized.goal } : null,
-    startOri: normalized.startOri || 'right',
-    mainSlots: normalized.mainSlotEnabled.filter(Boolean).length,
-    fnSlots: normalized.fnSlotEnabled.filter(Boolean).length,
-    availableBlocks: Object.keys(normalized.enabledBlocks).filter(dir => normalized.enabledBlocks[dir]),
-    obstacles: normalized.obstacles || []
-  };
+  return levelStorage.editorLevelToTutorialStep(level);
 }
 
 function buildInitialEditorLevels() {
-  const steps = getOfficialTutorialSteps();
-  return steps.map((step, idx) => tutorialStepToEditorLevel(step, idx));
-}
-
-function isProjectSaveSupported() {
-  return !!(window.isSecureContext && window.showSaveFilePicker && window.indexedDB && (
-    window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1'
-  ));
-}
-
-function openFileHandleDb() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(FILE_HANDLE_DB_NAME, 1);
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains(FILE_HANDLE_STORE_NAME)) {
-        db.createObjectStore(FILE_HANDLE_STORE_NAME);
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-async function getStoredFileHandle() {
-  if (!isProjectSaveSupported()) return null;
-  const db = await openFileHandleDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(FILE_HANDLE_STORE_NAME, 'readonly');
-    const store = tx.objectStore(FILE_HANDLE_STORE_NAME);
-    const request = store.get(EDITOR_LEVELS_FILE_HANDLE_KEY);
-    request.onsuccess = () => resolve(request.result || null);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-async function storeFileHandle(handle) {
-  if (!isProjectSaveSupported()) return;
-  const db = await openFileHandleDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(FILE_HANDLE_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(FILE_HANDLE_STORE_NAME);
-    const request = store.put(handle, EDITOR_LEVELS_FILE_HANDLE_KEY);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-  });
-}
-
-async function ensureProjectFilePermission(handle) {
-  if (!handle) return false;
-  if ((await handle.queryPermission({ mode: 'readwrite' })) === 'granted') return true;
-  return (await handle.requestPermission({ mode: 'readwrite' })) === 'granted';
-}
-
-async function requestProjectLevelsFileHandle() {
-  if (!isProjectSaveSupported()) return null;
-  const handle = await window.showSaveFilePicker({
-    suggestedName: EDITOR_LEVELS_FILE_PICKER_SUGGESTED_NAME,
-    types: [{
-      description: 'JSON levels file',
-      accept: { 'application/json': ['.json'] }
-    }]
-  });
-  await storeFileHandle(handle);
-  return handle;
-}
-
-async function getProjectLevelsFileHandle({ promptIfMissing = false } = {}) {
-  if (!isProjectSaveSupported()) return null;
-  let handle = await getStoredFileHandle();
-  if (handle && await ensureProjectFilePermission(handle)) return handle;
-  if (!promptIfMissing) return null;
-  handle = await requestProjectLevelsFileHandle();
-  if (handle && await ensureProjectFilePermission(handle)) return handle;
-  return null;
-}
-
-async function writeProjectLevelsFile(levels, { promptIfMissing = false } = {}) {
-  const handle = await getProjectLevelsFileHandle({ promptIfMissing });
-  if (!handle) return false;
-  const writable = await handle.createWritable();
-  await writable.write(JSON.stringify(exportableLevelsPayload(levels), null, 2));
-  await writable.close();
-  return true;
+  return levelStorage.buildInitialEditorLevels();
 }
 
 async function loadEditorLevelsSource() {
-  try {
-    const response = await fetch(EDITOR_LEVELS_FILE_PATH, { cache: 'no-store' });
-    if (response.ok) {
-      const payload = await response.json();
-      const levels = Array.isArray(payload) ? payload : payload?.levels;
-      if (Array.isArray(levels) && levels.length) {
-        writeCustomLevels(levels);
-        return;
-      }
-    }
-  } catch (_) {}
-  const fallback = readCustomLevels();
-  if (fallback.length) {
-    editorLevelsCache = fallback.map(normalizeCustomLevel);
-    return;
-  }
-  writeCustomLevels(buildInitialEditorLevels());
+  return levelStorage.loadEditorLevelsSource();
 }
 
 async function persistEditorLevels(levels, { promptIfMissing = false } = {}) {
-  writeCustomLevels(levels);
-  if (!isProjectSaveSupported()) return { projectFileSaved: false, localOnly: true };
-  try {
-    const projectFileSaved = await writeProjectLevelsFile(levels, { promptIfMissing });
-    return { projectFileSaved, localOnly: !projectFileSaved };
-  } catch (_err) {
-    return { projectFileSaved: false, localOnly: true };
-  }
+  return levelStorage.persistEditorLevels(levels, { promptIfMissing });
 }
 
 function syncEditorStateAfterLevelsChange(levels, { preferredLevelId = null } = {}) {
@@ -1210,6 +1098,7 @@ function setEditorMode(enabled) {
     updateRunAvailability();
     renderElementPalette();
   }
+  updateQuickEditorButton();
 }
 
 function toggleEditorSlot(zone, idx) {
@@ -1240,11 +1129,7 @@ function resetPlayerToStepStart() {
   const step = getCurrentTutorialStep();
   pos = { ...START };
   ori = currentCustomLevel?.startOri || step?.startOri || 'right';
-  const sprite = document.getElementById('sprite');
-  if (sprite) {
-    sprite.getAnimations().forEach(a => a.cancel());
-    sprite.classList.remove('moving');
-  }
+  resetSpritePresentation();
   syncSprite();
 }
 function applyTutorialStep(idx = 0) {
@@ -1276,11 +1161,7 @@ function applyTutorialStep(idx = 0) {
   renderBoard();
   renderFn();
   drawBackground();
-  const sprite = document.getElementById('sprite');
-  if (sprite) {
-    sprite.getAnimations().forEach(a => a.cancel());
-    sprite.classList.remove('moving');
-  }
+  const sprite = resetSpritePresentation();
   syncSprite();
   requestAnimationFrame(() => {
     sizeGrid();
@@ -1289,6 +1170,7 @@ function applyTutorialStep(idx = 0) {
       sprite.getAnimations().forEach(a => a.cancel());
       sprite.classList.remove('moving');
     }
+    setCharacterAction('idle');
     syncSprite();
   });
   updateDebugBadge();
@@ -1329,11 +1211,7 @@ function applyCustomLevel(level, { openEditor = false } = {}) {
   renderBoard();
   renderFn();
   drawBackground();
-  const sprite = document.getElementById('sprite');
-  if (sprite) {
-    sprite.getAnimations().forEach(a => a.cancel());
-    sprite.classList.remove('moving');
-  }
+  resetSpritePresentation();
   syncSprite();
   if (editorMode) refreshEditorDebug();
   else {
@@ -1432,6 +1310,7 @@ function startBlankEditorLevel() {
   GOAL = { x: 5, y: 5 };
   pos = { ...START };
   ori = 'right';
+  setCharacterAction('idle');
   setBlockedCells([]);
   resetPrograms();
   mainSlotEnabled = Array(SLOTS).fill(false);
@@ -2236,6 +2115,8 @@ async function moveChar(dir) {
       await sleep(120);
       return;
     }
+    setCharacterAction('move');
+    syncSprite();
     await animTo(p.x,p.y); await sleep(80);
   } else {
     playTurnSfx(dir);
@@ -2244,6 +2125,8 @@ async function moveChar(dir) {
       : {up:'right',right:'down',down:'left',left:'up'}[ori];
     const deg = dir==='left' ? -90 : 90;
     const s = document.getElementById('sprite');
+    setCharacterAction('turn');
+    syncSprite();
     // animate rotation
     const anim = s.animate(
       [{transform:'rotate(0deg)'},{transform:`rotate(${deg}deg)`}],
@@ -2252,6 +2135,7 @@ async function moveChar(dir) {
     await anim.finished.catch(()=>{});
     anim.cancel(); // reset transform so syncSprite takes over
     ori = newOri;
+    setCharacterAction('idle');
     syncSprite();
   }
 }
@@ -2423,10 +2307,13 @@ function showStartGate() {
 }
 function dismissSplash() {
   const splash = document.getElementById('splash');
-  if (!splash) return;
+  if (!splash) {
+    showStartGate();
+    return;
+  }
   showStartGate();
   splash.classList.add('hide');
-  setTimeout(() => splash.remove(), 900);
+  setTimeout(() => splash.remove(), 120);
 }
 function openAppFromGate({ openEditor = false, onOpen = null } = {}) {
   if (gameStarted) return;
@@ -2452,9 +2339,55 @@ function startEditorFromGate() {
   if (!LEVEL_EDITOR_ENABLED) return;
   openAppFromGate({ openEditor: true });
 }
+function updateQuickEditorButton() {
+  const btn = document.getElementById('quickEditorBtn');
+  if (!btn) return;
+  btn.textContent = editorMode ? 'Gioco' : 'Editor';
+  btn.setAttribute(
+    'aria-label',
+    editorMode ? 'Torna al livello in gioco' : 'Apri editor con il livello corrente'
+  );
+}
+function toggleEditorFromCurrentLevel() {
+  if (!LEVEL_EDITOR_ENABLED) return;
+  if (editorMode) {
+    exitEditorMode();
+    return;
+  }
+  enterEditorFromCurrentLevel();
+}
+function enterEditorFromCurrentLevel() {
+  if (!LEVEL_EDITOR_ENABLED) return;
+  if (running || animating) {
+    toast('Aspetta che il movimento finisca');
+    return;
+  }
+  closeSaveLevelModal();
+  if (currentCustomLevel) {
+    applyCustomLevel(currentCustomLevel, { openEditor: true });
+    return;
+  }
+  if (currentLevel === 'level1') {
+    const tutorialLevel = findCustomLevel(getEditorLevelIdForTutorialStep(tutorialStepIndex));
+    if (tutorialLevel) {
+      applyCustomLevel(tutorialLevel, { openEditor: true });
+      return;
+    }
+  }
+  setEditorMode(true);
+}
 function exitEditorMode() {
   if (!editorMode || running || animating) return;
   closeSaveLevelModal();
+  if (currentCustomLevel?.baseStepIndex != null) {
+    const stepIndex = currentCustomLevel.baseStepIndex;
+    currentCustomLevel = null;
+    currentLevel = 'level1';
+    applyLevelSceneVars();
+    setEditorMode(false);
+    applyTutorialStep(stepIndex);
+    return;
+  }
   if (currentCustomLevel) {
     applyCustomLevel(currentCustomLevel, { openEditor: false });
     return;
@@ -2473,11 +2406,12 @@ function exitEditorMode() {
 }
 
 // ── Splash dismiss ──
-setTimeout(dismissSplash, 3000);
+setTimeout(dismissSplash, 0);
 
 // tap to skip
 document.getElementById('startGameBtn')?.addEventListener('click', startGameFromGate);
 document.getElementById('startEditorBtn')?.addEventListener('click', startEditorFromGate);
+document.getElementById('quickEditorBtn')?.addEventListener('click', toggleEditorFromCurrentLevel);
 document.getElementById('saveLevelBtn')?.addEventListener('click', openSaveLevelModal);
 document.getElementById('exportLevelsBtn')?.addEventListener('click', exportEditorLevels);
 document.getElementById('importLevelsBtn')?.addEventListener('click', openImportLevelsPicker);
@@ -2502,9 +2436,16 @@ document.getElementById('levelNameInput')?.addEventListener('keydown', e => {
   if (e.key === 'Enter') saveCurrentEditorLevel();
 });
 document.addEventListener('keydown', e => {
+  const tag = e.target?.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) return;
   const key = (e.key || '').toLowerCase();
   if (key === 'escape') {
     closeSaveLevelModal();
+    return;
+  }
+  if (key === 'e' && !document.body.classList.contains('prestart')) {
+    e.preventDefault();
+    toggleEditorFromCurrentLevel();
     return;
   }
   if (key === 'l') {
@@ -2535,6 +2476,7 @@ window.addEventListener('resize', () => {
 window.visualViewport?.addEventListener('resize', syncViewportHeight);
 window.visualViewport?.addEventListener('scroll', syncViewportHeight);
 window.addEventListener('orientationchange', syncViewportHeight);
+updateQuickEditorButton();
 
 // ri-entra in fullscreen se l'utente torna sull'app (es. dopo notifica)
 document.addEventListener('visibilitychange', () => {

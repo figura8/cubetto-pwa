@@ -1,0 +1,123 @@
+#sprite .boks-hero,
+#ghost .boks-hero {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.boks-hero__motion {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: 50% 68%;
+}
+
+.boks-hero__pose {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.boks-hero__img {
+  width: 132%;
+  height: 132%;
+  display: block;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  transform-origin: 50% 55%;
+}
+
+.boks-hero[data-action="idle"][data-direction="right"] .boks-hero__motion {
+  animation: heroIdleRight 1.9s ease-in-out infinite;
+}
+
+.boks-hero[data-action="idle"][data-direction="left"] .boks-hero__motion {
+  animation: heroIdleLeft 1.95s ease-in-out infinite;
+}
+
+.boks-hero[data-action="idle"][data-direction="up"] .boks-hero__motion {
+  animation: heroIdleUp 1.8s ease-in-out infinite;
+}
+
+.boks-hero[data-action="idle"][data-direction="down"] .boks-hero__motion {
+  animation: heroIdleDown 2s ease-in-out infinite;
+}
+
+.boks-hero[data-action="move"][data-direction="right"] .boks-hero__motion,
+.boks-hero[data-action="move"][data-direction="left"] .boks-hero__motion,
+.boks-hero[data-action="move"][data-direction="up"] .boks-hero__motion,
+.boks-hero[data-action="move"][data-direction="down"] .boks-hero__motion {
+  animation: heroStrideFloat 0.28s ease-in-out infinite;
+}
+
+.boks-hero[data-action="turn"] .boks-hero__motion {
+  animation: heroTurnPulse 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Temporary fallback until dedicated directional artwork exists. */
+.boks-hero[data-transform-fallback="mirror-x"] .boks-hero__img {
+  transform: scaleX(-1);
+}
+
+.boks-hero[data-transform-fallback="rotate-left"] .boks-hero__img {
+  transform: rotate(-90deg) scale(0.98);
+}
+
+.boks-hero[data-transform-fallback="rotate-right"] .boks-hero__img {
+  transform: rotate(90deg) scale(0.98);
+}
+
+#sprite.moving {
+  animation: heroMoveWiggle 0.18s linear infinite;
+}
+
+#ghost .boks-hero__motion {
+  animation: none;
+  opacity: 0.92;
+}
+
+@keyframes heroMoveWiggle {
+  0%, 100% { transform: rotate(0deg); }
+  30% { transform: rotate(-3deg) translateY(-1px); }
+  70% { transform: rotate(3deg) translateY(-1px); }
+}
+
+@keyframes heroIdleRight {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  35% { transform: translateY(-1px) translateX(1px) scale(1.01, 0.99); }
+  65% { transform: translateY(-2px) scale(1.02, 0.98); }
+}
+
+@keyframes heroIdleLeft {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  30% { transform: translateY(-1px) translateX(-1px) scale(1.01, 0.99); }
+  60% { transform: translateY(-2px) scale(1.02, 0.98); }
+}
+
+@keyframes heroIdleUp {
+  0%, 100% { transform: translateY(0) scale(0.99, 1.01); }
+  40% { transform: translateY(-2px) scale(1.01, 0.98); }
+  70% { transform: translateY(-1px) scale(0.99, 1.01); }
+}
+
+@keyframes heroIdleDown {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  50% { transform: translateY(-1px) scale(1.03, 0.97); }
+}
+
+@keyframes heroStrideFloat {
+  0%, 100% { transform: translateY(0) scale(0.98, 1.02); }
+  50% { transform: translateY(-3px) scale(1.03, 0.97); }
+}
+
+@keyframes heroTurnPulse {
+  0% { transform: translateY(0) scale(0.98, 1.02); }
+  50% { transform: translateY(-1px) scale(1.04, 0.96); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
