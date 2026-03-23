@@ -6,7 +6,7 @@ Le icone installabili della PWA restano in `icons/`.
 Struttura corrente:
 
 - `characters/`
-  Personaggi in-game, organizzati per personaggio.
+  Art e materiale visivo dei personaggi, organizzati per personaggio.
 - `animations/`
   Manifest stati, timing e transizioni per personaggi e prop.
 - `audio/`
@@ -16,9 +16,7 @@ Struttura corrente:
 
 Convenzione consigliata:
 
-- `characters/<character-id>/idle/`
-- `characters/<character-id>/move/`
-- `characters/<character-id>/turn/`
+- `characters/<character-id>/`
 - `animations/characters/<character-id>/`
 - `animations/props/<prop-id>/`
 - `audio/sfx/`
@@ -28,4 +26,5 @@ Convenzione consigliata:
 Nota:
 
 - `assets/animations/` e il percorso canonico da usare da ora in avanti.
-- L'eventuale vecchia cartella `assets/animation-data/` puo essere rimossa in una pulizia successiva.
+- `assets/characters/` non deve contenere cartelle di stati come `idle`, `move`, `turn`.
+- Gli stati del runtime vivono in `assets/animations/`.

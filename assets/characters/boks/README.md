@@ -2,23 +2,14 @@
 
 Questa cartella ospita gli asset 2D del personaggio principale in gioco.
 
-Asset placeholder attuale:
+Asset art attuale:
 
-- `idle/right.png`
+- `placeholder.png`
 
-Struttura prevista quando arriveranno gli asset finali:
+Questa cartella contiene solo materiale visivo del personaggio.
+Gli stati del runtime non vivono qui.
 
-- `idle/right.png`
-- `idle/left.png`
-- `idle/up.png`
-- `idle/down.png`
-- `move/right.png`
-- `move/left.png`
-- `move/up.png`
-- `move/down.png`
-- `turn/`
-
-Per ora le direzioni `left/up/down` usano un fallback temporaneo definito in:
+Per ora le direzioni `left/up/down` e le azioni `idle/move/turn` usano un fallback temporaneo definito in:
 
 - `assets/animations/characters/boks/manifest.js`
 - `js/core/character/character-renderer.js`
