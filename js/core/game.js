@@ -502,7 +502,6 @@ function resetSpritePresentation() {
   setCharacterAction('idle');
   if (sprite) {
     sprite.getAnimations().forEach(a => a.cancel());
-    sprite.classList.remove('moving');
   }
   return sprite;
 }
@@ -548,7 +547,6 @@ async function animTo(tx, ty) {
   }
   const sfr = spriteRectFromCellRect(fr);
   const sto = spriteRectFromCellRect(to);
-  s.classList.add('moving');
   const a = s.animate(
     [{left:sfr.l+'px',top:sfr.t+'px'},{left:sto.l+'px',top:sto.t+'px'}],
     {duration:MOVE_MS, easing:'cubic-bezier(.2,.9,.2,1)', fill:'forwards'}
@@ -556,7 +554,6 @@ async function animTo(tx, ty) {
   await a.finished.catch(()=>{});
   s.style.left=sto.l+'px'; s.style.top=sto.t+'px';
   a.cancel();
-  s.classList.remove('moving');
   pos={x:tx,y:ty};
   setCharacterAction('idle');
   syncSprite();
@@ -1166,7 +1163,6 @@ function applyTutorialStep(idx = 0) {
     drawBackground();
     if (sprite) {
       sprite.getAnimations().forEach(a => a.cancel());
-      sprite.classList.remove('moving');
     }
     setCharacterAction('idle');
     syncSprite();
@@ -2121,18 +2117,10 @@ async function moveChar(dir) {
     const newOri = dir==='left'
       ? {up:'left',left:'down',down:'right',right:'up'}[ori]
       : {up:'right',right:'down',down:'left',left:'up'}[ori];
-    const deg = dir==='left' ? -90 : 90;
-    const s = document.getElementById('sprite');
+    ori = newOri;
     setCharacterAction('turn');
     syncSprite();
-    // animate rotation
-    const anim = s.animate(
-      [{transform:'rotate(0deg)'},{transform:`rotate(${deg}deg)`}],
-      {duration: TURN_MS, easing:'cubic-bezier(0.4,0,0.2,1)', fill:'forwards'}
-    );
-    await anim.finished.catch(()=>{});
-    anim.cancel(); // reset transform so syncSprite takes over
-    ori = newOri;
+    await sleep(TURN_MS);
     setCharacterAction('idle');
     syncSprite();
   }

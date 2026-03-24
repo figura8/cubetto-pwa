@@ -75,10 +75,8 @@
 
     return `
       <div class="boks-hero" data-character="${characterId}" data-direction="${state.direction}" data-action="${state.action}" data-state="${requestedKey}" data-resolved-state="${resolvedKey}" data-transform-fallback="${resolved.state.transformFallback || 'none'}" data-fallback="${resolved.usesFallback ? 'true' : 'false'}">
-        <span class="boks-hero__motion" aria-hidden="true">
-          <span class="boks-hero__pose">
-            <img class="boks-hero__img" src="${cacheBustedSrc}" alt=""/>
-          </span>
+        <span class="boks-hero__art" aria-hidden="true">
+          <img class="boks-hero__img" src="${cacheBustedSrc}" alt=""/>
         </span>
       </div>
     `;
