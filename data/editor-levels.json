@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exportedAt": "2026-03-25T16:17:10.158Z",
+  "exportedAt": "2026-03-26T17:35:08.132Z",
   "levels": [
     {
       "id": "level1-step-1",
@@ -8,7 +8,7 @@
       "baseStepIndex": 0,
       "name": "Livello 1",
       "icon": "leaf",
-      "baseLevel": "level-thomas",
+      "baseLevel": "level1",
       "characterId": "boks_black",
       "start": {
         "x": 2,
@@ -91,8 +91,8 @@
       "number": 3,
       "baseStepIndex": 2,
       "name": "Livello 3",
-      "icon": "turtle",
-      "baseLevel": "level-thomas",
+      "icon": "leaf",
+      "baseLevel": "level1",
       "characterId": "boks_black",
       "start": {
         "x": 1,
@@ -619,6 +619,48 @@
         "left": true,
         "right": true,
         "function": true
+      },
+      "themeOverrides": {}
+    },
+    {
+      "id": "custom-1774546508122",
+      "number": 14,
+      "baseStepIndex": null,
+      "name": "Livello 14",
+      "icon": "leaf",
+      "baseLevel": "level1",
+      "characterId": "boks_black",
+      "start": {
+        "x": 2,
+        "y": 3
+      },
+      "goal": {
+        "x": 4,
+        "y": 2
+      },
+      "startOri": "right",
+      "obstacles": [],
+      "mainSlotEnabled": [
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "fnSlotEnabled": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "enabledBlocks": {
+        "forward": true,
+        "left": true,
+        "right": false,
+        "function": false
       },
       "themeOverrides": {}
     }

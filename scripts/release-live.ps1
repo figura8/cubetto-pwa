@@ -58,6 +58,37 @@ function Assert-CleanWorktree {
   }
 }
 
+function Get-IndexDataAttribute {
+  param(
+    [string]$RepoPath,
+    [string]$Name
+  )
+
+  $indexPath = Join-Path $RepoPath 'index.html'
+  if (-not (Test-Path $indexPath)) {
+    throw "index.html non trovato in $RepoPath"
+  }
+  $content = Get-Content -Raw $indexPath
+  $match = [regex]::Match($content, "$Name=""([^""]+)""")
+  if (-not $match.Success) {
+    throw "Attributo $Name non trovato in $indexPath"
+  }
+  return $match.Groups[1].Value
+}
+
+function Assert-IndexDataAttribute {
+  param(
+    [string]$RepoPath,
+    [string]$Name,
+    [string]$Expected
+  )
+
+  $actual = Get-IndexDataAttribute -RepoPath $RepoPath -Name $Name
+  if ($actual -ne $Expected) {
+    throw "Valore non valido per $Name in $RepoPath. Atteso '$Expected', trovato '$actual'."
+  }
+}
+
 function New-BackupBranchIfDiverged {
   param(
     [string]$RepoPath,
@@ -115,6 +146,8 @@ New-BackupBranchIfDiverged -RepoPath $liveWorktreePath -BranchName 'live' -Remot
 Invoke-Git $liveWorktreePath 'reset' '--hard' "$RemoteName/live"
 Invoke-Git $liveWorktreePath 'merge' '-X' 'theirs' '--no-edit' "$RemoteName/main"
 
+$previousBuild = Get-IndexDataAttribute -RepoPath $liveWorktreePath -Name 'data-build'
+
 & pwsh -ExecutionPolicy Bypass -File (Join-Path $scriptRoot 'stamp-build.ps1') -RepoRoot $liveWorktreePath
 if ($LASTEXITCODE -ne 0) {
   throw 'Stamp build fallito per il branch live.'
@@ -124,6 +157,16 @@ if ($LASTEXITCODE -ne 0) {
 if ($LASTEXITCODE -ne 0) {
   throw 'Impostazione release mode fallita per il branch live.'
 }
+
+$currentBuild = Get-IndexDataAttribute -RepoPath $liveWorktreePath -Name 'data-build'
+if ($currentBuild -eq $previousBuild) {
+  throw "Build stamp invariato ($currentBuild). Release live annullata per sicurezza."
+}
+
+Assert-IndexDataAttribute -RepoPath $liveWorktreePath -Name 'data-release-channel' -Expected 'live'
+Assert-IndexDataAttribute -RepoPath $liveWorktreePath -Name 'data-editor-enabled' -Expected 'false'
+Assert-IndexDataAttribute -RepoPath $liveWorktreePath -Name 'data-debug-tools-enabled' -Expected 'false'
+Assert-IndexDataAttribute -RepoPath $liveWorktreePath -Name 'data-build-badge-enabled' -Expected 'false'
 
 $statusAfter = Get-GitOutput $liveWorktreePath 'status' '--porcelain'
 if (-not $statusAfter) {
@@ -136,7 +179,7 @@ Invoke-Git $liveWorktreePath 'commit' '-m' 'Prepare live player-only release'
 
 if ($Push) {
   Invoke-Git $liveWorktreePath 'push' $RemoteName 'live'
-  Write-Output 'Release live completata e pushata.'
+  Write-Output "Release live completata e pushata. Build: $currentBuild"
 } else {
-  Write-Output 'Release live preparata localmente. Esegui git push origin live nel worktree live per pubblicarla.'
+  Write-Output "Release live preparata localmente (build $currentBuild). Esegui git push origin live nel worktree live per pubblicarla."
 }
