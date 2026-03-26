@@ -94,7 +94,7 @@ let fnUnlockHintActive = false;
 let stepStartHintActive = false;
 let gameStarted = false;
 let debugVisible = DEBUG_TOOLS_ENABLED;
-let animationDebugVisible = true;
+let animationDebugVisible = DEBUG_TOOLS_ENABLED;
 let editorMode = false;
 let currentCustomLevel = null;
 let tutorialSceneLevelId = CUSTOM_LEVEL_THEME;
@@ -113,8 +113,12 @@ let emptyRunHintTimers = [];
 let lastEmptyRunHintAt = 0;
 document.body?.classList.add('prestart');
 if (DEBUG_TOOLS_ENABLED) document.body?.classList.add('debug-visible');
-if (animationDebugVisible) document.body?.classList.add('animation-debug-visible');
-if (animationDebugVisible) requestAnimationFrame(() => updateAnimationDebugBadge());
+if (DEBUG_TOOLS_ENABLED && animationDebugVisible) {
+  document.body?.classList.add('animation-debug-visible');
+  requestAnimationFrame(() => updateAnimationDebugBadge());
+} else {
+  document.body?.classList.remove('animation-debug-visible');
+}
 
 // ═══ UTILS ═══
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1106,8 +1110,10 @@ function getCurrentEditorThemeId() {
 function getActiveCharacterId() {
   if (currentCustomLevel?.characterId) return resolveCharacterId(currentCustomLevel.characterId);
   if (currentLevel === 'level1') {
-    const stepLevel = findCustomLevel(getEditorLevelIdForTutorialStep(tutorialStepIndex));
-    if (stepLevel?.characterId) return resolveCharacterId(stepLevel.characterId);
+    if (LEVEL_EDITOR_ENABLED) {
+      const stepLevel = findCustomLevel(getEditorLevelIdForTutorialStep(tutorialStepIndex));
+      if (stepLevel?.characterId) return resolveCharacterId(stepLevel.characterId);
+    }
     const step = getCurrentTutorialStep();
     if (step?.characterId) return resolveCharacterId(step.characterId);
   }
@@ -1534,7 +1540,7 @@ function applyLevelSceneVars() {
     activeOverrides = sanitizeThemeOverrides(pendingNewLevelThemeOverrides || {});
   } else if (currentCustomLevel) {
     activeOverrides = sanitizeThemeOverrides(currentCustomLevel.themeOverrides || {});
-  } else if (currentLevel === 'level1') {
+  } else if (currentLevel === 'level1' && LEVEL_EDITOR_ENABLED) {
     const stepLevel = findCustomLevel(getEditorLevelIdForTutorialStep(tutorialStepIndex));
     activeOverrides = sanitizeThemeOverrides(stepLevel?.themeOverrides || {});
   }
@@ -1693,6 +1699,11 @@ function toggleDebugBadge() {
 }
 
 function toggleAnimationDebugBadge(force = null) {
+  if (!DEBUG_TOOLS_ENABLED) {
+    animationDebugVisible = false;
+    document.body.classList.remove('animation-debug-visible');
+    return;
+  }
   const next = typeof force === 'boolean' ? force : !animationDebugVisible;
   animationDebugVisible = next;
   document.body.classList.toggle('animation-debug-visible', animationDebugVisible);
@@ -1836,6 +1847,9 @@ function toggleEditorSlot(zone, idx) {
 function getTutorialSteps() {
   if (currentCustomLevel) return [];
   if (currentLevel === 'level1') {
+    if (!LEVEL_EDITOR_ENABLED) {
+      return getOfficialTutorialSteps();
+    }
     return readCustomLevels().map(editorLevelToTutorialStep);
   }
   const lv = getLevel();
