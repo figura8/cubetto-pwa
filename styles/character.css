@@ -39,6 +39,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  transform-origin: 50% 50%;
+  will-change: transform;
 }
 
 .boks-hero__fit {
@@ -49,6 +51,7 @@
   justify-content: center;
   transform: translate(var(--hero-fit-offset-x, 0px), var(--hero-fit-offset-y, 0px)) scale(var(--hero-fit-scale, 1));
   transform-origin: 50% 50%;
+  will-change: transform;
 }
 
 .boks-hero__img {
@@ -74,8 +77,8 @@
   width: 100%;
   height: 100%;
   display: block;
-  opacity: 0;
-  transition: opacity 0.12s ease;
+  opacity: 1;
+  transition: opacity 0.08s linear;
 }
 
 .boks-hero__img--fallback {
@@ -92,10 +95,6 @@
 #sprite .boks-hero__lottie-wrap.is-failed .boks-hero__img--fallback,
 #sprite .boks-hero__lottie-wrap.is-unavailable .boks-hero__img--fallback {
   display: block;
-}
-
-#sprite .boks-hero__lottie-wrap.is-ready .boks-hero__lottie {
-  opacity: 1;
 }
 
 #sprite .boks-hero__lottie-wrap.is-ready .boks-hero__img--fallback {

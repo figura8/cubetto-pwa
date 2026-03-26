@@ -106,6 +106,13 @@
           white-space: normal;
           pointer-events: none;
         }
+        body.editor-mode #animationDebugBadge {
+          left: max(16px, calc(50% - (min(var(--editor-shell-w), calc(100vw - 32px)) / 2)));
+          top: 84px;
+          transform: none;
+          width: var(--editor-sidebar-w);
+          max-width: var(--editor-sidebar-w);
+        }
         body.editor-mode #editorLayout {
           display: grid;
           grid-template-columns: var(--editor-sidebar-w) var(--editor-main-w);
@@ -453,7 +460,8 @@
       touch-action: none;
       cursor: default;
       will-change: left, top;
-      transform: translateZ(0);
+      transform: translateZ(0) rotate(var(--sprite-rotation, 0deg));
+      transform-origin: 50% 50%;
       backface-visibility: hidden;
     }
     body.editor-mode #sprite { cursor: grab; }
@@ -764,7 +772,7 @@
     #ghost {
       position: fixed; z-index: 9999;
       pointer-events: none;
-      transform: translate(-50%, -50%) scale(1.0);
+      transform: translate(-50%, -50%) rotate(var(--sprite-rotation, 0deg)) scale(1.0);
       opacity: .9; display: none; border-radius: 5px;
       filter: drop-shadow(0 6px 12px rgba(0,0,0,0.25));
     }
@@ -825,6 +833,36 @@
       display: none !important;
     }
 
+    #animationDebugBadge {
+      position: fixed;
+      top: calc(44px + var(--safe-top));
+      left: 10px;
+      z-index: 12000;
+      display: none;
+      min-width: 320px;
+      max-width: min(86vw, 560px);
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(62, 49, 30, 0.34);
+      background: rgba(28, 24, 17, 0.86);
+      color: #f7ecd6;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+      font-size: 0.72rem;
+      font-weight: 600;
+      line-height: 1.35;
+      letter-spacing: 0.01em;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+      pointer-events: none;
+      white-space: pre-line;
+      user-select: none;
+    }
+    body.animation-debug-visible #animationDebugBadge {
+      display: block;
+    }
+    body:not(.prestart):not(.editor-mode).animation-debug-visible #animationDebugBadge {
+      top: calc(92px + var(--safe-top));
+    }
+
     #buildBadge {
       position: fixed;
       right: 10px;
@@ -857,7 +895,9 @@
     body.editor-disabled #elementPalettePanel {
       display: none !important;
     }
-    body.debug-tools-disabled #openSpritePreviewBtn {
+    body.debug-tools-disabled #openSpritePreviewBtn,
+    body.debug-tools-disabled #openLottieInspectorBtn,
+    body.debug-tools-disabled #openLottieInspectorBtnEditor {
       display: none !important;
     }
 
@@ -1462,6 +1502,78 @@
       font-size: 0.72rem;
       line-height: 1.25;
     }
+    .editor-setup-card {
+      border: 2px solid rgba(210, 201, 180, 0.95);
+      border-radius: 16px;
+      background: linear-gradient(180deg, #fffdf6 0%, #f1e6d1 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.72), 0 2px 0 #cdc2ab, 0 6px 10px rgba(95, 78, 52, 0.1);
+      padding: 10px 12px;
+      display: grid;
+      gap: 8px;
+    }
+    .editor-setup-title {
+      color: #6b5a43;
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .editor-orientation-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .editor-orientation-btn {
+      min-height: 44px;
+      border: 2px solid rgba(210, 201, 180, 0.95);
+      border-radius: 12px;
+      background: linear-gradient(180deg, #fffdf6 0%, #efe3cc 100%);
+      color: #5f4e34;
+      font-family: 'Fredoka', system-ui, sans-serif;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+    .editor-orientation-btn.active {
+      border-color: #76ad4d;
+      background: linear-gradient(180deg, #f5ffe9 0%, #e0efc4 100%);
+      color: #3d6e2c;
+      box-shadow: 0 0 0 2px rgba(118, 173, 77, 0.16);
+    }
+    .editor-orientation-glyph {
+      font-size: 1rem;
+      line-height: 1;
+    }
+    .editor-orientation-label {
+      font-size: 0.76rem;
+      line-height: 1;
+    }
+    .editor-character-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .editor-character-btn {
+      min-height: 34px;
+      padding: 0 10px;
+      border: 2px solid rgba(210, 201, 180, 0.95);
+      border-radius: 999px;
+      background: linear-gradient(180deg, #fffdf6 0%, #efe3cc 100%);
+      color: #5f4e34;
+      font-family: 'Fredoka', system-ui, sans-serif;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .editor-character-btn.active {
+      border-color: #76ad4d;
+      background: linear-gradient(180deg, #f5ffe9 0%, #e0efc4 100%);
+      color: #3d6e2c;
+      box-shadow: 0 0 0 2px rgba(118, 173, 77, 0.16);
+    }
     .custom-level-card,
     .custom-level-empty {
       border-radius: 14px;
@@ -1593,6 +1705,7 @@
     }
     #startEditorBtn,
     #openSpritePreviewBtn,
+    #openLottieInspectorBtn,
     #exitEditorBtn,
     #editorToolbar button {
       border: 2px solid var(--panel-edge);
@@ -1612,7 +1725,8 @@
       padding: 0 16px;
       font-size: 0.96rem;
     }
-    #openSpritePreviewBtn {
+    #openSpritePreviewBtn,
+    #openLottieInspectorBtn {
       min-width: 172px;
     }
     #editorToolbar {
@@ -1656,7 +1770,8 @@
     #importLevelsBtn,
     #resetLevelsBtn,
     #saveLevelBtn,
-    #openStyleEditorBtn {
+    #openStyleEditorBtn,
+    #openLottieInspectorBtnEditor {
       min-width: 84px;
       padding: 0 12px;
       font-size: 0.84rem;
@@ -1667,6 +1782,7 @@
     #editorToolbar button:active,
     #startEditorBtn:active,
     #openSpritePreviewBtn:active,
+    #openLottieInspectorBtn:active,
     #exitEditorBtn:active,
     .custom-level-actions button:active,
     #cancelSaveLevelBtn:active,
@@ -1869,6 +1985,7 @@
     body.theme-thomas #editorToolbar button,
     body.theme-thomas #startEditorBtn,
     body.theme-thomas #openSpritePreviewBtn,
+    body.theme-thomas #openLottieInspectorBtn,
     body.theme-thomas #exitEditorBtn,
     body.theme-thomas #customLevelsPanel,
     body.theme-thomas #levelThemePanel,

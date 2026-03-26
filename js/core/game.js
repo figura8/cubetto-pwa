@@ -27,7 +27,7 @@ function moveGoal() {
   }
 }
 let ori = 'right';
-const MOVE_MS = 650, TURN_MS = 520, STEP_MS = 380;
+const MOVE_MS = 650, TURN_MS = 520, STEP_MS = 180;
 const POOL = {
   forward:  {dir:'forward',  color:'#5BC85A', dark:'#3a8a39', light:'#8de88c'},
   left:     {dir:'left',     color:'#F5C842', dark:'#b8920a', light:'#ffe87a'},
@@ -43,7 +43,7 @@ const FILE_HANDLE_STORE_NAME = 'handles';
 const EDITOR_LEVELS_FILE_HANDLE_KEY = 'editor-levels-project-file';
 const CUSTOM_LEVEL_THEME = 'level1';
 const CUSTOM_ICONS = ['leaf', 'star', 'turtle', 'sun', 'moon', 'flower'];
-const DEFAULT_CHARACTER_ID = 'boks';
+const DEFAULT_CHARACTER_ID = 'boks_black';
 const LOCKED_THEME_SCENE_VAR_KEYS = ['--scene-body-bg', '--bg-base'];
 const EDITOR_THEME_COLOR_CONTROLS = [
   { key: '--panel-bg', label: 'Pannelli' },
@@ -94,6 +94,7 @@ let fnUnlockHintActive = false;
 let stepStartHintActive = false;
 let gameStarted = false;
 let debugVisible = DEBUG_TOOLS_ENABLED;
+let animationDebugVisible = true;
 let editorMode = false;
 let currentCustomLevel = null;
 let tutorialSceneLevelId = CUSTOM_LEVEL_THEME;
@@ -112,6 +113,8 @@ let emptyRunHintTimers = [];
 let lastEmptyRunHintAt = 0;
 document.body?.classList.add('prestart');
 if (DEBUG_TOOLS_ENABLED) document.body?.classList.add('debug-visible');
+if (animationDebugVisible) document.body?.classList.add('animation-debug-visible');
+if (animationDebugVisible) requestAnimationFrame(() => updateAnimationDebugBadge());
 
 // ═══ UTILS ═══
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -516,8 +519,17 @@ function spriteRectFromCellRect(r) {
 }
 
 function getCharacterRenderState(overrides = {}) {
+  const characterId = resolveCharacterId(overrides.characterId || getActiveCharacterId());
+  const manifest = getCharacterDefs()[characterId] || {};
+  if (manifest.containerDrivenPose === true) {
+    return {
+      characterId,
+      direction: manifest.defaultDirection || 'right',
+      action: manifest.defaultAction || 'idle'
+    };
+  }
   return {
-    characterId: resolveCharacterId(overrides.characterId || getActiveCharacterId()),
+    characterId,
     direction: overrides.direction || ori,
     action: overrides.action || characterAction
   };
@@ -525,6 +537,24 @@ function getCharacterRenderState(overrides = {}) {
 
 function setCharacterAction(action = 'idle') {
   characterAction = action;
+}
+
+function isContainerDrivenCharacter(characterId) {
+  const resolvedId = resolveCharacterId(characterId);
+  const manifest = getCharacterDefs()[resolvedId] || {};
+  return manifest.containerDrivenPose === true;
+}
+
+function applySpriteContainerOrientation(characterId, orientation = 'right', targetEl = null) {
+  const spriteEl = targetEl || document.getElementById('sprite');
+  if (!spriteEl) return;
+  // Evita che un transform inline lasciato da WAAPI/commitStyles blocchi la rotazione via CSS var.
+  spriteEl.style.removeProperty('transform');
+  const shouldTrackOrientation = isContainerDrivenCharacter(characterId);
+  const effectiveOrientation = shouldTrackOrientation ? orientation : 'right';
+  const angle = orientationAngle(effectiveOrientation);
+  spriteEl.style.setProperty('--sprite-rotation', `${angle}deg`);
+  spriteEl.dataset.visualOrientation = effectiveOrientation;
 }
 
 function clearSpriteSwapTimer(spriteEl) {
@@ -545,11 +575,11 @@ function pruneSpriteHeroes(spriteEl) {
   return keep;
 }
 
-function applySpriteMarkup(spriteEl, markup, renderToken, { animate = true } = {}) {
+function applySpriteMarkup(spriteEl, markup, renderToken, { animate = true, preservePlayback = true } = {}) {
   if (!spriteEl) return;
   clearSpriteSwapTimer(spriteEl);
   const currentHero = pruneSpriteHeroes(spriteEl);
-  const playbackSnapshot = currentHero
+  const playbackSnapshot = preservePlayback && currentHero
     ? window.BOKS_CHARACTER_RENDERER?.getPlaybackSnapshot?.(currentHero) || null
     : null;
 
@@ -567,38 +597,62 @@ function resetSpritePresentation() {
     clearSpriteSwapTimer(sprite);
     window.BOKS_CHARACTER_RENDERER?.destroyIn?.(sprite);
     delete sprite.dataset.heroRenderToken;
+    delete sprite.dataset.visualOrientation;
+    sprite.style.removeProperty('--sprite-rotation');
+    sprite.style.removeProperty('transform');
     sprite.getAnimations().forEach(a => a.cancel());
   }
   const ghost = document.getElementById('ghost');
   if (ghost) {
     window.BOKS_CHARACTER_RENDERER?.destroyIn?.(ghost);
+    delete ghost.dataset.visualOrientation;
+    ghost.style.removeProperty('--sprite-rotation');
+    ghost.style.removeProperty('transform');
   }
+  updateAnimationDebugBadge();
   return sprite;
 }
 
 function syncSprite(overrides = null) {
   const s = document.getElementById('sprite');
-  if (!s) return;
+  if (!s) {
+    updateAnimationDebugBadge();
+    return;
+  }
   if (!playerPlaced) {
     clearSpriteSwapTimer(s);
     window.BOKS_CHARACTER_RENDERER?.destroyIn?.(s);
     delete s.dataset.heroRenderToken;
+    delete s.dataset.visualOrientation;
+    s.style.removeProperty('--sprite-rotation');
+    s.style.removeProperty('transform');
     s.innerHTML = '';
     s.style.width = '0px';
     s.style.height = '0px';
     s.style.opacity = '0';
+    updateAnimationDebugBadge();
     return;
   }
   const r = cellPos(pos.x, pos.y);
-  if(!r) return;
+  if(!r) {
+    updateAnimationDebugBadge();
+    return;
+  }
   const sr = spriteRectFromCellRect(r);
   s.style.opacity = '1';
   s.style.left = sr.l+'px'; s.style.top = sr.t+'px';
   s.style.width = sr.w+'px'; s.style.height = sr.h+'px';
-  const renderState = overrides ? getCharacterRenderState(overrides) : getCharacterRenderState();
+  const renderState = overrides
+    ? getCharacterRenderState(overrides)
+    : getCharacterRenderState();
+  const visualDirection = overrides?.direction || ori;
+  applySpriteContainerOrientation(renderState.characterId, visualDirection, s);
+  window.BOKS_CHARACTER_RENDERER?.preloadCharacterAssets?.(renderState.characterId);
+  const renderInfo = window.BOKS_CHARACTER_RENDERER?.resolveConfig?.(renderState) || null;
   const renderToken = window.BOKS_CHARACTER_RENDERER?.getRenderToken?.(renderState) || '';
   if (renderToken && s.dataset.heroRenderToken === renderToken && s.innerHTML) {
     window.BOKS_CHARACTER_RENDERER?.mountIn?.(s);
+    updateAnimationDebugBadge();
     return;
   }
   const markup = svgRobot(renderState);
@@ -607,9 +661,13 @@ function syncSprite(overrides = null) {
     window.BOKS_CHARACTER_RENDERER?.destroyIn?.(s);
     delete s.dataset.heroRenderToken;
     s.innerHTML = '';
+    updateAnimationDebugBadge();
     return;
   }
-  applySpriteMarkup(s, markup, renderToken, { animate: true });
+  const preservePlayback = renderInfo?.resolved?.state?.restartPlayback !== true;
+  applySpriteMarkup(s, markup, renderToken, { animate: true, preservePlayback });
+  updateAnimationDebugBadge();
+  requestAnimationFrame(() => updateAnimationDebugBadge());
 }
 
 function orientationAngle(orientation = 'right') {
@@ -626,6 +684,84 @@ function orientationDelta(fromOri = 'right', toOri = 'right') {
   while (delta > 180) delta -= 360;
   while (delta < -180) delta += 360;
   return delta;
+}
+
+function buildTurnInterpolationKeyframes(delta = 0) {
+  const start = -delta;
+  const overshoot = delta === 0
+    ? 0
+    : Math.sign(delta) * Math.min(10, Math.max(4, Math.abs(delta) * 0.12));
+  return [
+    {
+      transform: `translate3d(0, 0, 0) rotate(${start}deg) scale(0.97)`
+    },
+    {
+      transform: `translate3d(0, -1.5%, 0) rotate(${overshoot}deg) scale(1.02)`,
+      offset: 0.72
+    },
+    {
+      transform: 'translate3d(0, 0, 0) rotate(0deg) scale(1)'
+    }
+  ];
+}
+
+async function animateTurnInterpolation(previousOri, newOri, durationMs = TURN_MS) {
+  const activeCharacterId = resolveCharacterId(getActiveCharacterId());
+  if (isContainerDrivenCharacter(activeCharacterId)) {
+    const spriteEl = document.getElementById('sprite');
+    if (!spriteEl) {
+      await sleep(durationMs);
+      return;
+    }
+    const delta = orientationDelta(previousOri, newOri);
+    const fromDeg = orientationAngle(previousOri);
+    // Angolo continuo: evita wrap -90 <-> 180 che causa scatti sul primo turn left.
+    const toDeg = fromDeg + delta;
+    const overshoot = delta === 0
+      ? 0
+      : Math.sign(delta) * Math.min(10, Math.max(4, Math.abs(delta) * 0.12));
+    const turnAnim = spriteEl.animate(
+      [
+        { transform: `translateZ(0) rotate(${fromDeg}deg) scale(0.97)` },
+        { transform: `translateZ(0) rotate(${toDeg + overshoot}deg) scale(1.02)`, offset: 0.72 },
+        { transform: `translateZ(0) rotate(${toDeg}deg) scale(1)` }
+      ],
+      {
+        duration: durationMs,
+        easing: 'cubic-bezier(.22,1,.36,1)',
+        fill: 'forwards'
+      }
+    );
+    await turnAnim.finished.catch(()=>{});
+    turnAnim.cancel();
+    applySpriteContainerOrientation(activeCharacterId, newOri, spriteEl);
+    return;
+  }
+
+  const spriteEl = document.getElementById('sprite');
+  const heroArt = spriteEl?.querySelector('.boks-hero__art');
+  const target = heroArt || spriteEl;
+  if (!target) {
+    await sleep(durationMs);
+    return;
+  }
+
+  const delta = orientationDelta(previousOri, newOri);
+  const turnAnim = target.animate(
+    buildTurnInterpolationKeyframes(delta),
+    {
+      duration: durationMs,
+      easing: 'cubic-bezier(.22,1,.36,1)',
+      fill: 'forwards'
+    }
+  );
+
+  await turnAnim.finished.catch(()=>{});
+  if (typeof turnAnim.commitStyles === 'function') {
+    try { turnAnim.commitStyles(); } catch (_) {}
+  }
+  turnAnim.cancel();
+  target.style.transform = '';
 }
 
 async function animTo(tx, ty) {
@@ -674,9 +810,11 @@ function setupSpriteDrag() {
     const g = document.getElementById('ghost');
     const w = s.offsetWidth;
     const h = s.offsetHeight;
+    const renderState = getCharacterRenderState();
     window.BOKS_CHARACTER_RENDERER?.destroyIn?.(g);
-    g.innerHTML = svgRobot(getCharacterRenderState());
+    g.innerHTML = svgRobot(renderState);
     g.style.cssText = `display:block;width:${w}px;height:${h}px;left:${cx}px;top:${cy}px;`;
+    applySpriteContainerOrientation(renderState.characterId, ori, g);
     s.style.opacity = '0.3'; return true;
   }
   function move(cx,cy) {
@@ -1429,6 +1567,91 @@ function ensureDebugBadge() {
   document.body.appendChild(badge);
   return badge;
 }
+
+function ensureAnimationDebugBadge() {
+  let badge = document.getElementById('animationDebugBadge');
+  if (badge) return badge;
+  badge = document.createElement('div');
+  badge.id = 'animationDebugBadge';
+  document.body.appendChild(badge);
+  return badge;
+}
+
+function trimBuildQuery(src = '') {
+  const clean = String(src || '').trim();
+  if (!clean) return '';
+  return clean.split('?')[0];
+}
+
+function compactAssetLabel(src = '') {
+  const clean = trimBuildQuery(src);
+  if (!clean) return '-';
+  const parts = clean.split('/');
+  if (parts.length <= 3) return clean;
+  return `${parts[parts.length - 3]}/${parts[parts.length - 2]}/${parts[parts.length - 1]}`;
+}
+
+function readCurrentAnimationState() {
+  const sprite = document.getElementById('sprite');
+  const hero = sprite?.querySelector('.boks-hero');
+  const visualDirection = sprite?.dataset?.visualOrientation || ori;
+  if (!hero) {
+    return {
+      visible: false,
+      character: resolveCharacterId(getActiveCharacterId()),
+      requested: '-',
+      resolved: '-',
+      action: characterAction,
+      direction: ori,
+      visualDirection,
+      mode: 'none',
+      loop: '-',
+      mounted: '-',
+      asset: '-'
+    };
+  }
+
+  const wrap = hero.querySelector('.boks-hero__lottie-wrap');
+  const img = hero.querySelector('.boks-hero__img:not(.boks-hero__img--fallback)');
+  const lottieSrc = wrap?.dataset?.lottieSrc || '';
+  const imageSrc = img?.getAttribute?.('src') || '';
+  const mode = wrap ? 'lottie' : (img ? 'image' : 'none');
+  const loopRaw = wrap?.dataset?.lottieLoop;
+  const loop = typeof loopRaw === 'string' ? (loopRaw === 'true' ? 'yes' : 'no') : '-';
+  const mounted = wrap?.dataset?.lottieMounted === 'true' ? 'yes' : (wrap ? 'no' : '-');
+  const ready = wrap?.dataset?.lottieReady === 'true' || wrap?.classList?.contains('is-ready') ? 'yes' : (wrap ? 'no' : '-');
+
+  return {
+    visible: true,
+    character: hero.dataset.character || resolveCharacterId(getActiveCharacterId()),
+    requested: hero.dataset.state || '-',
+    resolved: hero.dataset.resolvedState || '-',
+    action: hero.dataset.action || characterAction,
+    direction: hero.dataset.direction || ori,
+    visualDirection,
+    mode,
+    loop,
+    mounted,
+    ready,
+    asset: compactAssetLabel(lottieSrc || imageSrc),
+    fallback: hero.dataset.fallback === 'true' ? 'yes' : 'no'
+  };
+}
+
+function updateAnimationDebugBadge(extra = '') {
+  const badge = ensureAnimationDebugBadge();
+  const info = readCurrentAnimationState();
+  const lines = [
+    `Anim now  : ${info.resolved}`,
+    `Requested : ${info.requested}`,
+    `Char/pose : ${info.character} | ${info.action}:${info.direction} | visual:${info.visualDirection}`,
+    `Mode      : ${info.mode} | loop:${info.loop} | mounted:${info.mounted} | ready:${info.ready ?? '-'} | fallback:${info.fallback ?? '-'}`,
+    `Asset     : ${info.asset}`
+  ];
+  if (extra) lines.push(`Note      : ${extra}`);
+  badge.textContent = lines.join('\n');
+}
+
 function updateRunAvailability() {
   const btn = document.getElementById('runBtn');
   if (!btn) return;
@@ -1464,7 +1687,18 @@ function toggleDebugBadge() {
   if (!DEBUG_TOOLS_ENABLED) return;
   debugVisible = !debugVisible;
   document.body.classList.toggle('debug-visible', debugVisible);
-  if (debugVisible) updateDebugBadge();
+  if (debugVisible) {
+    updateDebugBadge();
+  }
+}
+
+function toggleAnimationDebugBadge(force = null) {
+  const next = typeof force === 'boolean' ? force : !animationDebugVisible;
+  animationDebugVisible = next;
+  document.body.classList.toggle('animation-debug-visible', animationDebugVisible);
+  if (animationDebugVisible) {
+    updateAnimationDebugBadge();
+  }
 }
 function debugStepJump(delta) {
   if (!DEBUG_TOOLS_ENABLED) return;
@@ -1763,6 +1997,73 @@ function resolveStyleTargetLabel() {
   return level?.name || 'Livello selezionato';
 }
 
+function renderEditorSetupControls(palette) {
+  if (!palette || !editorMode) return;
+
+  const card = document.createElement('div');
+  card.className = 'editor-setup-card';
+
+  const orientationTitle = document.createElement('div');
+  orientationTitle.className = 'editor-setup-title';
+  orientationTitle.textContent = 'Orientamento iniziale';
+  card.appendChild(orientationTitle);
+
+  const orientationGrid = document.createElement('div');
+  orientationGrid.className = 'editor-orientation-grid';
+  const orientationOptions = [
+    { id: 'up', label: 'Su', glyph: '^' },
+    { id: 'right', label: 'Destra', glyph: '>' },
+    { id: 'down', label: 'Giu', glyph: 'v' },
+    { id: 'left', label: 'Sinistra', glyph: '<' }
+  ];
+
+  orientationOptions.forEach(option => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'editor-orientation-btn' + (ori === option.id ? ' active' : '');
+    btn.dataset.orientation = option.id;
+    btn.innerHTML = `
+      <span class="editor-orientation-glyph">${option.glyph}</span>
+      <span class="editor-orientation-label">${option.label}</span>
+    `;
+    btn.addEventListener('click', () => {
+      if (ori === option.id) return;
+      ori = option.id;
+      setCharacterAction('idle');
+      syncSprite();
+      refreshEditorDebug();
+    });
+    orientationGrid.appendChild(btn);
+  });
+  card.appendChild(orientationGrid);
+
+  const characterTitle = document.createElement('div');
+  characterTitle.className = 'editor-setup-title';
+  characterTitle.textContent = 'Personaggio test';
+  card.appendChild(characterTitle);
+
+  const characterRow = document.createElement('div');
+  characterRow.className = 'editor-character-row';
+  const selectedCharacterId = getCurrentEditorCharacterId();
+  getCharacterOptions().forEach(option => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'editor-character-btn' + (selectedCharacterId === option.id ? ' active' : '');
+    btn.dataset.characterId = option.id;
+    btn.textContent = option.label;
+    btn.title = option.hint || option.id;
+    btn.addEventListener('click', () => {
+      if (!setCurrentEditorCharacterId(option.id)) return;
+      applyEditorBoardChanges();
+      renderCustomLevels();
+    });
+    characterRow.appendChild(btn);
+  });
+  card.appendChild(characterRow);
+
+  palette.appendChild(card);
+}
+
 function renderElementPalette() {
   const panel = document.getElementById('elementPalettePanel');
   const palette = document.getElementById('elementPalette');
@@ -1816,6 +2117,7 @@ function renderElementPalette() {
     });
     palette.appendChild(btn);
   });
+  renderEditorSetupControls(palette);
   renderThemeEditorPanel();
 }
 
@@ -2834,6 +3136,8 @@ function triggerEmptyRunHint() {
 
 async function moveChar(dir) {
   syncSprite();
+  const activeCharacterId = resolveCharacterId(getActiveCharacterId());
+  const containerDriven = isContainerDrivenCharacter(activeCharacterId);
   if(dir==='forward') {
     playStepSfx();
     const p={...pos};
@@ -2845,8 +3149,10 @@ async function moveChar(dir) {
       await sleep(120);
       return;
     }
-    setCharacterAction('move');
-    syncSprite();
+    if (!containerDriven) {
+      setCharacterAction('move');
+      syncSprite();
+    }
     await animTo(p.x,p.y); await sleep(80);
   } else {
     playTurnSfx(dir);
@@ -2854,30 +3160,18 @@ async function moveChar(dir) {
     const newOri = dir==='left'
       ? {up:'left',left:'down',down:'right',right:'up'}[ori]
       : {up:'right',right:'down',down:'left',left:'up'}[ori];
-    setCharacterAction('turn');
-    // Render subito lo stato target e interpola la rotazione dal vecchio orientamento.
-    syncSprite({ direction: newOri, action: 'turn' });
-    const spriteEl = document.getElementById('sprite');
-    if (spriteEl) {
-      const delta = orientationDelta(previousOri, newOri);
-      const turnAnim = spriteEl.animate(
-        [
-          { transform: `translateZ(0) rotate(${-delta}deg)` },
-          { transform: 'translateZ(0) rotate(0deg)' }
-        ],
-        { duration: TURN_MS, easing: 'cubic-bezier(.2,.9,.2,1)', fill: 'forwards' }
-      );
-      await turnAnim.finished.catch(()=>{});
-      if (typeof turnAnim.commitStyles === 'function') {
-        try { turnAnim.commitStyles(); } catch (_) {}
-      }
-      turnAnim.cancel();
-      spriteEl.style.transform = 'translateZ(0)';
+    if (!containerDriven) {
+      setCharacterAction('turn');
+      syncSprite({ direction: newOri, action: 'turn' });
+      await nextFrame();
     } else {
-      await sleep(TURN_MS);
+      await nextFrame();
     }
+    await animateTurnInterpolation(previousOri, newOri, TURN_MS);
     ori = newOri;
-    setCharacterAction('idle');
+    if (!containerDriven) {
+      setCharacterAction('idle');
+    }
     syncSprite();
   }
 }
@@ -3104,6 +3398,11 @@ function openSpritePreviewTool() {
   const opened = window.open(targetUrl, '_blank', 'noopener');
   if (!opened) window.location.href = targetUrl;
 }
+function openLottieInspectorTool() {
+  const targetUrl = new URL('tools/lottie-inspector.html', window.location.href).toString();
+  const opened = window.open(targetUrl, '_blank', 'noopener');
+  if (!opened) window.location.href = targetUrl;
+}
 function toggleStyleEditorPanel() {
   if (!editorMode) return;
   setEditorStylePanelOpen(!editorStylePanelOpen);
@@ -3181,6 +3480,8 @@ setTimeout(dismissSplash, 0);
 document.getElementById('startGameBtn')?.addEventListener('click', startGameFromGate);
 document.getElementById('startEditorBtn')?.addEventListener('click', startEditorFromGate);
 document.getElementById('openSpritePreviewBtn')?.addEventListener('click', openSpritePreviewTool);
+document.getElementById('openLottieInspectorBtn')?.addEventListener('click', openLottieInspectorTool);
+document.getElementById('openLottieInspectorBtnEditor')?.addEventListener('click', openLottieInspectorTool);
 document.getElementById('header')?.addEventListener('click', returnToMainMenu);
 document.getElementById('header')?.addEventListener('keydown', e => {
   if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -3234,6 +3535,11 @@ document.addEventListener('keydown', e => {
   }
   if (key === 'l') {
     toggleDebugBadge();
+    return;
+  }
+  if (key === 'a') {
+    e.preventDefault();
+    toggleAnimationDebugBadge();
     return;
   }
   if (e.key === 'ArrowRight') {

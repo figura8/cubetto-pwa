@@ -1,4 +1,4 @@
-# Bock Base
+# Boks Base
 
 Placeholder tecnico per validare orientamento e rotazioni.
 

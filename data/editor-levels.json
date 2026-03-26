@@ -9,7 +9,7 @@
       "name": "Livello 1",
       "icon": "leaf",
       "baseLevel": "level-thomas",
-      "characterId": "bock_base",
+      "characterId": "boks_black",
       "start": {
         "x": 2,
         "y": 3
@@ -51,7 +51,7 @@
       "name": "Livello 2",
       "icon": "star",
       "baseLevel": "level1",
-      "characterId": "bock_base",
+      "characterId": "boks_black",
       "start": {
         "x": 1,
         "y": 3
@@ -93,7 +93,7 @@
       "name": "Livello 3",
       "icon": "turtle",
       "baseLevel": "level-thomas",
-      "characterId": "ae-idle",
+      "characterId": "boks_black",
       "start": {
         "x": 1,
         "y": 3
@@ -140,7 +140,7 @@
       "name": "Livello 4",
       "icon": "sun",
       "baseLevel": "level1",
-      "characterId": "bock_base",
+      "characterId": "boks_black",
       "start": {
         "x": 4,
         "y": 3
@@ -187,7 +187,7 @@
       "name": "Livello 5",
       "icon": "moon",
       "baseLevel": "level1",
-      "characterId": "bock_base",
+      "characterId": "boks_black",
       "start": {
         "x": 1,
         "y": 4
@@ -234,7 +234,7 @@
       "name": "Livello 6",
       "icon": "leaf",
       "baseLevel": "level1",
-      "characterId": "bock_base",
+      "characterId": "boks_black",
       "start": {
         "x": 1,
         "y": 3
@@ -276,7 +276,7 @@
       "name": "Livello 7",
       "icon": "leaf",
       "baseLevel": "level1",
-      "characterId": "bock_base",
+      "characterId": "boks_black",
       "start": {
         "x": 1,
         "y": 4
@@ -323,7 +323,7 @@
       "name": "Livello 8",
       "icon": "star",
       "baseLevel": "level1",
-      "characterId": "bock_base",
+      "characterId": "boks_black",
       "start": {
         "x": 4,
         "y": 4
@@ -370,7 +370,7 @@
       "name": "Livello 9",
       "icon": "turtle",
       "baseLevel": "level1",
-      "characterId": "bock_base",
+      "characterId": "boks_black",
       "start": {
         "x": 1,
         "y": 4
@@ -421,7 +421,7 @@
       "name": "Livello 10",
       "icon": "sun",
       "baseLevel": "level1",
-      "characterId": "bock_base",
+      "characterId": "boks_black",
       "start": {
         "x": 1,
         "y": 4
@@ -472,7 +472,7 @@
       "name": "Livello 11",
       "icon": "moon",
       "baseLevel": "level1",
-      "characterId": "bock_base",
+      "characterId": "boks_black",
       "start": {
         "x": 4,
         "y": 4
@@ -523,7 +523,7 @@
       "name": "Livello 12",
       "icon": "flower",
       "baseLevel": "level1",
-      "characterId": "bock_base",
+      "characterId": "boks_black",
       "start": {
         "x": 4,
         "y": 4
@@ -574,7 +574,7 @@
       "name": "Livello 13",
       "icon": "leaf",
       "baseLevel": "level1",
-      "characterId": "bock_base",
+      "characterId": "boks_black",
       "start": {
         "x": 1,
         "y": 4

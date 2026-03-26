@@ -1,9 +1,10 @@
 (() => {
   const build = document.body?.dataset.build || 'dev';
-  const DEFAULT_CHARACTER_ID = 'boks';
+  const DEFAULT_CHARACTER_ID = 'boks_base';
   const DEFAULT_ACTION = 'idle';
   const DEFAULT_DIRECTION = 'right';
   const lottieInstances = new WeakMap();
+  const prefetchedLottieSrc = new Set();
 
   function normalizeDirection(direction) {
     return ['right', 'left', 'up', 'down'].includes(direction) ? direction : DEFAULT_DIRECTION;
@@ -71,15 +72,15 @@
     return parts.join('; ');
   }
 
-  function resolveState(characterId, action, direction) {
+  function resolveState(characterId, stateInput = {}) {
     const manifest = getCharacterManifest(characterId);
     if (!manifest) return null;
 
-    const desiredKey = getStateKey(action, direction);
+    const state = normalizeState(stateInput);
     const fallbackAction = manifest.defaultAction || DEFAULT_ACTION;
     const fallbackDirection = manifest.defaultDirection || DEFAULT_DIRECTION;
     const fallbackKey = getStateKey(fallbackAction, fallbackDirection);
-
+    const desiredKey = getStateKey(state.action, state.direction);
     const directState = manifest.states?.[desiredKey];
     if (directState) {
       return {
@@ -103,6 +104,24 @@
 
   function isLottieState(state = {}) {
     return typeof state?.lottieSrc === 'string' && state.lottieSrc.trim().length > 0;
+  }
+
+  function prefetchLottieSource(src = '') {
+    const url = withBuildQuery(src);
+    if (!url || prefetchedLottieSrc.has(url)) return;
+    prefetchedLottieSrc.add(url);
+    fetch(url, { cache: 'force-cache' }).catch(() => {
+      // Non blocchiamo il rendering: il preload e solo best-effort.
+    });
+  }
+
+  function preloadCharacterAssets(characterId) {
+    const manifest = getCharacterManifest(characterId);
+    if (!manifest?.states) return;
+    Object.values(manifest.states).forEach(state => {
+      if (!isLottieState(state)) return;
+      prefetchLottieSource(state.lottieSrc);
+    });
   }
 
   function buildLottieMarkup(state) {
@@ -133,18 +152,91 @@
     return !!(window.lottie && typeof window.lottie.loadAnimation === 'function');
   }
 
+  function wait(ms = 0) {
+    return new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
+  }
+
+  function getPlaybackBounds(instance) {
+    if (!instance || typeof instance.getDuration !== 'function') return null;
+    const totalFrames = Number(instance.getDuration(true));
+    if (!Number.isFinite(totalFrames) || totalFrames <= 0) return null;
+    const firstFrameRaw = Number(instance.firstFrame);
+    const firstFrame = Number.isFinite(firstFrameRaw) ? firstFrameRaw : 0;
+    const lastFrame = firstFrame + totalFrames - 0.01;
+    return { firstFrame, totalFrames, lastFrame };
+  }
+
+  function collectKeyframeTimes(value, out) {
+    if (!value) return;
+    if (Array.isArray(value)) {
+      value.forEach(item => collectKeyframeTimes(item, out));
+      return;
+    }
+    if (typeof value !== 'object') return;
+    if (value.a === 1 && Array.isArray(value.k)) {
+      value.k.forEach(kf => {
+        const t = Number(kf?.t);
+        if (Number.isFinite(t)) out.push(t);
+      });
+    }
+    Object.values(value).forEach(child => collectKeyframeTimes(child, out));
+  }
+
+  function getPlaybackSegment(instance) {
+    const bounds = getPlaybackBounds(instance);
+    if (!bounds) return null;
+    const times = [];
+    collectKeyframeTimes(instance?.animationData?.layers, times);
+    const uniq = [...new Set(times.map(t => Number(t)).filter(Number.isFinite))].sort((a, b) => a - b);
+    if (uniq.length < 2) {
+      return { startFrame: bounds.firstFrame, endFrame: bounds.lastFrame, fromKeyframes: false };
+    }
+
+    const eps = 0.5;
+    const desiredStart = bounds.firstFrame;
+    const desiredEnd = bounds.lastFrame;
+    const beforeStart = uniq.filter(t => t <= desiredStart + eps);
+    const afterEnd = uniq.filter(t => t >= desiredEnd - eps);
+    let startFrame = beforeStart.length ? beforeStart[beforeStart.length - 1] : desiredStart;
+    let endFrame = afterEnd.length ? afterEnd[0] : desiredEnd;
+
+    if (!Number.isFinite(startFrame) || !Number.isFinite(endFrame) || endFrame <= startFrame + 0.2) {
+      startFrame = uniq[0];
+      endFrame = uniq[uniq.length - 1];
+    }
+    if (!Number.isFinite(startFrame) || !Number.isFinite(endFrame) || endFrame <= startFrame + 0.2) {
+      startFrame = bounds.firstFrame;
+      endFrame = bounds.lastFrame;
+      return { startFrame, endFrame, fromKeyframes: false };
+    }
+    return { startFrame, endFrame, fromKeyframes: true };
+  }
+
+  function getExplicitSegment(options = {}) {
+    const startFrame = Number(options?.segmentStartFrame ?? options?.segmentStart);
+    const endFrame = Number(options?.segmentEndFrame ?? options?.segmentEnd);
+    if (!Number.isFinite(startFrame) || !Number.isFinite(endFrame)) return null;
+    if (Math.abs(endFrame - startFrame) < 0.2) return null;
+    return {
+      startFrame,
+      endFrame,
+      fromKeyframes: false
+    };
+  }
+
   function getPlaybackSnapshot(root) {
     if (!root) return null;
     const wrap = root.querySelector?.('.boks-hero__lottie-wrap');
     if (!wrap) return null;
     const instance = lottieInstances.get(wrap);
-    if (!instance || typeof instance.getDuration !== 'function') return null;
-    const totalFrames = Number(instance.getDuration(true));
-    if (!Number.isFinite(totalFrames) || totalFrames <= 0) return null;
-    const currentFrame = Number(instance.currentFrame || 0);
-    const normalized = ((currentFrame % totalFrames) + totalFrames) % totalFrames;
+    const bounds = getPlaybackBounds(instance);
+    if (!bounds) return null;
+    const currentFrame = Number(instance.currentFrame);
+    const frame = Number.isFinite(currentFrame) ? currentFrame : bounds.firstFrame;
+    const relative = frame - bounds.firstFrame;
+    const normalized = ((relative % bounds.totalFrames) + bounds.totalFrames) % bounds.totalFrames;
     return {
-      progress: clamp01(normalized / totalFrames),
+      progress: clamp01(normalized / bounds.totalFrames),
       paused: instance.isPaused === true
     };
   }
@@ -169,7 +261,25 @@
       lottieInstances.delete(wrap);
       wrap.classList.remove('is-ready', 'is-failed', 'is-unavailable');
       wrap.dataset.lottieMounted = 'false';
+      wrap.dataset.lottieReady = 'false';
     });
+  }
+
+  async function waitForLottieReady(wrap, instance, timeoutMs = 0) {
+    if (!wrap || !instance) return false;
+    const deadline = Math.max(220, Math.min(2200, Number(timeoutMs) || 1000));
+    const startedAt = Date.now();
+    while ((Date.now() - startedAt) < deadline) {
+      const readyByDataset = wrap.dataset.lottieReady === 'true';
+      const readyByClass = wrap.classList.contains('is-ready');
+      const readyByInstance = instance.isLoaded === true;
+      if (readyByDataset || readyByClass || readyByInstance) {
+        wrap.dataset.lottieReady = 'true';
+        return true;
+      }
+      await wait(16);
+    }
+    return false;
   }
 
   function mountIn(root) {
@@ -207,20 +317,21 @@
         animation.addEventListener?.('DOMLoaded', () => {
           const seekRatio = Number(wrap.dataset.lottieSeekRatio);
           const hasSeek = Number.isFinite(seekRatio);
-          const total = Number(animation.getDuration(true));
+          const bounds = getPlaybackBounds(animation);
           if (hasSeek) {
-            if (Number.isFinite(total) && total > 0) {
-              const frame = clamp01(seekRatio) * total;
+            if (bounds) {
+              const frame = bounds.firstFrame + (clamp01(seekRatio) * bounds.totalFrames);
               animation.goToAndStop(frame, true);
             }
           } else {
-            animation.goToAndStop(0, true);
+            animation.goToAndStop(bounds?.firstFrame || 0, true);
           }
           if (shouldAutoplay && wrap.dataset.lottieSeekPaused !== 'true') {
             animation.play();
           }
           delete wrap.dataset.lottieSeekRatio;
           delete wrap.dataset.lottieSeekPaused;
+          wrap.dataset.lottieReady = 'true';
           requestAnimationFrame(() => {
             wrap.classList.add('is-ready');
             wrap.classList.remove('is-failed', 'is-unavailable');
@@ -229,6 +340,7 @@
         animation.addEventListener?.('data_failed', () => {
           wrap.classList.add('is-failed');
           wrap.classList.remove('is-ready');
+          wrap.dataset.lottieReady = 'false';
         });
 
         wrap.dataset.lottieMounted = 'true';
@@ -236,14 +348,140 @@
       } catch (_err) {
         wrap.classList.add('is-failed');
         wrap.dataset.lottieMounted = 'false';
+        wrap.dataset.lottieReady = 'false';
       }
     });
+  }
+
+  async function waitForAnimationCompletionIn(root, timeoutMs = 0) {
+    if (!root) return false;
+    const wrap = root.querySelector?.('.boks-hero__lottie-wrap');
+    if (!wrap) return false;
+    if (wrap.dataset.lottieLoop !== 'false') return false;
+
+    const startedAt = Date.now();
+    const mountDeadline = Math.max(200, Math.min(2000, Number(timeoutMs) || 1000));
+    let instance = lottieInstances.get(wrap) || null;
+    while (!instance && (Date.now() - startedAt) < mountDeadline) {
+      await wait(16);
+      instance = lottieInstances.get(wrap) || null;
+    }
+    if (!instance) return false;
+    await waitForLottieReady(wrap, instance, timeoutMs);
+
+    let effectiveTimeout = Number(timeoutMs);
+    if (!Number.isFinite(effectiveTimeout) || effectiveTimeout <= 0) {
+      const bounds = getPlaybackBounds(instance);
+      const frames = bounds?.totalFrames || 0;
+      const fps = Number(instance.frameRate || 0);
+      if (Number.isFinite(frames) && frames > 0 && Number.isFinite(fps) && fps > 0) {
+        effectiveTimeout = Math.ceil((frames / fps) * 1000) + 400;
+      } else {
+        effectiveTimeout = 2400;
+      }
+    } else {
+      effectiveTimeout += 500;
+    }
+
+    return new Promise(resolve => {
+      let done = false;
+      const finish = (ok) => {
+        if (done) return;
+        done = true;
+        try {
+          instance.removeEventListener?.('complete', onComplete);
+        } catch (_err) {}
+        clearTimeout(timer);
+        resolve(Boolean(ok));
+      };
+      const onComplete = () => finish(true);
+      const timer = setTimeout(() => finish(false), effectiveTimeout);
+      instance.addEventListener?.('complete', onComplete);
+    });
+  }
+
+  async function playAnimationOnceIn(root, timeoutMs = 0, options = {}) {
+    if (!root) return false;
+    const wrap = root.querySelector?.('.boks-hero__lottie-wrap');
+    if (!wrap) return false;
+    if (wrap.dataset.lottieLoop !== 'false') return false;
+
+    const startedAt = Date.now();
+    const mountDeadline = Math.max(250, Math.min(2200, Number(timeoutMs) || 1200));
+    let instance = lottieInstances.get(wrap) || null;
+    while (!instance && (Date.now() - startedAt) < mountDeadline) {
+      await wait(16);
+      instance = lottieInstances.get(wrap) || null;
+    }
+    if (!instance) return false;
+    const ready = await waitForLottieReady(wrap, instance, timeoutMs);
+    if (!ready) return false;
+
+    const segment = getExplicitSegment(options) || getPlaybackSegment(instance);
+    if (!segment) return false;
+    const reversePlayback = options?.reversePlayback === true;
+    let effectiveTimeout = Number(timeoutMs);
+    const fps = Number(instance.frameRate || 0);
+    const segmentFrames = Math.max(1, Math.abs(segment.endFrame - segment.startFrame));
+    const segmentMs = Number.isFinite(fps) && fps > 0
+      ? Math.ceil((segmentFrames / fps) * 1000)
+      : 0;
+    if (!Number.isFinite(effectiveTimeout) || effectiveTimeout <= 0) {
+      if (segmentMs > 0) {
+        effectiveTimeout = segmentMs + 450;
+      } else {
+        effectiveTimeout = 2400;
+      }
+    } else {
+      effectiveTimeout = Math.max(effectiveTimeout + 500, segmentMs > 0 ? segmentMs + 450 : 0);
+    }
+
+    const completed = await new Promise(resolve => {
+      let done = false;
+      const finish = (ok) => {
+        if (done) return;
+        done = true;
+        try {
+          instance.removeEventListener?.('complete', onComplete);
+        } catch (_err) {}
+        clearTimeout(timer);
+        resolve(Boolean(ok));
+      };
+      const onComplete = () => finish(true);
+      const timer = setTimeout(() => finish(false), effectiveTimeout);
+
+      try {
+        instance.addEventListener?.('complete', onComplete);
+        if (typeof instance.setDirection === 'function') {
+          instance.setDirection(reversePlayback ? -1 : 1);
+        }
+        instance.pause?.();
+        const fromFrame = reversePlayback ? segment.endFrame : segment.startFrame;
+        instance.goToAndStop?.(fromFrame, true);
+        if (typeof instance.playSegments === 'function') {
+          instance.playSegments([segment.startFrame, segment.endFrame], true);
+        } else {
+          instance.play?.();
+        }
+      } catch (_err) {
+        finish(false);
+      }
+    });
+
+    if (!completed) return false;
+    try {
+      instance.goToAndStop(reversePlayback ? segment.startFrame : segment.endFrame, true);
+      if (typeof instance.setDirection === 'function') {
+        instance.setDirection(1);
+      }
+    } catch (_err) {}
+    return true;
   }
 
   function resolveRender(input = {}) {
     const characterId = input.characterId || DEFAULT_CHARACTER_ID;
     const state = normalizeState(input);
-    const resolved = resolveState(characterId, state.action, state.direction);
+    const resolved = resolveState(characterId, state);
     if (!resolved?.state) return null;
     const requestedKey = getStateKey(state.action, state.direction);
     const resolvedKey = resolved.key;
@@ -271,6 +509,8 @@
     const autoplay = state.lottieAutoplay !== false ? '1' : '0';
     return [
       info.characterId,
+      info.requestedKey,
+      info.resolvedKey,
       mode,
       renderer,
       loop,
@@ -305,11 +545,15 @@
   window.BOKS_CHARACTER_RENDERER = {
     render,
     getRenderToken,
+    resolveConfig: resolveRender,
     normalizeState,
+    preloadCharacterAssets,
     mountIn,
     destroyIn,
     getPlaybackSnapshot,
     applyPlaybackSnapshot,
+    waitForAnimationCompletionIn,
+    playAnimationOnceIn,
     isLottieAvailable
   };
 })();

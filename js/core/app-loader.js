@@ -36,7 +36,7 @@
     badge.textContent = '';
   }
 
-  const DEFAULT_CHARACTER_MANIFESTS = ['assets/animations/characters/boks_black/manifest.js'];
+  const DEFAULT_CHARACTER_MANIFESTS = ['assets/animations/characters/boks_base/manifest.js'];
   const CHARACTER_MANIFEST_REGISTRY = 'assets/animations/characters/registry.json';
   const OPTIONAL_LOTTIE_SCRIPT = 'js/vendor/lottie.min.js';
   const LOTTIE_CDN_FALLBACKS = [

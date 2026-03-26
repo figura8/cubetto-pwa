@@ -43,7 +43,7 @@
         return api.resolveCharacterId(characterId);
       }
       const normalized = typeof characterId === 'string' ? characterId.trim() : '';
-      return normalized || 'boks';
+      return normalized || 'boks_base';
     }
 
     function normalizeCustomLevel(level) {
@@ -239,6 +239,17 @@
     }
 
     async function loadEditorLevelsSource() {
+      try {
+        const raw = localStorage.getItem(api.editorLevelsStorageKey);
+        const parsed = raw ? JSON.parse(raw) : null;
+        if (Array.isArray(parsed) && parsed.length) {
+          editorLevelsCache = parsed.map(normalizeCustomLevel);
+          return;
+        }
+      } catch (_) {
+        // Se la cache locale e corrotta, proviamo sotto con file progetto/fallback.
+      }
+
       try {
         const response = await fetch(api.editorLevelsFilePath, { cache: 'no-store' });
         if (response.ok) {

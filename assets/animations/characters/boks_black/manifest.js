@@ -1,69 +1,38 @@
 (() => {
   window.BOKS_CHARACTER_DEFS = window.BOKS_CHARACTER_DEFS || {};
-  const blueState = {
-    src: 'assets/characters/boks_black/block-placeholder-blue.svg',
+
+  const boksBlackIdleRight = {
+    lottieSrc: 'assets/animations/characters/boks_black/boks_black_idle_right.json',
+    lottieLoop: true,
+    lottieAutoplay: true,
+    lottieRenderer: 'svg',
     fit: {
       scale: 1,
       offsetX: 0,
       offsetY: 0
     }
   };
-  const redState = {
-    src: 'assets/characters/boks_black/block-placeholder-red.svg',
-    fit: { ...blueState.fit }
-  };
-  const yellowState = {
-    src: 'assets/characters/boks_black/block-placeholder-yellow.svg',
-    fit: { ...blueState.fit }
-  };
-  const greenState = {
-    src: 'assets/characters/boks_black/block-placeholder-green.svg',
-    fit: { ...blueState.fit }
-  };
 
-  window.BOKS_CHARACTER_DEFS.boks = {
-    id: 'boks',
-    label: 'Boks',
-    hint: 'Personaggio base',
+  window.BOKS_CHARACTER_DEFS.boks_black = {
+    id: 'boks_black',
+    label: 'Boks Black',
+    hint: 'Solo idle right (placeholder mode)',
+    containerDrivenPose: true,
     defaultAction: 'idle',
     defaultDirection: 'right',
     states: {
-      'idle:right': {
-        ...blueState
-      },
-      'idle:left': {
-        ...redState
-      },
-      'idle:up': {
-        ...yellowState
-      },
-      'idle:down': {
-        ...greenState
-      },
-      'move:right': {
-        ...blueState
-      },
-      'move:left': {
-        ...redState
-      },
-      'move:up': {
-        ...yellowState
-      },
-      'move:down': {
-        ...greenState
-      },
-      'turn:right': {
-        ...blueState
-      },
-      'turn:left': {
-        ...redState
-      },
-      'turn:up': {
-        ...yellowState
-      },
-      'turn:down': {
-        ...greenState
-      }
+      'idle:right': { ...boksBlackIdleRight },
+      'idle:left': { ...boksBlackIdleRight },
+      'idle:up': { ...boksBlackIdleRight },
+      'idle:down': { ...boksBlackIdleRight },
+      'move:right': { ...boksBlackIdleRight },
+      'move:left': { ...boksBlackIdleRight },
+      'move:up': { ...boksBlackIdleRight },
+      'move:down': { ...boksBlackIdleRight },
+      'turn:right': { ...boksBlackIdleRight },
+      'turn:left': { ...boksBlackIdleRight },
+      'turn:up': { ...boksBlackIdleRight },
+      'turn:down': { ...boksBlackIdleRight }
     }
   };
 })();

@@ -2,7 +2,7 @@
   window.BOKS_CHARACTER_DEFS = window.BOKS_CHARACTER_DEFS || {};
 
   const baseRight = {
-    src: 'assets/characters/bock_base/base-right.svg',
+    src: 'assets/characters/boks_base/base-right.svg',
     fit: {
       scale: 1,
       offsetX: 0,
@@ -22,9 +22,9 @@
     transformFallback: 'rotate-right'
   };
 
-  window.BOKS_CHARACTER_DEFS.bock_base = {
-    id: 'bock_base',
-    label: 'Bock Base',
+  window.BOKS_CHARACTER_DEFS.boks_base = {
+    id: 'boks_base',
+    label: 'Boks Base',
     hint: 'Placeholder direzionale',
     defaultAction: 'idle',
     defaultDirection: 'right',

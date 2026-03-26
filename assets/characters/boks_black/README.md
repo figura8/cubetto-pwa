@@ -1,16 +1,14 @@
-# BOKS Character
+# Boks Black
 
-Questa cartella ospita gli asset 2D del personaggio principale in gioco.
+Cartella art di supporto per il prossimo character runtime `boks_black`.
 
-Asset art attuale:
+Per ora qui teniamo solo asset statici di riferimento o preview, ad esempio:
 
-- `placeholder.png`
+- `preview.png`
+- `thumb.png`
+- eventuali note visive o reference
 
-Questa cartella contiene solo materiale visivo del personaggio.
-Gli stati del runtime non vivono qui.
+I file Lottie runtime non vanno qui.
+I file Lottie runtime vanno in:
 
-Per ora le direzioni `left/up/down` e le azioni `idle/move/turn` usano un fallback temporaneo definito in:
-
-- `assets/animations/characters/boks_black/manifest.js`
-- `js/core/character/character-renderer.js`
-- `styles/character.css`
+- `assets/animations/characters/boks_black/`
