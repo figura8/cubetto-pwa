@@ -859,6 +859,9 @@
     body.animation-debug-visible #animationDebugBadge {
       display: block;
     }
+    body.debug-tools-disabled #animationDebugBadge {
+      display: none !important;
+    }
     body:not(.prestart):not(.editor-mode).animation-debug-visible #animationDebugBadge {
       top: calc(92px + var(--safe-top));
     }
