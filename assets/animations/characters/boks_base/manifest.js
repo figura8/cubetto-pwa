@@ -9,38 +9,27 @@
       offsetY: 0
     }
   };
-  const baseLeft = {
-    ...baseRight,
-    transformFallback: 'mirror-x'
-  };
-  const baseUp = {
-    ...baseRight,
-    transformFallback: 'rotate-left'
-  };
-  const baseDown = {
-    ...baseRight,
-    transformFallback: 'rotate-right'
-  };
 
   window.BOKS_CHARACTER_DEFS.boks_base = {
     id: 'boks_base',
     label: 'Boks Base',
     hint: 'Placeholder direzionale',
+    containerDrivenPose: true,
     defaultAction: 'idle',
     defaultDirection: 'right',
     states: {
       'idle:right': { ...baseRight },
-      'idle:left': { ...baseLeft },
-      'idle:up': { ...baseUp },
-      'idle:down': { ...baseDown },
+      'idle:left': { ...baseRight },
+      'idle:up': { ...baseRight },
+      'idle:down': { ...baseRight },
       'move:right': { ...baseRight },
-      'move:left': { ...baseLeft },
-      'move:up': { ...baseUp },
-      'move:down': { ...baseDown },
+      'move:left': { ...baseRight },
+      'move:up': { ...baseRight },
+      'move:down': { ...baseRight },
       'turn:right': { ...baseRight },
-      'turn:left': { ...baseLeft },
-      'turn:up': { ...baseUp },
-      'turn:down': { ...baseDown }
+      'turn:left': { ...baseRight },
+      'turn:up': { ...baseRight },
+      'turn:down': { ...baseRight }
     }
   };
 })();

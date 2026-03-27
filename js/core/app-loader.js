@@ -10,7 +10,8 @@
     releaseChannel: body?.dataset.releaseChannel || 'main',
     editorEnabled,
     debugToolsEnabled,
-    buildBadgeEnabled
+    buildBadgeEnabled,
+    lightweightCharacterMode: body?.dataset.lightweightCharacterMode !== 'false'
   };
 
   body?.classList.toggle('editor-enabled', editorEnabled);
@@ -36,7 +37,10 @@
     badge.textContent = '';
   }
 
-  const DEFAULT_CHARACTER_MANIFESTS = ['assets/animations/characters/boks_base/manifest.js'];
+  const DEFAULT_CHARACTER_MANIFESTS = [
+    'assets/animations/characters/boks_base/manifest.js',
+    'assets/animations/characters/boks_black/manifest.js'
+  ];
   const CHARACTER_MANIFEST_REGISTRY = 'assets/animations/characters/registry.json';
   const OPTIONAL_LOTTIE_SCRIPT = 'js/vendor/lottie.min.js';
   const LOTTIE_CDN_FALLBACKS = [
@@ -74,6 +78,9 @@
   }
 
   async function loadOptionalLottieRuntime() {
+    if (window.BOKS_RUNTIME_CONFIG?.lightweightCharacterMode) {
+      return false;
+    }
     try {
       const probe = await fetch(`${OPTIONAL_LOTTIE_SCRIPT}?v=${encodeURIComponent(build)}`, { cache: 'no-store' });
       if (!probe.ok) {

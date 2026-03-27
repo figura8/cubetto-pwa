@@ -2,6 +2,17 @@
 const COLS = 6, ROWS = 6, SLOTS = 8, FSLOTS = 4;
 let GOAL = {x:5,y:5};
 let START = {x:2,y:2};
+const gridCellEls = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+
+function getGridCell(x, y) {
+  if (!Number.isInteger(x) || !Number.isInteger(y)) return null;
+  if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return null;
+  const cached = gridCellEls[y]?.[x] || null;
+  if (cached?.isConnected) return cached;
+  const cell = document.querySelector(`.cell[data-cx="${x}"][data-cy="${y}"]`);
+  if (gridCellEls[y]) gridCellEls[y][x] = cell || null;
+  return cell || null;
+}
 
 function moveGoal() {
   const old = document.querySelector('.goal-cell');
@@ -17,7 +28,7 @@ function moveGoal() {
      (nx===START.x && ny===START.y))
   );
   GOAL = {x:nx, y:ny};
-  const cell = document.querySelector(`.cell[data-cx="${nx}"][data-cy="${ny}"]`);
+  const cell = getGridCell(nx, ny);
   if(cell) {
     cell.classList.remove(...DECOR_CLASSES);
     cell.classList.add('goal-cell');
@@ -61,6 +72,8 @@ const EDITOR_THEME_COLOR_KEYS = new Set(EDITOR_THEME_COLOR_CONTROLS.map(control 
 const RUNTIME_CONFIG = window.BOKS_RUNTIME_CONFIG || {};
 const LEVEL_EDITOR_ENABLED = RUNTIME_CONFIG.editorEnabled !== false;
 const DEBUG_TOOLS_ENABLED = RUNTIME_CONFIG.debugToolsEnabled !== false;
+const FORCE_LIGHTWEIGHT_CHARACTER = RUNTIME_CONFIG.lightweightCharacterMode !== false;
+const LIGHTWEIGHT_CHARACTER_ID = 'boks_black';
 
 // ═══ STATE ═══
 let pos = {...START};
@@ -94,7 +107,7 @@ let fnUnlockHintActive = false;
 let stepStartHintActive = false;
 let gameStarted = false;
 let debugVisible = DEBUG_TOOLS_ENABLED;
-let animationDebugVisible = DEBUG_TOOLS_ENABLED;
+let animationDebugVisible = false;
 let editorMode = false;
 let currentCustomLevel = null;
 let tutorialSceneLevelId = CUSTOM_LEVEL_THEME;
@@ -116,7 +129,7 @@ let winBurstHideTimer = null;
 let activeWinBurstPromise = null;
 let activeWinFeedbackAt = 0;
 document.body?.classList.add('prestart');
-if (DEBUG_TOOLS_ENABLED) document.body?.classList.add('debug-visible');
+document.body?.classList.toggle('debug-visible', DEBUG_TOOLS_ENABLED && debugVisible);
 if (DEBUG_TOOLS_ENABLED && animationDebugVisible) {
   document.body?.classList.add('animation-debug-visible');
   requestAnimationFrame(() => updateAnimationDebugBadge());
@@ -133,6 +146,8 @@ let bgmTicker = null;
 let bgmStarted = false;
 let bgmStep = 0;
 let bgmNextNoteTime = 0;
+let bgmSharedLowpass;
+let bgmSharedHighpass;
 const BGM_TARGET_GAIN = 0.02;
 const FX = () => {
   if (!fxAc) fxAc = new (window.AudioContext || window.webkitAudioContext)();
@@ -148,7 +163,13 @@ const BGM_CHORDS = [
   [52, 59, 64, 67]  // E minor
 ];
 const BGM_ARP = [0, 1, 2, 1, 3, 2, 1, 2];
-const midiToFreq = midi => 440 * Math.pow(2, (midi - 69) / 12);
+const midiFreqCache = new Map();
+const midiToFreq = midi => {
+  if (midiFreqCache.has(midi)) return midiFreqCache.get(midi);
+  const freq = 440 * Math.pow(2, (midi - 69) / 12);
+  midiFreqCache.set(midi, freq);
+  return freq;
+};
 function getBgmBus() {
   if (bgmBus) return bgmBus;
   const c = FX();
@@ -158,9 +179,18 @@ function getBgmBus() {
   comp.ratio.value = 3;
   comp.attack.value = 0.006;
   comp.release.value = 0.18;
+  bgmSharedLowpass = c.createBiquadFilter();
+  bgmSharedLowpass.type = 'lowpass';
+  bgmSharedLowpass.frequency.value = 2400;
+  bgmSharedLowpass.Q.value = 0.8;
+  bgmSharedHighpass = c.createBiquadFilter();
+  bgmSharedHighpass.type = 'highpass';
+  bgmSharedHighpass.frequency.value = 160;
   bgmBus = c.createGain();
   bgmBus.gain.value = 0.0001;
-  bgmBus.connect(comp);
+  bgmBus.connect(bgmSharedLowpass);
+  bgmSharedLowpass.connect(bgmSharedHighpass);
+  bgmSharedHighpass.connect(comp);
   comp.connect(c.destination);
   return bgmBus;
 }
@@ -177,41 +207,21 @@ function playPizzicatoNote(time, midi, accent = false) {
   const c = FX();
   const f = midiToFreq(midi);
 
-  const osc1 = c.createOscillator();
-  osc1.type = 'triangle';
-  osc1.frequency.setValueAtTime(f, time);
-  osc1.frequency.exponentialRampToValueAtTime(f * 0.995, time + 0.18);
-
-  const osc2 = c.createOscillator();
-  osc2.type = 'sawtooth';
-  osc2.frequency.setValueAtTime(f * 2, time);
-  osc2.detune.setValueAtTime(4, time);
-
-  const lp = c.createBiquadFilter();
-  lp.type = 'lowpass';
-  lp.frequency.setValueAtTime(5200, time);
-  lp.frequency.exponentialRampToValueAtTime(1200, time + 0.2);
-
-  const hp = c.createBiquadFilter();
-  hp.type = 'highpass';
-  hp.frequency.setValueAtTime(170, time);
-
+  const osc = c.createOscillator();
   const amp = c.createGain();
-  const peak = accent ? 0.095 : 0.062;
+  const peak = accent ? 0.082 : 0.048;
+  osc.type = accent ? 'triangle' : 'sine';
+  osc.frequency.setValueAtTime(f, time);
+  osc.frequency.exponentialRampToValueAtTime(f * (accent ? 0.997 : 0.992), time + 0.22);
   amp.gain.setValueAtTime(0.0001, time);
   amp.gain.exponentialRampToValueAtTime(peak, time + 0.01);
-  amp.gain.exponentialRampToValueAtTime(0.0001, time + 0.26);
+  amp.gain.exponentialRampToValueAtTime(0.0001, time + (accent ? 0.24 : 0.21));
 
-  osc1.connect(lp);
-  osc2.connect(lp);
-  lp.connect(hp);
-  hp.connect(amp);
+  osc.connect(amp);
   amp.connect(getBgmBus());
 
-  osc1.start(time);
-  osc2.start(time);
-  osc1.stop(time + 0.27);
-  osc2.stop(time + 0.27);
+  osc.start(time);
+  osc.stop(time + (accent ? 0.25 : 0.22));
 }
 function scheduleBgmStep(step, time) {
   const chord = BGM_CHORDS[Math.floor(step / 8) % BGM_CHORDS.length];
@@ -220,11 +230,11 @@ function scheduleBgmStep(step, time) {
 
   playPizzicatoNote(time + 0.002, chord[BGM_ARP[pos]], accent);
   if (accent) playPizzicatoNote(time + 0.008, chord[0] - 12, true);
-  if (pos === 2 || pos === 6) playPizzicatoNote(time + 0.014, chord[2] + 12, false);
 }
 function scheduleBgmLookahead() {
+  if (!bgmStarted) return;
   const c = FX();
-  while (bgmNextNoteTime < c.currentTime + 0.24) {
+  while (bgmNextNoteTime < c.currentTime + 0.36) {
     scheduleBgmStep(bgmStep, bgmNextNoteTime);
     bgmNextNoteTime += BGM_STEP;
     bgmStep = (bgmStep + 1) % (BGM_CHORDS.length * 8);
@@ -238,7 +248,7 @@ function startPizzicatoBgm() {
   bgmStep = 0;
   bgmNextNoteTime = c.currentTime + 0.05;
   scheduleBgmLookahead();
-  bgmTicker = setInterval(scheduleBgmLookahead, 70);
+  bgmTicker = setInterval(scheduleBgmLookahead, 120);
 }
 function pausePizzicatoBgm() {
   if (!bgmTicker) return;
@@ -249,7 +259,7 @@ function resumePizzicatoBgm() {
   if (!bgmStarted || bgmTicker) return;
   const c = FX();
   bgmNextNoteTime = c.currentTime + 0.05;
-  bgmTicker = setInterval(scheduleBgmLookahead, 70);
+  bgmTicker = setInterval(scheduleBgmLookahead, 120);
   fadeInPizzicatoBgm(800);
 }
 function playLevelTransitionSfx() {
@@ -620,7 +630,7 @@ function getWinBurstAnchor() {
     y: Math.round(window.innerHeight * 0.36)
   };
   if (!goalPlaced) return fallback;
-  const goalCell = document.querySelector(`.cell[data-cx="${GOAL.x}"][data-cy="${GOAL.y}"]`);
+  const goalCell = getGridCell(GOAL.x, GOAL.y);
   if (!goalCell) return fallback;
   const rect = goalCell.getBoundingClientRect();
   const x = rect.left + rect.width * 0.5;
@@ -719,6 +729,7 @@ function mkB(block, w, h, cls='') {
 function initGrid() {
   const g = document.getElementById('gameGrid');
   g.innerHTML = '';
+  gridCellEls.forEach(row => row.fill(null));
   const lv = getLevel();
   for(let y=0; y<ROWS; y++) for(let x=0; x<COLS; x++) {
     const c = document.createElement('div');
@@ -735,6 +746,7 @@ function initGrid() {
       c.style.position = 'relative';
       c.style.overflow = 'hidden';
     }
+    gridCellEls[y][x] = c;
     g.appendChild(c);
   }
 }
@@ -762,7 +774,7 @@ function sizeGrid() {
 // ═══ SPRITE ═══
 
 function cellPos(x, y) {
-  const cell = document.querySelector(`.cell[data-cx="${x}"][data-cy="${y}"]`);
+  const cell = getGridCell(x, y);
   const wrap = document.getElementById('gridWrap');
   if(!cell || !wrap) return null;
   const cr = cell.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
@@ -779,7 +791,7 @@ function spriteRectFromCellRect(r) {
 }
 
 function getCharacterRenderState(overrides = {}) {
-  const characterId = resolveCharacterId(overrides.characterId || getActiveCharacterId());
+  const characterId = resolveRuntimeCharacterId(overrides.characterId || getActiveCharacterId());
   const manifest = getCharacterDefs()[characterId] || {};
   if (manifest.containerDrivenPose === true) {
     return {
@@ -808,8 +820,6 @@ function isContainerDrivenCharacter(characterId) {
 function applySpriteContainerOrientation(characterId, orientation = 'right', targetEl = null) {
   const spriteEl = targetEl || document.getElementById('sprite');
   if (!spriteEl) return;
-  // Evita che un transform inline lasciato da WAAPI/commitStyles blocchi la rotazione via CSS var.
-  spriteEl.style.removeProperty('transform');
   const shouldTrackOrientation = isContainerDrivenCharacter(characterId);
   const effectiveOrientation = shouldTrackOrientation ? orientation : 'right';
   const angle = orientationAngle(effectiveOrientation);
@@ -966,10 +976,11 @@ function buildTurnInterpolationKeyframes(delta = 0) {
 }
 
 async function animateTurnInterpolation(previousOri, newOri, durationMs = TURN_MS) {
-  const activeCharacterId = resolveCharacterId(getActiveCharacterId());
+  const activeCharacterId = resolveRuntimeCharacterId(getActiveCharacterId());
   if (isContainerDrivenCharacter(activeCharacterId)) {
     const spriteEl = document.getElementById('sprite');
-    if (!spriteEl) {
+    const visualEl = spriteEl?.querySelector('.boks-hero');
+    if (!spriteEl || !visualEl) {
       await sleep(durationMs);
       return;
     }
@@ -980,7 +991,7 @@ async function animateTurnInterpolation(previousOri, newOri, durationMs = TURN_M
     const overshoot = delta === 0
       ? 0
       : Math.sign(delta) * Math.min(10, Math.max(4, Math.abs(delta) * 0.12));
-    const turnAnim = spriteEl.animate(
+    const turnAnim = visualEl.animate(
       [
         { transform: `translateZ(0) rotate(${fromDeg}deg) scale(0.97)` },
         { transform: `translateZ(0) rotate(${toDeg + overshoot}deg) scale(1.02)`, offset: 0.72 },
@@ -994,6 +1005,7 @@ async function animateTurnInterpolation(previousOri, newOri, durationMs = TURN_M
     );
     await turnAnim.finished.catch(()=>{});
     turnAnim.cancel();
+    visualEl.style.transform = '';
     applySpriteContainerOrientation(activeCharacterId, newOri, spriteEl);
     return;
   }
@@ -1046,16 +1058,20 @@ async function animTo(tx, ty) {
   }
   const sfr = spriteRectFromCellRect(fr);
   const sto = spriteRectFromCellRect(to);
+  const dx = Math.round((sfr.l - sto.l) * 100) / 100;
+  const dy = Math.round((sfr.t - sto.t) * 100) / 100;
+  s.style.left = sto.l + 'px';
+  s.style.top = sto.t + 'px';
   const a = s.animate(
-    [{left:sfr.l+'px',top:sfr.t+'px'},{left:sto.l+'px',top:sto.t+'px'}],
+    [
+      { transform: `translate3d(${dx}px, ${dy}px, 0)` },
+      { transform: 'translate3d(0, 0, 0)' }
+    ],
     {duration:MOVE_MS, easing:'cubic-bezier(.2,.9,.2,1)', fill:'forwards'}
   );
   await a.finished.catch(()=>{});
-  if (typeof a.commitStyles === 'function') {
-    try { a.commitStyles(); } catch (_) {}
-  }
-  s.style.left=sto.l+'px'; s.style.top=sto.t+'px';
   a.cancel();
+  s.style.transform = '';
   pos={x:tx,y:ty};
   setCharacterAction('idle');
   syncSprite();
@@ -1143,6 +1159,13 @@ function getCharacterIds() {
   const ids = Object.keys(getCharacterDefs()).filter(id => typeof id === 'string' && id.trim());
   if (!ids.includes(DEFAULT_CHARACTER_ID)) ids.unshift(DEFAULT_CHARACTER_ID);
   return [...new Set(ids)];
+}
+
+function resolveRuntimeCharacterId(characterId) {
+  const resolved = resolveCharacterId(characterId);
+  if (!FORCE_LIGHTWEIGHT_CHARACTER) return resolved;
+  const ids = getCharacterIds();
+  return ids.includes(LIGHTWEIGHT_CHARACTER_ID) ? LIGHTWEIGHT_CHARACTER_ID : resolved;
 }
 
 function resolveCharacterId(characterId) {
@@ -1860,7 +1883,7 @@ function readCurrentAnimationState() {
   if (!hero) {
     return {
       visible: false,
-      character: resolveCharacterId(getActiveCharacterId()),
+      character: resolveRuntimeCharacterId(getActiveCharacterId()),
       requested: '-',
       resolved: '-',
       action: characterAction,
@@ -1885,7 +1908,7 @@ function readCurrentAnimationState() {
 
   return {
     visible: true,
-    character: hero.dataset.character || resolveCharacterId(getActiveCharacterId()),
+    character: hero.dataset.character || resolveRuntimeCharacterId(getActiveCharacterId()),
     requested: hero.dataset.state || '-',
     resolved: hero.dataset.resolvedState || '-',
     action: hero.dataset.action || characterAction,
@@ -1901,6 +1924,7 @@ function readCurrentAnimationState() {
 }
 
 function updateAnimationDebugBadge(extra = '') {
+  if (!animationDebugVisible) return;
   const badge = ensureAnimationDebugBadge();
   const info = readCurrentAnimationState();
   const lines = [
@@ -2432,7 +2456,7 @@ function getCharacterOptions() {
 
 function buildCharacterPreviewMarkup(characterId) {
   const markup = window.BOKS_CHARACTER_RENDERER?.render({
-    characterId: resolveCharacterId(characterId),
+    characterId: resolveRuntimeCharacterId(characterId),
     action: 'idle',
     direction: 'right'
   }) || '';
@@ -2616,7 +2640,7 @@ function setupEditorElementPlacement() {
 
   function setupBrickDrag(startX, startY, clientX, clientY) {
     if (!editorMode || running || animating || !isBlockedCell(startX, startY)) return false;
-    const sourceCell = document.querySelector(`.cell[data-cx="${startX}"][data-cy="${startY}"]`);
+    const sourceCell = getGridCell(startX, startY);
     const size = sourceCell?.getBoundingClientRect().width || 48;
     const ghost = document.getElementById('ghost');
     ghost.innerHTML = elementPaletteIcon('brick');
@@ -2639,7 +2663,7 @@ function setupEditorElementPlacement() {
   function endBrickDrag(startX, startY, clientX, clientY, moved) {
     document.getElementById('ghost').style.display = 'none';
     document.querySelectorAll('.cell.hi').forEach(c => c.classList.remove('hi'));
-    document.querySelector(`.cell[data-cx="${startX}"][data-cy="${startY}"]`)?.style.removeProperty('opacity');
+    getGridCell(startX, startY)?.style.removeProperty('opacity');
     if (!moved) return;
     suppressNextClick = true;
     const under = document.elementFromPoint(clientX, clientY);
@@ -3406,7 +3430,7 @@ function triggerEmptyRunHint() {
 
 async function moveChar(dir) {
   syncSprite();
-  const activeCharacterId = resolveCharacterId(getActiveCharacterId());
+  const activeCharacterId = resolveRuntimeCharacterId(getActiveCharacterId());
   const containerDriven = isContainerDrivenCharacter(activeCharacterId);
   if(dir==='forward') {
     playStepSfx();

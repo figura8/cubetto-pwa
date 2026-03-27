@@ -5,6 +5,7 @@
   const DEFAULT_DIRECTION = 'right';
   const lottieInstances = new WeakMap();
   const prefetchedLottieSrc = new Set();
+  const preloadedCharacterIds = new Set();
 
   function normalizeDirection(direction) {
     return ['right', 'left', 'up', 'down'].includes(direction) ? direction : DEFAULT_DIRECTION;
@@ -118,10 +119,12 @@
   function preloadCharacterAssets(characterId) {
     const manifest = getCharacterManifest(characterId);
     if (!manifest?.states) return;
+    if (preloadedCharacterIds.has(characterId)) return;
     Object.values(manifest.states).forEach(state => {
       if (!isLottieState(state)) return;
       prefetchLottieSource(state.lottieSrc);
     });
+    preloadedCharacterIds.add(characterId);
   }
 
   function buildLottieMarkup(state) {
@@ -143,6 +146,9 @@
   }
 
   function buildImageMarkup(state) {
+    if (typeof state?.svgMarkup === 'string' && state.svgMarkup.trim()) {
+      return `<span class="boks-hero__inline-svg">${state.svgMarkup}</span>`;
+    }
     if (!state?.src) return '';
     const src = withBuildQuery(state.src);
     return `<img class="boks-hero__img" src="${escapeAttr(src)}" alt=""/>`;

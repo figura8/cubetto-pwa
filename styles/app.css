@@ -486,10 +486,11 @@
       z-index: 20;
       touch-action: none;
       cursor: default;
-      will-change: left, top;
-      transform: translateZ(0) rotate(var(--sprite-rotation, 0deg));
+      will-change: transform;
+      transform: translateZ(0);
       transform-origin: 50% 50%;
       backface-visibility: hidden;
+      contain: layout paint;
     }
     body.editor-mode #sprite { cursor: grab; }
     body.editor-mode #sprite:active { cursor: grabbing; }
@@ -799,7 +800,7 @@
     #ghost {
       position: fixed; z-index: 9999;
       pointer-events: none;
-      transform: translate(-50%, -50%) rotate(var(--sprite-rotation, 0deg)) scale(1.0);
+      transform: translate(-50%, -50%) scale(1.0);
       opacity: .9; display: none; border-radius: 5px;
       filter: drop-shadow(0 6px 12px rgba(0,0,0,0.25));
     }
