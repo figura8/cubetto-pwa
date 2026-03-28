@@ -1,6 +1,7 @@
 (function () {
   function createLevelStorage(api) {
     let editorLevelsCache = [];
+    let projectLevelsSeed = [];
 
     function normalizeLevelName(name = '') {
       return name.trim().replace(/\s+/g, ' ').slice(0, 32);
@@ -46,14 +47,24 @@
       return normalized || 'boks_black';
     }
 
+    function extractLevels(payload) {
+      const levels = Array.isArray(payload) ? payload : payload?.levels;
+      if (!Array.isArray(levels)) return [];
+      return levels.map(normalizeCustomLevel);
+    }
+
     function normalizeCustomLevel(level) {
+      const normalizedCampaignIndex = Number.isInteger(level.campaignIndex)
+        ? level.campaignIndex
+        : (Number.isInteger(level.baseStepIndex) ? level.baseStepIndex : null);
       const normalizedBaseLevel = typeof level.baseLevel === 'string' && level.baseLevel.trim()
         ? level.baseLevel.trim()
         : api.customLevelTheme;
       const normalized = {
         id: level.id || `custom-${Date.now()}`,
         number: level.number ?? null,
-        baseStepIndex: level.baseStepIndex ?? null,
+        baseStepIndex: normalizedCampaignIndex,
+        campaignIndex: normalizedCampaignIndex,
         name: normalizeLevelName(level.name || 'Livello custom') || 'Livello custom',
         icon: api.customIcons.includes(level.icon) ? level.icon : api.customIcons[0],
         baseLevel: normalizedBaseLevel,
@@ -67,55 +78,13 @@
         enabledBlocks: normalizeEnabledBlocks(level.enabledBlocks || {}),
         themeOverrides: normalizeThemeOverrides(level.themeOverrides || {})
       };
-
-      const tutorialIdx = normalized.baseStepIndex;
-      const officialStep = Number.isInteger(tutorialIdx)
-        ? api.getOfficialTutorialSteps()?.[tutorialIdx]
-        : null;
-      if (!officialStep) return normalized;
-
-      const enabledMainCount = normalized.mainSlotEnabled.filter(Boolean).length;
-      const enabledFnCount = normalized.fnSlotEnabled.filter(Boolean).length;
-      const enabledBlockCount = Object.values(normalized.enabledBlocks).filter(Boolean).length;
-      const looksCollapsed = enabledMainCount === 0 && enabledFnCount === 0 && enabledBlockCount === 0;
-      if (!looksCollapsed) return normalized;
-
-      const officialLevel = tutorialStepToEditorLevel(officialStep, tutorialIdx);
-      return {
-        ...normalized,
-        mainSlotEnabled: [...officialLevel.mainSlotEnabled],
-        fnSlotEnabled: [...officialLevel.fnSlotEnabled],
-        enabledBlocks: { ...officialLevel.enabledBlocks }
-      };
-    }
-
-    function tutorialStepToEditorLevel(step, idx) {
-      const mainCount = Math.max(0, Math.min(api.slots, step.mainSlots ?? api.slots));
-      const fnCount = Math.max(0, Math.min(api.fnSlots, step.fnSlots ?? 0));
-      return normalizeCustomLevel({
-        id: `level1-step-${idx + 1}`,
-        number: idx + 1,
-        baseStepIndex: idx,
-        name: `Livello ${idx + 1}`,
-        icon: api.customIcons[idx % api.customIcons.length],
-        baseLevel: step.baseLevel || api.customLevelTheme,
-        characterId: normalizeCharacterId(step.characterId),
-        start: { ...(step.start || { x: 2, y: 2 }) },
-        goal: { ...(step.goal || { x: 5, y: 5 }) },
-        startOri: step.startOri || 'right',
-        obstacles: step.obstacles || [],
-        themeOverrides: normalizeThemeOverrides(step.themeOverrides || {}),
-        mainSlotEnabled: Array.from({ length: api.slots }, (_, i) => i < mainCount),
-        fnSlotEnabled: Array.from({ length: api.fnSlots }, (_, i) => i < fnCount),
-        enabledBlocks: normalizeEnabledBlocks(
-          Object.fromEntries(Object.keys(api.pool).map(dir => [dir, (step.availableBlocks || []).includes(dir)]))
-        )
-      });
+      return normalized;
     }
 
     function editorLevelToTutorialStep(level) {
       const normalized = normalizeCustomLevel(level);
       return {
+        campaignIndex: normalized.campaignIndex,
         baseLevel: normalized.baseLevel || api.customLevelTheme,
         characterId: normalizeCharacterId(normalized.characterId),
         start: normalized.start ? { ...normalized.start } : null,
@@ -130,31 +99,61 @@
     }
 
     function buildInitialEditorLevels() {
-      return api.getOfficialTutorialSteps().map((step, idx) => tutorialStepToEditorLevel(step, idx));
+      if (projectLevelsSeed.length) {
+        return projectLevelsSeed.map(normalizeCustomLevel);
+      }
+      const cachedProjectLevels = readStoredLevels(api.projectLevelsCacheKey);
+      if (cachedProjectLevels.length) {
+        return cachedProjectLevels;
+      }
+      return [];
+    }
+
+    function readStoredLevels(storageKey) {
+      try {
+        const raw = localStorage.getItem(storageKey);
+        const parsed = raw ? JSON.parse(raw) : null;
+        if (!Array.isArray(parsed) || !parsed.length) return [];
+        return parsed.map(normalizeCustomLevel);
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function writeStoredLevels(storageKey, levels) {
+      const normalizedLevels = levels.map(normalizeCustomLevel);
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(normalizedLevels));
+      } catch (_) {}
+      return normalizedLevels;
+    }
+
+    function setActiveLevels(levels) {
+      editorLevelsCache = levels.map(normalizeCustomLevel);
+      return editorLevelsCache.map(normalizeCustomLevel);
     }
 
     function readCustomLevels() {
       if (editorLevelsCache.length) return editorLevelsCache.map(normalizeCustomLevel);
-      try {
-        const raw = localStorage.getItem(api.editorLevelsStorageKey);
-        const parsed = raw ? JSON.parse(raw) : null;
-        if (!Array.isArray(parsed) || !parsed.length) {
-          const seeded = buildInitialEditorLevels();
-          editorLevelsCache = seeded.map(normalizeCustomLevel);
-          return editorLevelsCache.map(normalizeCustomLevel);
+
+      if (!api.preferProjectLevelsFile) {
+        const draftLevels = readStoredLevels(api.editorLevelsStorageKey);
+        if (draftLevels.length) {
+          return setActiveLevels(draftLevels);
         }
-        editorLevelsCache = parsed.map(normalizeCustomLevel);
-        return editorLevelsCache.map(normalizeCustomLevel);
-      } catch (_) {
-        const seeded = buildInitialEditorLevels();
-        editorLevelsCache = seeded.map(normalizeCustomLevel);
-        return editorLevelsCache.map(normalizeCustomLevel);
       }
+
+      const projectLevels = buildInitialEditorLevels();
+      if (projectLevels.length) {
+        return setActiveLevels(projectLevels);
+      }
+
+      return [];
     }
 
     function writeCustomLevels(levels) {
-      editorLevelsCache = levels.map(normalizeCustomLevel);
-      localStorage.setItem(api.editorLevelsStorageKey, JSON.stringify(editorLevelsCache));
+      const normalizedLevels = writeStoredLevels(api.editorLevelsStorageKey, levels);
+      editorLevelsCache = normalizedLevels;
     }
 
     function exportableLevelsPayload(levels = readCustomLevels()) {
@@ -171,7 +170,7 @@
 
     function getEditorLevelIdForTutorialStep(idx = api.getTutorialStepIndex()) {
       const levels = readCustomLevels();
-      const match = levels.find(level => (level.baseStepIndex ?? null) === idx);
+      const match = levels.find(level => (level.campaignIndex ?? level.baseStepIndex ?? null) === idx);
       return match?.id || `level1-step-${idx + 1}`;
     }
 
@@ -259,53 +258,51 @@
     }
 
     async function loadEditorLevelsSource() {
-      if (api.preferProjectLevelsFile) {
-        try {
-          localStorage.removeItem(api.editorLevelsStorageKey);
-        } catch (_) {}
-        try {
-          const response = await fetch(api.editorLevelsFilePath, { cache: 'no-store' });
-          if (response.ok) {
-            const payload = await response.json();
-            const levels = Array.isArray(payload) ? payload : payload?.levels;
-            if (Array.isArray(levels) && levels.length) {
-              writeCustomLevels(levels);
-              return;
-            }
-          }
-        } catch (_) {}
-      }
-
-      try {
-        const raw = localStorage.getItem(api.editorLevelsStorageKey);
-        const parsed = raw ? JSON.parse(raw) : null;
-        if (Array.isArray(parsed) && parsed.length) {
-          editorLevelsCache = parsed.map(normalizeCustomLevel);
-          return;
-        }
-      } catch (_) {
-        // Se la cache locale e corrotta, proviamo sotto con file progetto/fallback.
-      }
+      let projectLevels = [];
 
       try {
         const response = await fetch(api.editorLevelsFilePath, { cache: 'no-store' });
         if (response.ok) {
-          const payload = await response.json();
-          const levels = Array.isArray(payload) ? payload : payload?.levels;
-          if (Array.isArray(levels) && levels.length) {
-            writeCustomLevels(levels);
-            return;
+          const levels = extractLevels(await response.json());
+          if (levels.length) {
+            projectLevelsSeed = levels.map(normalizeCustomLevel);
+            writeStoredLevels(api.projectLevelsCacheKey, levels);
+            projectLevels = levels.map(normalizeCustomLevel);
           }
         }
       } catch (_) {}
 
-      const fallback = readCustomLevels();
-      if (fallback.length) {
-        editorLevelsCache = fallback.map(normalizeCustomLevel);
+      if (api.preferProjectLevelsFile) {
+        if (projectLevels.length) {
+          setActiveLevels(projectLevels);
+          return;
+        }
+        const cachedProjectLevels = readStoredLevels(api.projectLevelsCacheKey);
+        if (cachedProjectLevels.length) {
+          setActiveLevels(cachedProjectLevels);
+          return;
+        }
         return;
       }
 
-      writeCustomLevels(buildInitialEditorLevels());
+      const draftLevels = readStoredLevels(api.editorLevelsStorageKey);
+      if (draftLevels.length) {
+        setActiveLevels(draftLevels);
+        return;
+      }
+
+      if (projectLevels.length) {
+        setActiveLevels(projectLevels);
+        return;
+      }
+
+      const cachedProjectLevels = readStoredLevels(api.projectLevelsCacheKey);
+      if (cachedProjectLevels.length) {
+        setActiveLevels(cachedProjectLevels);
+        return;
+      }
+
+      editorLevelsCache = [];
     }
 
     async function persistEditorLevels(levels, { promptIfMissing = false } = {}) {
@@ -313,6 +310,10 @@
       if (!isProjectSaveSupported()) return { projectFileSaved: false, localOnly: true };
       try {
         const projectFileSaved = await writeProjectLevelsFile(levels, { promptIfMissing });
+        if (projectFileSaved) {
+          projectLevelsSeed = levels.map(normalizeCustomLevel);
+          writeStoredLevels(api.projectLevelsCacheKey, levels);
+        }
         return { projectFileSaved, localOnly: !projectFileSaved };
       } catch (_err) {
         return { projectFileSaved: false, localOnly: true };
@@ -332,7 +333,6 @@
       normalizeSlotArray,
       persistEditorLevels,
       readCustomLevels,
-      tutorialStepToEditorLevel,
       writeCustomLevels
     };
   }

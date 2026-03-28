@@ -75,7 +75,7 @@
       : { action: 'idle', ...(state || {}) };
     const characterId = typeof resolvedState.characterId === 'string' && resolvedState.characterId.trim()
       ? resolvedState.characterId.trim()
-      : 'boks_base';
+      : 'boks_black';
     return window.BOKS_CHARACTER_RENDERER?.render({
       characterId,
       action: resolvedState.action,
@@ -443,117 +443,6 @@
       startFill: '#fff7ef',
       startStroke: '#5aa24e'
     },
-    tutorialSteps: [
-      {
-        start: { x: 2, y: 3 },
-        goal: { x: 3, y: 3 },
-        startOri: 'right',
-        mainSlots: 1,
-        availableBlocks: ['forward']
-      },
-      {
-        start: { x: 1, y: 3 },
-        goal: { x: 3, y: 3 },
-        startOri: 'right',
-        mainSlots: 2,
-        availableBlocks: ['forward']
-      },
-      {
-        start: { x: 1, y: 3 },
-        goal: { x: 3, y: 3 },
-        startOri: 'up',
-        mainSlots: 3,
-        availableBlocks: ['forward', 'right'],
-        obstacles: [{ x: 1, y: 2 }]
-      },
-      {
-        start: { x: 4, y: 3 },
-        goal: { x: 2, y: 3 },
-        startOri: 'up',
-        mainSlots: 3,
-        availableBlocks: ['forward', 'left'],
-        obstacles: [{ x: 4, y: 2 }]
-      },
-      {
-        start: { x: 1, y: 4 },
-        goal: { x: 2, y: 3 },
-        startOri: 'up',
-        mainSlots: 4,
-        availableBlocks: ['forward', 'left', 'right'],
-        obstacles: [{ x: 1, y: 3 }]
-      },
-      {
-        start: { x: 0, y: 3 },
-        goal: { x: 5, y: 3 },
-        startOri: 'right',
-        mainSlots: 4,
-        fnSlots: 2,
-        availableBlocks: ['forward', 'function']
-      },
-      {
-        start: { x: 1, y: 4 },
-        goal: { x: 3, y: 4 },
-        startOri: 'up',
-        mainSlots: 4,
-        fnSlots: 2,
-        availableBlocks: ['forward', 'right', 'function'],
-        obstacles: [{ x: 1, y: 3 }]
-      },
-      {
-        start: { x: 4, y: 4 },
-        goal: { x: 2, y: 4 },
-        startOri: 'up',
-        mainSlots: 4,
-        fnSlots: 2,
-        availableBlocks: ['forward', 'left', 'function'],
-        obstacles: [{ x: 4, y: 3 }]
-      },
-      {
-        start: { x: 1, y: 4 },
-        goal: { x: 4, y: 2 },
-        startOri: 'up',
-        mainSlots: 4,
-        fnSlots: 3,
-        availableBlocks: ['forward', 'left', 'right', 'function'],
-        obstacles: [{ x: 1, y: 3 }, { x: 3, y: 3 }]
-      },
-      {
-        start: { x: 1, y: 4 },
-        goal: { x: 3, y: 1 },
-        startOri: 'up',
-        mainSlots: 4,
-        fnSlots: 3,
-        availableBlocks: ['forward', 'left', 'right', 'function'],
-        obstacles: [{ x: 1, y: 3 }, { x: 2, y: 2 }]
-      },
-      {
-        start: { x: 4, y: 4 },
-        goal: { x: 1, y: 1 },
-        startOri: 'up',
-        mainSlots: 4,
-        fnSlots: 3,
-        availableBlocks: ['forward', 'left', 'right', 'function'],
-        obstacles: [{ x: 4, y: 3 }, { x: 3, y: 2 }]
-      },
-      {
-        start: { x: 4, y: 4 },
-        goal: { x: 0, y: 2 },
-        startOri: 'up',
-        mainSlots: 4,
-        fnSlots: 4,
-        availableBlocks: ['forward', 'left', 'right', 'function'],
-        obstacles: [{ x: 3, y: 4 }, { x: 2, y: 3 }]
-      },
-      {
-        start: { x: 1, y: 4 },
-        goal: { x: 4, y: 0 },
-        startOri: 'up',
-        mainSlots: 4,
-        fnSlots: 4,
-        availableBlocks: ['forward', 'left', 'right', 'function'],
-        obstacles: [{ x: 4, y: 4 }, { x: 3, y: 2 }, { x: 3, y: 0 }]
-      }
-    ],
     sceneVars: {
       '--scene-body-bg': 'radial-gradient(140% 95% at 50% 0%, #f3ecdd 0%, #ece3d1 48%, #e8dfcc 100%)',
       '--bg-base': '#e8dfcc',

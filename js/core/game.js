@@ -47,6 +47,7 @@ const POOL = {
 };
 const CUSTOM_LEVELS_STORAGE_KEY = 'boks-custom-levels';
 const EDITOR_LEVELS_STORAGE_KEY = 'boks-editor-levels-v1';
+const PROJECT_LEVELS_CACHE_KEY = 'boks-project-levels-cache-v1';
 const EDITOR_LEVELS_FILE_PATH = './data/editor-levels.json';
 const EDITOR_LEVELS_FILE_PICKER_SUGGESTED_NAME = 'editor-levels.json';
 const FILE_HANDLE_DB_NAME = 'boks-file-handles';
@@ -1301,6 +1302,7 @@ function setCurrentEditorThemeOverrides(overrides) {
     ...draft,
     id: selectedLevel.id,
     number: selectedLevel.number,
+    campaignIndex: selectedLevel.campaignIndex ?? selectedLevel.baseStepIndex ?? null,
     baseStepIndex: selectedLevel.baseStepIndex,
     name: selectedLevel.name,
     themeOverrides: normalized
@@ -1396,11 +1398,11 @@ function getActiveCharacterId() {
   if (currentCustomLevel?.characterId) return resolveCharacterId(currentCustomLevel.characterId);
   if (currentLevel === 'level1') {
     if (LEVEL_EDITOR_ENABLED) {
-      const stepLevel = findCustomLevel(getEditorLevelIdForTutorialStep(tutorialStepIndex));
-      if (stepLevel?.characterId) return resolveCharacterId(stepLevel.characterId);
+      const campaignLevel = findCustomLevel(getCampaignLevelIdForIndex(tutorialStepIndex));
+      if (campaignLevel?.characterId) return resolveCharacterId(campaignLevel.characterId);
     }
-    const step = getCurrentTutorialStep();
-    if (step?.characterId) return resolveCharacterId(step.characterId);
+    const campaignLevel = getCurrentCampaignLevel();
+    if (campaignLevel?.characterId) return resolveCharacterId(campaignLevel.characterId);
   }
   const level = getLevel();
   return resolveCharacterId(level?.characterId);
@@ -1432,6 +1434,7 @@ function setCurrentEditorCharacterId(characterId) {
     ...draft,
     id: selectedLevel.id,
     number: selectedLevel.number,
+    campaignIndex: selectedLevel.campaignIndex ?? selectedLevel.baseStepIndex ?? null,
     baseStepIndex: selectedLevel.baseStepIndex,
     name: selectedLevel.name,
     characterId: resolved
@@ -1530,6 +1533,7 @@ function applyEditorTheme(themeId) {
         ...draft,
         id: selectedLevel.id,
         number: selectedLevel.number,
+        campaignIndex: selectedLevel.campaignIndex ?? selectedLevel.baseStepIndex ?? null,
         baseStepIndex: selectedLevel.baseStepIndex,
         name: selectedLevel.name,
         baseLevel: resolved
@@ -1621,13 +1625,12 @@ const levelStorage = window.BOKS_LEVEL_STORAGE({
   editorLevelsFileHandleKey: EDITOR_LEVELS_FILE_HANDLE_KEY,
   editorLevelsFilePath: EDITOR_LEVELS_FILE_PATH,
   editorLevelsStorageKey: EDITOR_LEVELS_STORAGE_KEY,
+  projectLevelsCacheKey: PROJECT_LEVELS_CACHE_KEY,
   editorLevelsSuggestedName: EDITOR_LEVELS_FILE_PICKER_SUGGESTED_NAME,
   fileHandleDbName: FILE_HANDLE_DB_NAME,
   fileHandleStoreName: FILE_HANDLE_STORE_NAME,
   fnSlots: FSLOTS,
-  getOfficialTutorialSteps,
   getTutorialStepIndex: () => tutorialStepIndex,
-  pool: POOL,
   preferProjectLevelsFile: !LEVEL_EDITOR_ENABLED || RUNTIME_CONFIG.releaseChannel === 'live',
   resolveCharacterId,
   slots: SLOTS
@@ -1669,11 +1672,15 @@ function getEditorLevelIdForTutorialStep(idx = tutorialStepIndex) {
   return levelStorage.getEditorLevelIdForTutorialStep(idx);
 }
 
-function tutorialStepToEditorLevel(step, idx) {
-  return levelStorage.tutorialStepToEditorLevel(step, idx);
+function getCampaignLevelIdForIndex(idx = tutorialStepIndex) {
+  return levelStorage.getEditorLevelIdForTutorialStep(idx);
 }
 
 function editorLevelToTutorialStep(level) {
+  return levelStorage.editorLevelToTutorialStep(level);
+}
+
+function editorLevelToCampaignLevel(level) {
   return levelStorage.editorLevelToTutorialStep(level);
 }
 
@@ -1711,7 +1718,7 @@ function syncEditorStateAfterLevelsChange(levels, { preferredLevelId = null } = 
       return;
     }
     if (currentLevel === 'level1') {
-      applyTutorialStep(tutorialStepIndex);
+      applyCampaignLevel(tutorialStepIndex);
       renderCustomLevels();
       return;
     }
@@ -1731,7 +1738,7 @@ function syncEditorStateAfterLevelsChange(levels, { preferredLevelId = null } = 
     }
     currentCustomLevel = null;
     currentLevel = 'level1';
-    applyTutorialStep(tutorialStepIndex);
+    applyCampaignLevel(tutorialStepIndex);
     renderCustomLevels();
     return;
   }
@@ -1797,7 +1804,7 @@ async function resetEditorLevels() {
   currentLevel = 'level1';
   tutorialStepIndex = 0;
   syncEditorStateAfterLevelsChange(seeded, {
-    preferredLevelId: getEditorLevelIdForTutorialStep(0)
+    preferredLevelId: getCampaignLevelIdForIndex(0)
   });
   toast(persistResult.projectFileSaved
     ? 'Livelli originali ripristinati nel progetto'
@@ -1822,9 +1829,6 @@ function getLevel() {
   }
   return LEVELS[currentLevel] || LEVELS.level1 || null;
 }
-function getOfficialTutorialSteps() {
-  return LEVELS.level1?.tutorialSteps || [];
-}
 function applyLevelSceneVars() {
   const lv = getLevel();
   if (!lv) return;
@@ -1838,8 +1842,8 @@ function applyLevelSceneVars() {
   } else if (currentCustomLevel) {
     activeOverrides = sanitizeThemeOverrides(currentCustomLevel.themeOverrides || {});
   } else if (currentLevel === 'level1') {
-    const stepLevel = findCustomLevel(getEditorLevelIdForTutorialStep(tutorialStepIndex));
-    activeOverrides = sanitizeThemeOverrides(stepLevel?.themeOverrides || {});
+    const campaignLevel = findCustomLevel(getCampaignLevelIdForIndex(tutorialStepIndex));
+    activeOverrides = sanitizeThemeOverrides(campaignLevel?.themeOverrides || {});
   }
   Object.entries(activeOverrides).forEach(([key, value]) => {
     if (EDITOR_THEME_COLOR_KEYS.has(key)) baseVars[key] = value;
@@ -1975,12 +1979,12 @@ function updateDebugBadge() {
     return;
   }
   const lv = getLevel();
-  const steps = getTutorialSteps();
-  if (steps.length) {
-    badge.textContent = `${lv?.name || currentLevel} | Step ${tutorialStepIndex + 1}/${steps.length}`;
+  const campaignLevels = getCampaignLevels();
+  if (campaignLevels.length) {
+    badge.textContent = `${lv?.name || currentLevel} | Livello ${tutorialStepIndex + 1}/${campaignLevels.length}`;
     return;
   }
-  badge.textContent = `${lv?.name || currentLevel} | Single level`;
+  badge.textContent = `${lv?.name || currentLevel} | Livello singolo`;
 }
 
 function setSlotMasks(mainCount = SLOTS, fnCount = FSLOTS) {
@@ -2014,9 +2018,9 @@ function debugStepJump(delta) {
   if (running || animating) return;
   if (editorMode) return;
   if (currentLevel !== 'level1') return;
-  const steps = getTutorialSteps();
-  if (!steps.length) return;
-  applyTutorialStep(tutorialStepIndex + delta);
+  const campaignLevels = getCampaignLevels();
+  if (!campaignLevels.length) return;
+  applyCampaignLevel(tutorialStepIndex + delta);
 }
 
 function cellKey(x, y) {
@@ -2145,14 +2149,26 @@ function toggleEditorSlot(zone, idx) {
 function getTutorialSteps() {
   if (currentCustomLevel) return [];
   if (currentLevel === 'level1') {
-    const projectTutorialSteps = readCustomLevels().map(editorLevelToTutorialStep);
-    if (projectTutorialSteps.length) {
-      return projectTutorialSteps;
+    const projectCampaignLevels = readCustomLevels().map(editorLevelToCampaignLevel);
+    if (projectCampaignLevels.length) {
+      return projectCampaignLevels;
     }
-    return getOfficialTutorialSteps();
+    return [];
   }
   const lv = getLevel();
   return lv?.tutorialSteps || [];
+}
+
+function getCampaignLevels() {
+  return getTutorialSteps();
+}
+
+function getCurrentCampaignLevel() {
+  return getCurrentTutorialStep();
+}
+
+function applyCampaignLevel(idx = 0) {
+  return applyTutorialStep(idx);
 }
 function getCurrentTutorialStep() {
   const steps = getTutorialSteps();
@@ -2160,13 +2176,13 @@ function getCurrentTutorialStep() {
   return steps[tutorialStepIndex] || null;
 }
 function isFunctionTutorialStep() {
-  const step = getCurrentTutorialStep();
+  const step = getCurrentCampaignLevel();
   if (!step) return false;
   const blocks = step.availableBlocks || [];
   return (step.fnSlots || 0) > 0 && blocks.includes('function');
 }
 function resetPlayerToStepStart() {
-  const step = getCurrentTutorialStep();
+  const step = getCurrentCampaignLevel();
   pos = { ...START };
   ori = currentCustomLevel?.startOri || step?.startOri || 'right';
   resetSpritePresentation();
@@ -2176,7 +2192,7 @@ function applyTutorialStep(idx = 0) {
   const steps = getTutorialSteps();
   if (!steps.length) return false;
   tutorialStepIndex = ((idx % steps.length) + steps.length) % steps.length;
-  selectedEditorLevelId = getEditorLevelIdForTutorialStep(tutorialStepIndex);
+  selectedEditorLevelId = getCampaignLevelIdForIndex(tutorialStepIndex);
   const step = steps[tutorialStepIndex];
   tutorialSceneLevelId = resolveThemeLevelId(step.baseLevel);
   applyLevelSceneVars();
@@ -2270,6 +2286,7 @@ function collectCurrentEditorLevel() {
   return normalizeCustomLevel({
     id: currentCustomLevel?.id || selectedEditorLevelId || `custom-${Date.now()}`,
     number: currentCustomLevel?.number ?? null,
+    campaignIndex: currentCustomLevel?.campaignIndex ?? currentCustomLevel?.baseStepIndex ?? null,
     baseStepIndex: currentCustomLevel?.baseStepIndex ?? null,
     name: currentCustomLevel?.name || 'Livello custom',
     icon: currentCustomLevel?.icon || selectedSaveIcon,
@@ -2848,7 +2865,7 @@ async function saveCurrentEditorLevel() {
   if (!LEVEL_EDITOR_ENABLED || !editorMode) return;
   const levelId = currentCustomLevel?.id
     || selectedEditorLevelId
-    || (currentLevel === 'level1' ? getEditorLevelIdForTutorialStep(tutorialStepIndex) : null);
+    || (currentLevel === 'level1' ? getCampaignLevelIdForIndex(tutorialStepIndex) : null);
   if (!levelId) {
     toast('Seleziona un livello');
     return;
@@ -2885,18 +2902,20 @@ async function saveCurrentEditorLevel() {
     ...level,
     id: levels[idx].id,
     number: levels[idx].number,
+    campaignIndex: levels[idx].campaignIndex ?? levels[idx].baseStepIndex ?? null,
     baseStepIndex: levels[idx].baseStepIndex,
     name: levels[idx].name
   });
   const persistResult = await persistEditorLevels(levels, { promptIfMissing: true });
   const savedLevel = levels[idx];
   selectedEditorLevelId = savedLevel.id;
-  if (savedLevel.baseStepIndex != null) {
+  const savedCampaignIndex = savedLevel.campaignIndex ?? savedLevel.baseStepIndex;
+  if (savedCampaignIndex != null) {
     currentCustomLevel = null;
     currentLevel = 'level1';
     applyLevelSceneVars();
-    tutorialStepIndex = savedLevel.baseStepIndex;
-    applyTutorialStep(savedLevel.baseStepIndex);
+    tutorialStepIndex = savedCampaignIndex;
+    applyCampaignLevel(savedCampaignIndex);
     refreshEditorDebug();
   } else {
     currentCustomLevel = cloneCustomLevel(savedLevel);
@@ -3573,9 +3592,9 @@ async function run() {
       const transitionAnchor = getWinBurstAnchor();
         await sleep(260);
         await fadeTransition(1850, async () => {
-        const steps = getTutorialSteps();
-        if (steps.length) {
-          applyTutorialStep((tutorialStepIndex + 1) % steps.length);
+      const campaignLevels = getCampaignLevels();
+      if (campaignLevels.length) {
+          applyCampaignLevel((tutorialStepIndex + 1) % campaignLevels.length);
         } else {
           resetPrograms();
           initGrid();
@@ -3629,7 +3648,7 @@ async function init() {
   currentLevel = 'level1';
   setLevel('level1', { persist: false });
   document.getElementById('gridWrap').style.position = 'relative';
-  if (!applyTutorialStep(0)) {
+  if (!applyCampaignLevel(0)) {
     activeMainSlots = SLOTS;
     activeFnSlots = FSLOTS;
     setSlotMasks(activeMainSlots, activeFnSlots);
@@ -3763,9 +3782,9 @@ function enterEditorFromCurrentLevel() {
     return;
   }
   if (currentLevel === 'level1') {
-    const tutorialLevel = findCustomLevel(getEditorLevelIdForTutorialStep(tutorialStepIndex));
-    if (tutorialLevel) {
-      applyCustomLevel(tutorialLevel, { openEditor: true });
+    const campaignLevel = findCustomLevel(getCampaignLevelIdForIndex(tutorialStepIndex));
+    if (campaignLevel) {
+      applyCustomLevel(campaignLevel, { openEditor: true });
       return;
     }
   }
@@ -3774,13 +3793,13 @@ function enterEditorFromCurrentLevel() {
 function exitEditorMode() {
   if (!editorMode || running || animating) return;
   closeSaveLevelModal();
-  if (currentCustomLevel?.baseStepIndex != null) {
-    const stepIndex = currentCustomLevel.baseStepIndex;
+  if (currentCustomLevel?.campaignIndex != null || currentCustomLevel?.baseStepIndex != null) {
+    const stepIndex = currentCustomLevel.campaignIndex ?? currentCustomLevel.baseStepIndex;
     currentCustomLevel = null;
     currentLevel = 'level1';
     applyLevelSceneVars();
     setEditorMode(false);
-    applyTutorialStep(stepIndex);
+    applyCampaignLevel(stepIndex);
     return;
   }
   if (currentCustomLevel) {
@@ -3788,8 +3807,8 @@ function exitEditorMode() {
     return;
   }
   setEditorMode(false);
-  if (getTutorialSteps().length) {
-    applyTutorialStep(tutorialStepIndex);
+  if (getCampaignLevels().length) {
+    applyCampaignLevel(tutorialStepIndex);
     return;
   }
   renderAvail();
