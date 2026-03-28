@@ -1628,6 +1628,7 @@ const levelStorage = window.BOKS_LEVEL_STORAGE({
   getOfficialTutorialSteps,
   getTutorialStepIndex: () => tutorialStepIndex,
   pool: POOL,
+  preferProjectLevelsFile: !LEVEL_EDITOR_ENABLED || RUNTIME_CONFIG.releaseChannel === 'live',
   resolveCharacterId,
   slots: SLOTS
 });

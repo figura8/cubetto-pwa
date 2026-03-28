@@ -43,7 +43,7 @@
         return api.resolveCharacterId(characterId);
       }
       const normalized = typeof characterId === 'string' ? characterId.trim() : '';
-      return normalized || 'boks_base';
+      return normalized || 'boks_black';
     }
 
     function normalizeCustomLevel(level) {
@@ -259,6 +259,20 @@
     }
 
     async function loadEditorLevelsSource() {
+      if (api.preferProjectLevelsFile) {
+        try {
+          const response = await fetch(api.editorLevelsFilePath, { cache: 'no-store' });
+          if (response.ok) {
+            const payload = await response.json();
+            const levels = Array.isArray(payload) ? payload : payload?.levels;
+            if (Array.isArray(levels) && levels.length) {
+              writeCustomLevels(levels);
+              return;
+            }
+          }
+        } catch (_) {}
+      }
+
       try {
         const raw = localStorage.getItem(api.editorLevelsStorageKey);
         const parsed = raw ? JSON.parse(raw) : null;
