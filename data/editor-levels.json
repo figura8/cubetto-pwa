@@ -87,7 +87,10 @@
         "right": false,
         "function": false
       },
-      "themeOverrides": {}
+      "themeOverrides": {
+        "--scene-grid-wrap-bg": "#3d4c29",
+        "--grid-bg": "#49a253"
+      }
     },
     {
       "id": "level1-step-3",
@@ -134,7 +137,10 @@
         "right": true,
         "function": false
       },
-      "themeOverrides": {}
+      "themeOverrides": {
+        "--scene-grid-wrap-bg": "#3d4c29",
+        "--grid-bg": "#49a253"
+      }
     },
     {
       "id": "level1-step-4",
@@ -181,7 +187,10 @@
         "right": false,
         "function": false
       },
-      "themeOverrides": {}
+      "themeOverrides": {
+        "--scene-grid-wrap-bg": "#3d4c29",
+        "--grid-bg": "#49a253"
+      }
     },
     {
       "id": "level1-step-5",

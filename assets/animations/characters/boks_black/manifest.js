@@ -2,7 +2,7 @@
   window.BOKS_CHARACTER_DEFS = window.BOKS_CHARACTER_DEFS || {};
 
   const boksBlackIdleRight = {
-    svgSrc: 'assets/characters/boks_black/idle-loop.svg',
+    svgSrc: 'assets/characters/boks_black/base-right-red.svg',
     fit: {
       scale: 1,
       offsetX: 0,
@@ -13,7 +13,7 @@
   window.BOKS_CHARACTER_DEFS.boks_black = {
     id: 'boks_black',
     label: 'Boks Red',
-    hint: 'Static lightweight placeholder in rosso',
+    hint: 'Placeholder direzionale rosso',
     containerDrivenPose: true,
     defaultAction: 'idle',
     defaultDirection: 'right',
