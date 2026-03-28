@@ -1212,7 +1212,13 @@ function elementPaletteIcon(type) {
     return customIconSVG('turtle').replace('width="24" height="24"', 'width="38" height="38"');
   }
   if (type === 'goal') {
-    return '<svg viewBox="0 0 48 48" width="38" height="38" aria-hidden="true"><path d="M39 9C26 10 13 18 11 31c-1 7 6 10 12 8 10-2 18-14 16-30Z" fill="#71c85f" stroke="#3f8c33" stroke-width="2"/><path d="M16 32c6-4 12-10 18-18" fill="none" stroke="#3f8c33" stroke-width="2.2" stroke-linecap="round"/></svg>';
+    return window.BOKS_GOAL_CHARACTER?.iconMarkup?.({
+      size: 38,
+      rim: '#a25a69',
+      panelTop: '#fff8fb',
+      panelBottom: '#ffdbe3',
+      shadow: 'rgba(83, 28, 39, 0.14)'
+    }) || '<svg viewBox="0 0 48 48" width="38" height="38" aria-hidden="true"><path d="M39 9C26 10 13 18 11 31c-1 7 6 10 12 8 10-2 18-14 16-30Z" fill="#71c85f" stroke="#3f8c33" stroke-width="2"/><path d="M16 32c6-4 12-10 18-18" fill="none" stroke="#3f8c33" stroke-width="2.2" stroke-linecap="round"/></svg>';
   }
   return '<svg viewBox="0 0 48 48" width="38" height="38" aria-hidden="true"><rect x="10" y="12" width="28" height="22" rx="5" fill="#c8a271" stroke="#8c6744" stroke-width="2.2"/><path d="M13 20h22M13 26h22" stroke="#8c6744" stroke-width="2" stroke-linecap="round" opacity="0.65"/></svg>';
 }
@@ -1576,8 +1582,19 @@ function buildCustomLevelThumbnail(level) {
   const goalY = level.goal?.y * cell + cell / 2;
   const startX = level.start?.x * cell + cell / 2;
   const startY = level.start?.y * cell + cell / 2;
+  const goalPreviewClipId = `goal-preview-${String(level.id || level.name || 'custom').toLowerCase().replace(/[^a-z0-9_-]+/g, '-')}`;
   const goalMarkup = level.goal
-    ? `<circle cx="${goalX}" cy="${goalY}" r="${cell * 0.24}" fill="${goalFill}" stroke="${goalStroke}" stroke-width="2"/>`
+    ? (
+      window.BOKS_GOAL_CHARACTER?.previewSvgMarkup?.({
+        x: goalX,
+        y: goalY,
+        size: cell * 0.58,
+        clipId: goalPreviewClipId,
+        rim: '#b55f72',
+        glow: 'rgba(197, 96, 120, 0.18)',
+        panelFill: '#ffe7ee'
+      }) || `<circle cx="${goalX}" cy="${goalY}" r="${cell * 0.24}" fill="${goalFill}" stroke="${goalStroke}" stroke-width="2"/>`
+    )
     : '';
   const startMarkup = level.start
     ? `
@@ -2381,7 +2398,7 @@ function renderElementPalette() {
     },
     {
       key: 'goal',
-      label: 'Foglia',
+      label: 'Boks nero',
       present: goalPlaced,
       hint: goalPlaced ? 'Presente: sposta o tocca per rimuovere' : 'Tocca e piazza sulla griglia'
     },

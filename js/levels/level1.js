@@ -1,37 +1,72 @@
 (function () {
+  const GOAL_CHARACTER_SRC = `assets/animations/characters/boks_black/boks_black_trapped.png?v=${encodeURIComponent(document.body?.dataset.build || 'dev')}`;
+
+  function renderGoalCharacterBadge({
+    shadow = 'rgba(83, 28, 39, 0.22)'
+  } = {}) {
+    return `
+      <span aria-hidden="true" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+        <span style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#000;box-shadow:0 4px 8px ${shadow};overflow:hidden;">
+          <img src="${GOAL_CHARACTER_SRC}" alt="" style="width:92%;height:92%;display:block;object-fit:contain;transform:none;"/>
+        </span>
+      </span>
+    `;
+  }
+
+  function renderGoalCharacterIcon({
+    size = 38,
+    shadow = 'rgba(83, 28, 39, 0.18)'
+  } = {}) {
+    const shiftY = 0;
+    return `
+      <span aria-hidden="true" style="width:${size}px;height:${size}px;display:inline-flex;align-items:center;justify-content:center;overflow:visible;">
+        <span style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;background:#000;box-shadow:0 3px 6px ${shadow};overflow:hidden;">
+          <img src="${GOAL_CHARACTER_SRC}" alt="" style="width:${Math.round(size * 0.9)}px;height:${Math.round(size * 0.9)}px;display:block;object-fit:contain;transform:translateY(${shiftY}px);"/>
+        </span>
+      </span>
+    `;
+  }
+
+  function renderGoalCharacterPreviewSvg({
+    x = 0,
+    y = 0,
+    size = 20,
+    clipId = 'goal-preview'
+  } = {}) {
+    const bgSize = size;
+    const bgX = x - bgSize / 2;
+    const bgY = y - bgSize / 2;
+    const imageSize = size * 0.9;
+    const imageX = x - imageSize / 2;
+    const imageY = y - imageSize / 2;
+    const safeClipId = String(clipId).replace(/[^a-z0-9_-]+/gi, '-');
+    return `
+      <defs>
+        <clipPath id="${safeClipId}">
+          <rect x="${bgX.toFixed(2)}" y="${bgY.toFixed(2)}" width="${bgSize.toFixed(2)}" height="${bgSize.toFixed(2)}"/>
+        </clipPath>
+      </defs>
+      <rect x="${bgX.toFixed(2)}" y="${bgY.toFixed(2)}" width="${bgSize.toFixed(2)}" height="${bgSize.toFixed(2)}" fill="#000"/>
+      <image href="${GOAL_CHARACTER_SRC}" x="${imageX.toFixed(2)}" y="${imageY.toFixed(2)}" width="${imageSize.toFixed(2)}" height="${imageSize.toFixed(2)}" preserveAspectRatio="xMidYMid meet" clip-path="url(#${safeClipId})"/>
+    `;
+  }
+
   function goalSVGLevel1() {
-    return `<svg viewBox="0 0 50 50" style="width:72%;height:72%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);filter:drop-shadow(0 2px 4px rgba(0,0,0,0.18));">
-      <path d="M24 44 C10 42 6 27 12 16 C17 7 30 4 40 10 C47 14 47 25 40 34 C35 40 30 44 24 44 Z" fill="#66c455" stroke="#3f8c33" stroke-width="1.6"/>
-      <path d="M23 40 C15 37 12 27 15 19 C18 13 27 10 34 13 C39 16 40 23 35 30 C31 35 28 39 23 40 Z" fill="#8fdf72" opacity="0.92"/>
-      <path d="M24 40 C25 33 25 25 24 14" fill="none" stroke="#3d8d34" stroke-width="1.6" stroke-linecap="round"/>
-      <path d="M24 23 C20 21 17 20 14 19 M24 27 C28 26 31 25 34 23 M24 31 C19 31 16 32 13 33 M24 34 C29 34 32 35 35 36" fill="none" stroke="#4ca743" stroke-width="1" stroke-linecap="round"/>
-      <ellipse cx="20" cy="18" rx="4" ry="2" fill="rgba(255,255,255,0.3)"/>
-      <ellipse cx="31" cy="28" rx="3.2" ry="1.6" fill="rgba(255,255,255,0.24)"/>
-    </svg>`;
+    return renderGoalCharacterBadge({
+      shadow: 'rgba(52, 84, 31, 0.2)'
+    });
   }
 
   function goalSVGCity() {
-    return `<svg viewBox="0 0 50 50" style="width:72%;height:72%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);filter:drop-shadow(0 2px 5px rgba(8,18,35,0.32));">
-      <path d="M25 5 C17 5 11 11 11 19 c0 11 14 25 14 25 s14-14 14-25 C39 11 33 5 25 5 Z" fill="#44b8ff" stroke="#1c6ea3" stroke-width="1.7"/>
-      <circle cx="25" cy="19" r="5.5" fill="#f4fbff" stroke="#1c6ea3" stroke-width="1.5"/>
-      <path d="M25 15 L26.6 18.4 L30.3 18.7 L27.5 21.3 L28.2 25 L25 23.2 L21.8 25 L22.5 21.3 L19.7 18.7 L23.4 18.4 Z" fill="#ffd56a"/>
-    </svg>`;
+    return renderGoalCharacterBadge({
+      shadow: 'rgba(35, 70, 110, 0.2)'
+    });
   }
 
   function goalSVGUniverse() {
-    return `<svg viewBox="0 0 50 50" style="width:72%;height:72%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);filter:drop-shadow(0 2px 6px rgba(0,0,0,0.45));">
-      <defs>
-        <radialGradient id="portalCore" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="#ecfdff"/>
-          <stop offset="50%" stop-color="#91e4ff"/>
-          <stop offset="100%" stop-color="#5d8bff"/>
-        </radialGradient>
-      </defs>
-      <circle cx="25" cy="25" r="13.5" fill="none" stroke="#a897ff" stroke-width="4.2"/>
-      <circle cx="25" cy="25" r="10.2" fill="none" stroke="#d0e7ff" stroke-width="2.2" opacity="0.9"/>
-      <circle cx="25" cy="25" r="6.8" fill="url(#portalCore)"/>
-      <circle cx="25" cy="25" r="2.4" fill="#ffffff" opacity="0.92"/>
-    </svg>`;
+    return renderGoalCharacterBadge({
+      shadow: 'rgba(43, 32, 84, 0.26)'
+    });
   }
 
   function renderCharacter(state) {
@@ -378,6 +413,12 @@
   function decorateThomas() {}
 
   window.goalSVGLevel1 = goalSVGLevel1;
+  window.BOKS_GOAL_CHARACTER = {
+    src: GOAL_CHARACTER_SRC,
+    badgeMarkup: renderGoalCharacterBadge,
+    iconMarkup: renderGoalCharacterIcon,
+    previewSvgMarkup: renderGoalCharacterPreviewSvg
+  };
   window.renderCharacterLevel1 = renderCharacter;
   window.drawBackgroundLevel1 = drawBackgroundLevel1;
 

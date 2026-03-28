@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exportedAt": "2026-03-26T17:35:08.132Z",
+  "exportedAt": "2026-03-28T18:24:44.117Z",
   "levels": [
     {
       "id": "level1-step-1",
@@ -42,7 +42,10 @@
         "right": false,
         "function": false
       },
-      "themeOverrides": {}
+      "themeOverrides": {
+        "--scene-grid-wrap-bg": "#3d4c29",
+        "--grid-bg": "#49a253"
+      }
     },
     {
       "id": "level1-step-2",
@@ -91,7 +94,7 @@
       "number": 3,
       "baseStepIndex": 2,
       "name": "Livello 3",
-      "icon": "leaf",
+      "icon": "turtle",
       "baseLevel": "level1",
       "characterId": "boks_black",
       "start": {
@@ -186,7 +189,7 @@
       "baseStepIndex": 4,
       "name": "Livello 5",
       "icon": "moon",
-      "baseLevel": "level1",
+      "baseLevel": "level-city",
       "characterId": "boks_black",
       "start": {
         "x": 1,
@@ -233,7 +236,7 @@
       "baseStepIndex": 5,
       "name": "Livello 6",
       "icon": "leaf",
-      "baseLevel": "level1",
+      "baseLevel": "level-city",
       "characterId": "boks_black",
       "start": {
         "x": 1,
@@ -275,7 +278,7 @@
       "baseStepIndex": 6,
       "name": "Livello 7",
       "icon": "leaf",
-      "baseLevel": "level1",
+      "baseLevel": "level-city",
       "characterId": "boks_black",
       "start": {
         "x": 1,
@@ -322,7 +325,7 @@
       "baseStepIndex": 7,
       "name": "Livello 8",
       "icon": "star",
-      "baseLevel": "level1",
+      "baseLevel": "level-city",
       "characterId": "boks_black",
       "start": {
         "x": 4,
@@ -369,7 +372,7 @@
       "baseStepIndex": 8,
       "name": "Livello 9",
       "icon": "turtle",
-      "baseLevel": "level1",
+      "baseLevel": "level-universe",
       "characterId": "boks_black",
       "start": {
         "x": 1,
@@ -412,7 +415,15 @@
         "right": true,
         "function": true
       },
-      "themeOverrides": {}
+      "themeOverrides": {
+        "--panel-bg": "#4767b3",
+        "--scene-grid-wrap-bg": "#c0becb",
+        "--cell-bg": "#605d83",
+        "--cell-hi-bg": "#777e88",
+        "--obstacle-bg-top": "#d1d1d1",
+        "--obstacle-bg-bottom": "#b49e50",
+        "--obstacle-edge": "#c5bfd4"
+      }
     },
     {
       "id": "level1-step-10",
@@ -420,7 +431,7 @@
       "baseStepIndex": 9,
       "name": "Livello 10",
       "icon": "sun",
-      "baseLevel": "level1",
+      "baseLevel": "level-universe",
       "characterId": "boks_black",
       "start": {
         "x": 1,
@@ -471,7 +482,7 @@
       "baseStepIndex": 10,
       "name": "Livello 11",
       "icon": "moon",
-      "baseLevel": "level1",
+      "baseLevel": "level-universe",
       "characterId": "boks_black",
       "start": {
         "x": 4,
@@ -522,7 +533,7 @@
       "baseStepIndex": 11,
       "name": "Livello 12",
       "icon": "flower",
-      "baseLevel": "level1",
+      "baseLevel": "level-universe",
       "characterId": "boks_black",
       "start": {
         "x": 4,
@@ -573,7 +584,7 @@
       "baseStepIndex": 12,
       "name": "Livello 13",
       "icon": "leaf",
-      "baseLevel": "level1",
+      "baseLevel": "level-thomas",
       "characterId": "boks_black",
       "start": {
         "x": 1,
@@ -620,49 +631,12 @@
         "right": true,
         "function": true
       },
-      "themeOverrides": {}
-    },
-    {
-      "id": "custom-1774546508122",
-      "number": 14,
-      "baseStepIndex": null,
-      "name": "Livello 14",
-      "icon": "leaf",
-      "baseLevel": "level1",
-      "characterId": "boks_black",
-      "start": {
-        "x": 2,
-        "y": 3
-      },
-      "goal": {
-        "x": 4,
-        "y": 2
-      },
-      "startOri": "right",
-      "obstacles": [],
-      "mainSlotEnabled": [
-        true,
-        true,
-        true,
-        true,
-        false,
-        false,
-        false,
-        false
-      ],
-      "fnSlotEnabled": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "enabledBlocks": {
-        "forward": true,
-        "left": true,
-        "right": false,
-        "function": false
-      },
-      "themeOverrides": {}
+      "themeOverrides": {
+        "--panel-bg": "#dff0cb",
+        "--cell-hi-bg": "#072116",
+        "--cell-hi-edge": "#89e1b8",
+        "--obstacle-bg-bottom": "#da9234"
+      }
     }
   ]
 }

@@ -351,6 +351,9 @@
       border-radius: var(--cell-radius);
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.65), inset 0 -1px 0 rgba(190,172,139,0.35);
     }
+    .cell.goal-cell {
+      border-radius: 0;
+    }
     .cell.hi {
       background: var(--cell-hi-bg);
       border-color: var(--cell-hi-edge);

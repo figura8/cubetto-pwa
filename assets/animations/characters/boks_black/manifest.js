@@ -12,8 +12,8 @@
 
   window.BOKS_CHARACTER_DEFS.boks_black = {
     id: 'boks_black',
-    label: 'Boks Black',
-    hint: 'Static lightweight placeholder',
+    label: 'Boks Red',
+    hint: 'Static lightweight placeholder in rosso',
     containerDrivenPose: true,
     defaultAction: 'idle',
     defaultDirection: 'right',

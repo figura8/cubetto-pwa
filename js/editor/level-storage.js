@@ -50,7 +50,7 @@
       const normalizedBaseLevel = typeof level.baseLevel === 'string' && level.baseLevel.trim()
         ? level.baseLevel.trim()
         : api.customLevelTheme;
-      return {
+      const normalized = {
         id: level.id || `custom-${Date.now()}`,
         number: level.number ?? null,
         baseStepIndex: level.baseStepIndex ?? null,
@@ -66,6 +66,26 @@
         fnSlotEnabled: normalizeSlotArray(level.fnSlotEnabled, api.fnSlots),
         enabledBlocks: normalizeEnabledBlocks(level.enabledBlocks || {}),
         themeOverrides: normalizeThemeOverrides(level.themeOverrides || {})
+      };
+
+      const tutorialIdx = normalized.baseStepIndex;
+      const officialStep = Number.isInteger(tutorialIdx)
+        ? api.getOfficialTutorialSteps()?.[tutorialIdx]
+        : null;
+      if (!officialStep) return normalized;
+
+      const enabledMainCount = normalized.mainSlotEnabled.filter(Boolean).length;
+      const enabledFnCount = normalized.fnSlotEnabled.filter(Boolean).length;
+      const enabledBlockCount = Object.values(normalized.enabledBlocks).filter(Boolean).length;
+      const looksCollapsed = enabledMainCount === 0 && enabledFnCount === 0 && enabledBlockCount === 0;
+      if (!looksCollapsed) return normalized;
+
+      const officialLevel = tutorialStepToEditorLevel(officialStep, tutorialIdx);
+      return {
+        ...normalized,
+        mainSlotEnabled: [...officialLevel.mainSlotEnabled],
+        fnSlotEnabled: [...officialLevel.fnSlotEnabled],
+        enabledBlocks: { ...officialLevel.enabledBlocks }
       };
     }
 
