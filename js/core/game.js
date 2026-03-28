@@ -1837,7 +1837,7 @@ function applyLevelSceneVars() {
     activeOverrides = sanitizeThemeOverrides(pendingNewLevelThemeOverrides || {});
   } else if (currentCustomLevel) {
     activeOverrides = sanitizeThemeOverrides(currentCustomLevel.themeOverrides || {});
-  } else if (currentLevel === 'level1' && LEVEL_EDITOR_ENABLED) {
+  } else if (currentLevel === 'level1') {
     const stepLevel = findCustomLevel(getEditorLevelIdForTutorialStep(tutorialStepIndex));
     activeOverrides = sanitizeThemeOverrides(stepLevel?.themeOverrides || {});
   }
@@ -2145,10 +2145,11 @@ function toggleEditorSlot(zone, idx) {
 function getTutorialSteps() {
   if (currentCustomLevel) return [];
   if (currentLevel === 'level1') {
-    if (!LEVEL_EDITOR_ENABLED) {
-      return getOfficialTutorialSteps();
+    const projectTutorialSteps = readCustomLevels().map(editorLevelToTutorialStep);
+    if (projectTutorialSteps.length) {
+      return projectTutorialSteps;
     }
-    return readCustomLevels().map(editorLevelToTutorialStep);
+    return getOfficialTutorialSteps();
   }
   const lv = getLevel();
   return lv?.tutorialSteps || [];
