@@ -435,6 +435,8 @@ Obiettivo della sessione:
 - Questo script:
   - controlla che `main` e `live` siano puliti
   - verifica che `main` sia gia pushato su `origin/main`
+  - mostra un preflight esplicito sui livelli progetto (`data/editor-levels.json`)
+  - chiede conferma umana prima di proseguire con la release
   - aggiorna il worktree `live`
   - mergea `origin/main` dentro `live`
   - esegue il build stamp
@@ -453,7 +455,8 @@ Quando vuoi pubblicare una versione di `main` su `live`:
 1. lavorare in `main`
 2. fare commit su `main`
 3. fare push su `origin/main`
-4. lanciare:
+4. controllare che i livelli/stili giusti siano davvero nel file progetto `data/editor-levels.json`
+5. lanciare:
   - `powershell -ExecutionPolicy Bypass -File scripts\release-live.ps1 -Push`
 
 Se invece vuoi solo preparare `live` localmente senza pubblicarlo ancora:
@@ -466,8 +469,16 @@ Lo script di release si ferma apposta se:
 - `live` ha modifiche locali
 - `main` non e ancora stato pushato su `origin/main`
 - il worktree non e sul branch giusto
+- non confermi esplicitamente il preflight dei livelli progetto
 
 Questo serve a evitare release incoerenti o pubblicazioni accidentali di codice non ancora sincronizzato.
+
+Checklist minima prima di ogni release live:
+- `main` pulito
+- commit dei livelli gia fatto
+- push su GitHub gia fatto
+- `data/editor-levels.json` contiene davvero i livelli/stili che vuoi pubblicare
+- solo dopo confermare il prompt dello script
 
 ## Come riprendere la prossima volta
 

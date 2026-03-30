@@ -3,7 +3,8 @@ param(
   [string]$MainWorktreePath,
   [string]$LiveWorktreePath,
   [string]$RemoteName = 'origin',
-  [switch]$Push
+  [switch]$Push,
+  [switch]$SkipConfirmation
 )
 
 $ErrorActionPreference = 'Stop'
@@ -109,6 +110,47 @@ function New-BackupBranchIfDiverged {
   Write-Output "Creato backup locale ${backupBranch} prima di riallineare ${BranchName}."
 }
 
+function Get-LastCommitForPath {
+  param(
+    [string]$RepoPath,
+    [string]$RelativePath
+  )
+
+  $commit = Get-GitOutput $RepoPath 'log' '-1' '--format=%h %ad %s' '--date=iso-short' '--' $RelativePath
+  if (-not $commit) {
+    return 'nessun commit trovato'
+  }
+  return $commit
+}
+
+function Confirm-ReleasePreflight {
+  param(
+    [string]$RepoPath,
+    [string]$RemoteName
+  )
+
+  $levelsPath = 'data/editor-levels.json'
+  $headCommit = Get-GitOutput $RepoPath 'rev-parse' '--short' 'HEAD'
+  $remoteCommit = Get-GitOutput $RepoPath 'rev-parse' '--short' "$RemoteName/main"
+  $levelsStatus = Get-GitOutput $RepoPath 'status' '--short' '--' $levelsPath
+  $levelsCommit = Get-LastCommitForPath -RepoPath $RepoPath -RelativePath $levelsPath
+
+  Write-Output ''
+  Write-Output 'Preflight release live'
+  Write-Output '---------------------'
+  Write-Output "- main locale pronto per release: si ($headCommit)"
+  Write-Output "- origin/main allineato: si ($remoteCommit)"
+  Write-Output "- sorgente canonica livelli: $levelsPath"
+  Write-Output "- stato locale livelli: $(if ($levelsStatus) { $levelsStatus } else { 'pulito' })"
+  Write-Output "- ultimo commit che ha toccato i livelli: $levelsCommit"
+  Write-Output ''
+
+  $answer = (Read-Host 'Aspetta: hai gia pushato i commit giusti su GitHub e questi livelli locali sono davvero quelli da pubblicare su live? [y/N]').Trim().ToLowerInvariant()
+  if ($answer -notin @('y', 'yes', 's', 'si')) {
+    throw 'Release live annullata: preflight livelli non confermato.'
+  }
+}
+
 if (-not (Test-Path (Join-Path $mainWorktreePath '.git'))) {
   throw "Main worktree non valido: $mainWorktreePath"
 }
@@ -140,6 +182,10 @@ if ([int]$mainAhead -ne 0) {
 }
 if ([int]$mainBehind -ne 0) {
   throw "Il branch main locale e indietro rispetto a $RemoteName/main. Allinealo prima della release live."
+}
+
+if (-not $SkipConfirmation) {
+  Confirm-ReleasePreflight -RepoPath $mainWorktreePath -RemoteName $RemoteName
 }
 
 New-BackupBranchIfDiverged -RepoPath $liveWorktreePath -BranchName 'live' -RemoteName $RemoteName

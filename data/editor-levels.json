@@ -1,11 +1,12 @@
 {
   "version": 1,
-  "exportedAt": "2026-03-28T18:24:44.117Z",
+  "exportedAt": "2026-03-30T13:55:55.876Z",
   "levels": [
     {
       "id": "level1-step-1",
       "number": 1,
       "baseStepIndex": 0,
+      "campaignIndex": 0,
       "name": "Livello 1",
       "icon": "leaf",
       "baseLevel": "level1",
@@ -42,15 +43,13 @@
         "right": false,
         "function": false
       },
-      "themeOverrides": {
-        "--scene-grid-wrap-bg": "#3d4c29",
-        "--grid-bg": "#49a253"
-      }
+      "themeOverrides": {}
     },
     {
       "id": "level1-step-2",
       "number": 2,
       "baseStepIndex": 1,
+      "campaignIndex": 1,
       "name": "Livello 2",
       "icon": "star",
       "baseLevel": "level1",
@@ -88,14 +87,14 @@
         "function": false
       },
       "themeOverrides": {
-        "--scene-grid-wrap-bg": "#3d4c29",
-        "--grid-bg": "#49a253"
+        "--grid-bg": "#acd784"
       }
     },
     {
       "id": "level1-step-3",
       "number": 3,
       "baseStepIndex": 2,
+      "campaignIndex": 2,
       "name": "Livello 3",
       "icon": "turtle",
       "baseLevel": "level1",
@@ -139,13 +138,14 @@
       },
       "themeOverrides": {
         "--scene-grid-wrap-bg": "#3d4c29",
-        "--grid-bg": "#49a253"
+        "--grid-bg": "#b9dd98"
       }
     },
     {
       "id": "level1-step-4",
       "number": 4,
       "baseStepIndex": 3,
+      "campaignIndex": 3,
       "name": "Livello 4",
       "icon": "sun",
       "baseLevel": "level1",
@@ -188,14 +188,14 @@
         "function": false
       },
       "themeOverrides": {
-        "--scene-grid-wrap-bg": "#3d4c29",
-        "--grid-bg": "#49a253"
+        "--scene-grid-wrap-bg": "#c5e1a3"
       }
     },
     {
       "id": "level1-step-5",
       "number": 5,
       "baseStepIndex": 4,
+      "campaignIndex": 4,
       "name": "Livello 5",
       "icon": "moon",
       "baseLevel": "level-city",
@@ -243,6 +243,7 @@
       "id": "level1-step-6",
       "number": 6,
       "baseStepIndex": 5,
+      "campaignIndex": 5,
       "name": "Livello 6",
       "icon": "leaf",
       "baseLevel": "level-city",
@@ -285,6 +286,7 @@
       "id": "level1-step-7",
       "number": 7,
       "baseStepIndex": 6,
+      "campaignIndex": 6,
       "name": "Livello 7",
       "icon": "leaf",
       "baseLevel": "level-city",
@@ -332,6 +334,7 @@
       "id": "level1-step-8",
       "number": 8,
       "baseStepIndex": 7,
+      "campaignIndex": 7,
       "name": "Livello 8",
       "icon": "star",
       "baseLevel": "level-city",
@@ -379,6 +382,7 @@
       "id": "level1-step-9",
       "number": 9,
       "baseStepIndex": 8,
+      "campaignIndex": 8,
       "name": "Livello 9",
       "icon": "turtle",
       "baseLevel": "level-universe",
@@ -438,6 +442,7 @@
       "id": "level1-step-10",
       "number": 10,
       "baseStepIndex": 9,
+      "campaignIndex": 9,
       "name": "Livello 10",
       "icon": "sun",
       "baseLevel": "level-universe",
@@ -489,6 +494,7 @@
       "id": "level1-step-11",
       "number": 11,
       "baseStepIndex": 10,
+      "campaignIndex": 10,
       "name": "Livello 11",
       "icon": "moon",
       "baseLevel": "level-universe",
@@ -540,6 +546,7 @@
       "id": "level1-step-12",
       "number": 12,
       "baseStepIndex": 11,
+      "campaignIndex": 11,
       "name": "Livello 12",
       "icon": "flower",
       "baseLevel": "level-universe",
@@ -591,6 +598,7 @@
       "id": "level1-step-13",
       "number": 13,
       "baseStepIndex": 12,
+      "campaignIndex": 12,
       "name": "Livello 13",
       "icon": "leaf",
       "baseLevel": "level-thomas",
@@ -649,4 +657,3 @@
     }
   ]
 }
-
