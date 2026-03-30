@@ -47,6 +47,24 @@ function Get-GitOutput {
   return ($output | Out-String).Trim()
 }
 
+function Invoke-PowerShellScript {
+  param(
+    [string]$ScriptPath,
+    [string[]]$ArgumentList = @()
+  )
+
+  $shellCommand = Get-Command 'pwsh' -ErrorAction SilentlyContinue
+  if ($shellCommand) {
+    & $shellCommand.Source -ExecutionPolicy Bypass -File $ScriptPath @ArgumentList
+  } else {
+    & powershell -ExecutionPolicy Bypass -File $ScriptPath @ArgumentList
+  }
+
+  if ($LASTEXITCODE -ne 0) {
+    throw "Script PowerShell fallito: $ScriptPath"
+  }
+}
+
 function Assert-CleanWorktree {
   param(
     [string]$RepoPath,
@@ -194,15 +212,8 @@ Invoke-Git $liveWorktreePath 'merge' '-X' 'theirs' '--no-edit' "$RemoteName/main
 
 $previousBuild = Get-IndexDataAttribute -RepoPath $liveWorktreePath -Name 'data-build'
 
-& pwsh -ExecutionPolicy Bypass -File (Join-Path $scriptRoot 'stamp-build.ps1') -RepoRoot $liveWorktreePath
-if ($LASTEXITCODE -ne 0) {
-  throw 'Stamp build fallito per il branch live.'
-}
-
-& pwsh -ExecutionPolicy Bypass -File (Join-Path $scriptRoot 'set-release-mode.ps1') -RepoRoot $liveWorktreePath -Channel 'live'
-if ($LASTEXITCODE -ne 0) {
-  throw 'Impostazione release mode fallita per il branch live.'
-}
+Invoke-PowerShellScript -ScriptPath (Join-Path $scriptRoot 'stamp-build.ps1') -ArgumentList @('-RepoRoot', $liveWorktreePath)
+Invoke-PowerShellScript -ScriptPath (Join-Path $scriptRoot 'set-release-mode.ps1') -ArgumentList @('-RepoRoot', $liveWorktreePath, '-Channel', 'live')
 
 $currentBuild = Get-IndexDataAttribute -RepoPath $liveWorktreePath -Name 'data-build'
 if ($currentBuild -eq $previousBuild) {
