@@ -1954,7 +1954,9 @@ const levelStorage = window.BOKS_LEVEL_STORAGE({
   fileHandleStoreName: FILE_HANDLE_STORE_NAME,
   fnSlots: FSLOTS,
   getTutorialStepIndex: () => tutorialStepIndex,
-  preferProjectLevelsFile: !LEVEL_EDITOR_ENABLED || RUNTIME_CONFIG.releaseChannel === 'live',
+  // Keep campaign levels aligned between main and live by treating the
+  // project file as the canonical source in gameplay/editor boot.
+  preferProjectLevelsFile: true,
   resolveCharacterId,
   slots: SLOTS
 });
