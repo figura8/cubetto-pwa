@@ -337,6 +337,7 @@ async function popGoalBubble() {
   const goalCell = document.querySelector('.goal-cell');
   if (!goalCell || goalCell.classList.contains('is-popping')) return;
   triggerGoalCanvasPop();
+  playBubblePopSfx();
   await sleep(1200);
 }
 let ori = 'right';
@@ -438,6 +439,7 @@ const WIN_BURST_ANGLES = [-108, -78, -52, -24, 8, 34, 62, 92, 122, 154, 186, 218
 let winBurstHideTimer = null;
 let activeWinBurstPromise = null;
 let activeWinFeedbackAt = 0;
+let scheduledWinFeedbackTimer = null;
 document.body?.classList.add('prestart');
 document.body?.classList.toggle('debug-visible', DEBUG_TOOLS_ENABLED && debugVisible);
 if (DEBUG_TOOLS_ENABLED && animationDebugVisible) {
@@ -451,128 +453,89 @@ if (DEBUG_TOOLS_ENABLED && animationDebugVisible) {
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
 let fxAc;
-let bgmBus;
-let bgmTicker = null;
-let bgmStarted = false;
-let bgmStep = 0;
-let bgmNextNoteTime = 0;
-let bgmSharedLowpass;
-let bgmSharedHighpass;
+let backgroundMusicAudio = null;
+let backgroundMusicStarted = false;
 let levelOneIntroAudio = null;
 let levelOneIntroBgmTimer = null;
-const BGM_TARGET_GAIN = 0.02;
-const LEVEL_ONE_INTRO_AUDIO_PATH = 'assets/audio/intro_level_01_V2.ogg';
-const DRAG_START_SFX_PATH = 'assets/audio/sfx/detach_v2.ogg';
-const HOVER_SLOT_SFX_PATH = 'assets/audio/sfx/hover_slot.mp3';
-const DROP_SUCCESS_SFX_PATH = 'assets/audio/sfx/drop.mp3';
-const PLAY_PRESS_SFX_PATH = 'assets/audio/sfx/play_sound_v2.mp3';
-const STEP_MOVE_SFX_PATH = 'assets/audio/sfx/step_mov_01.mp3';
-const uiSfxPlayers = new Map();
+const BACKGROUND_MUSIC_VOLUME = 0.18;
+const LEVEL_ONE_INTRO_VOLUME = 0.5;
+const BACKGROUND_MUSIC_STORAGE_KEY = 'boks-bgm-enabled';
+const AUDIO_PATHS = Object.freeze({
+  music: {
+    gameLoop: 'assets/audio/music/game_loop_main.mp3',
+    level01Intro: 'assets/audio/music/level_01_intro_main.ogg'
+  },
+  sfx: {
+    ui: {
+      blockDetach: 'assets/audio/sfx/ui/block_detach.ogg',
+      blockDropSuccess: 'assets/audio/sfx/ui/block_drop_success.mp3',
+      slotHover: 'assets/audio/sfx/ui/slot_hover.mp3',
+      playPress: 'assets/audio/sfx/ui/play_press_main.mp3'
+    },
+    gameplay: {
+      stepMove: 'assets/audio/sfx/gameplay/step_move.mp3',
+      errorAction: 'assets/audio/sfx/gameplay/error_action.mp3',
+      bubblePop: 'assets/audio/sfx/gameplay/bubble_pop_main.ogg',
+      levelComplete: 'assets/audio/sfx/gameplay/level_complete_main.mp3'
+    }
+  }
+});
+const audioPlayers = new Map();
 const FX = () => {
   if (!fxAc) fxAc = new (window.AudioContext || window.webkitAudioContext)();
   if (fxAc.state === 'suspended') fxAc.resume();
   return fxAc;
 };
-const BGM_TEMPO = 104;
-const BGM_STEP = (60 / BGM_TEMPO) / 2;
-const BGM_CHORDS = [
-  [57, 64, 69, 72], // A minor
-  [53, 60, 65, 69], // F major
-  [55, 62, 67, 71], // G major
-  [52, 59, 64, 67]  // E minor
-];
-const BGM_ARP = [0, 1, 2, 1, 3, 2, 1, 2];
-const midiFreqCache = new Map();
-const midiToFreq = midi => {
-  if (midiFreqCache.has(midi)) return midiFreqCache.get(midi);
-  const freq = 440 * Math.pow(2, (midi - 69) / 12);
-  midiFreqCache.set(midi, freq);
-  return freq;
-};
-function getBgmBus() {
-  if (bgmBus) return bgmBus;
-  const c = FX();
-  const comp = c.createDynamicsCompressor();
-  comp.threshold.value = -30;
-  comp.knee.value = 8;
-  comp.ratio.value = 3;
-  comp.attack.value = 0.006;
-  comp.release.value = 0.18;
-  bgmSharedLowpass = c.createBiquadFilter();
-  bgmSharedLowpass.type = 'lowpass';
-  bgmSharedLowpass.frequency.value = 2400;
-  bgmSharedLowpass.Q.value = 0.8;
-  bgmSharedHighpass = c.createBiquadFilter();
-  bgmSharedHighpass.type = 'highpass';
-  bgmSharedHighpass.frequency.value = 160;
-  bgmBus = c.createGain();
-  bgmBus.gain.value = 0.0001;
-  bgmBus.connect(bgmSharedLowpass);
-  bgmSharedLowpass.connect(bgmSharedHighpass);
-  bgmSharedHighpass.connect(comp);
-  comp.connect(c.destination);
-  return bgmBus;
+function getVersionedAudioPath(path) {
+  const build = window.BOKS_RUNTIME_CONFIG?.build || document.body?.dataset?.build || 'dev';
+  return `${path}?v=${encodeURIComponent(build)}`;
 }
-function fadeInPizzicatoBgm(ms = 2200) {
-  const c = FX();
-  const bus = getBgmBus();
-  const t = c.currentTime;
-  const now = Math.max(0.0001, bus.gain.value);
-  bus.gain.cancelScheduledValues(t);
-  bus.gain.setValueAtTime(now, t);
-  bus.gain.exponentialRampToValueAtTime(BGM_TARGET_GAIN, t + (ms / 1000));
-}
-function playPizzicatoNote(time, midi, accent = false) {
-  const c = FX();
-  const f = midiToFreq(midi);
-
-  const osc = c.createOscillator();
-  const amp = c.createGain();
-  const peak = accent ? 0.082 : 0.048;
-  osc.type = accent ? 'triangle' : 'sine';
-  osc.frequency.setValueAtTime(f, time);
-  osc.frequency.exponentialRampToValueAtTime(f * (accent ? 0.997 : 0.992), time + 0.22);
-  amp.gain.setValueAtTime(0.0001, time);
-  amp.gain.exponentialRampToValueAtTime(peak, time + 0.01);
-  amp.gain.exponentialRampToValueAtTime(0.0001, time + (accent ? 0.24 : 0.21));
-
-  osc.connect(amp);
-  amp.connect(getBgmBus());
-
-  osc.start(time);
-  osc.stop(time + (accent ? 0.25 : 0.22));
-}
-function scheduleBgmStep(step, time) {
-  const chord = BGM_CHORDS[Math.floor(step / 8) % BGM_CHORDS.length];
-  const pos = step % 8;
-  const accent = pos === 0 || pos === 4;
-
-  playPizzicatoNote(time + 0.002, chord[BGM_ARP[pos]], accent);
-  if (accent) playPizzicatoNote(time + 0.008, chord[0] - 12, true);
-}
-function scheduleBgmLookahead() {
-  if (!bgmStarted) return;
-  const c = FX();
-  while (bgmNextNoteTime < c.currentTime + 0.36) {
-    scheduleBgmStep(bgmStep, bgmNextNoteTime);
-    bgmNextNoteTime += BGM_STEP;
-    bgmStep = (bgmStep + 1) % (BGM_CHORDS.length * 8);
+function readBackgroundMusicEnabledPreference() {
+  try {
+    const stored = localStorage.getItem(BACKGROUND_MUSIC_STORAGE_KEY);
+    return stored == null ? true : stored !== 'false';
+  } catch (_err) {
+    return true;
   }
 }
-function startPizzicatoBgm() {
-  if (bgmStarted) return;
-  bgmStarted = true;
-  const c = FX();
-  getBgmBus();
-  bgmStep = 0;
-  bgmNextNoteTime = c.currentTime + 0.05;
-  scheduleBgmLookahead();
-  bgmTicker = setInterval(scheduleBgmLookahead, 120);
+let backgroundMusicEnabled = readBackgroundMusicEnabledPreference();
+function setBackgroundMusicEnabled(enabled, { persist = true } = {}) {
+  backgroundMusicEnabled = !!enabled;
+  if (persist) {
+    try {
+      localStorage.setItem(BACKGROUND_MUSIC_STORAGE_KEY, backgroundMusicEnabled ? 'true' : 'false');
+    } catch (_err) {
+      // ignore persistence issues
+    }
+  }
+  if (!backgroundMusicEnabled) pauseBackgroundMusicLoop();
+  else if (gameStarted) startBackgroundMusicLoop();
 }
-function pausePizzicatoBgm() {
-  if (!bgmTicker) return;
-  clearInterval(bgmTicker);
-  bgmTicker = null;
+function getBackgroundMusicAudio() {
+  if (backgroundMusicAudio) return backgroundMusicAudio;
+  const audio = new Audio(getVersionedAudioPath(AUDIO_PATHS.music.gameLoop));
+  audio.preload = 'auto';
+  audio.loop = true;
+  audio.volume = BACKGROUND_MUSIC_VOLUME;
+  backgroundMusicAudio = audio;
+  return backgroundMusicAudio;
+}
+function startBackgroundMusicLoop() {
+  if (!backgroundMusicEnabled) return;
+  const audio = getBackgroundMusicAudio();
+  audio.volume = BACKGROUND_MUSIC_VOLUME;
+  backgroundMusicStarted = true;
+  if (!audio.paused) return;
+  const playAttempt = audio.play();
+  if (playAttempt?.catch) playAttempt.catch(() => {});
+}
+function pauseBackgroundMusicLoop() {
+  if (!backgroundMusicAudio) return;
+  try {
+    backgroundMusicAudio.pause();
+  } catch (_err) {
+    // ignore media pause issues
+  }
 }
 function clearLevelOneIntroBgmTimer() {
   if (!levelOneIntroBgmTimer) return;
@@ -581,20 +544,18 @@ function clearLevelOneIntroBgmTimer() {
 }
 function getLevelOneIntroAudio() {
   if (levelOneIntroAudio) return levelOneIntroAudio;
-  const build = window.BOKS_RUNTIME_CONFIG?.build || document.body?.dataset?.build || 'dev';
-  const audio = new Audio(`${LEVEL_ONE_INTRO_AUDIO_PATH}?v=${encodeURIComponent(build)}`);
+  const audio = new Audio(getVersionedAudioPath(AUDIO_PATHS.music.level01Intro));
   audio.preload = 'auto';
-  audio.volume = 0.5;
+  audio.volume = LEVEL_ONE_INTRO_VOLUME;
   levelOneIntroAudio = audio;
   return levelOneIntroAudio;
 }
 function getUiAudioSfxPlayer(path) {
-  const build = window.BOKS_RUNTIME_CONFIG?.build || document.body?.dataset?.build || 'dev';
-  const cacheKey = `${path}?v=${encodeURIComponent(build)}`;
-  if (uiSfxPlayers.has(cacheKey)) return uiSfxPlayers.get(cacheKey);
+  const cacheKey = getVersionedAudioPath(path);
+  if (audioPlayers.has(cacheKey)) return audioPlayers.get(cacheKey);
   const audio = new Audio(cacheKey);
   audio.preload = 'auto';
-  uiSfxPlayers.set(cacheKey, audio);
+  audioPlayers.set(cacheKey, audio);
   return audio;
 }
 function playUiAudioSfx(path, volume = 0.5, { mode = 'oneshot' } = {}) {
@@ -618,16 +579,25 @@ function playUiAudioSfx(path, volume = 0.5, { mode = 'oneshot' } = {}) {
   }
 }
 function playBlockDragStartSfx() {
-  playUiAudioSfx(DRAG_START_SFX_PATH, 0.42);
+  playUiAudioSfx(AUDIO_PATHS.sfx.ui.blockDetach, 0.42);
 }
 function playBlockHoverSlotSfx() {
-  playUiAudioSfx(HOVER_SLOT_SFX_PATH, 0.22);
+  playUiAudioSfx(AUDIO_PATHS.sfx.ui.slotHover, 0.22);
 }
 function playBlockDropSuccessSfx() {
-  playUiAudioSfx(DROP_SUCCESS_SFX_PATH, 0.48);
+  playUiAudioSfx(AUDIO_PATHS.sfx.ui.blockDropSuccess, 0.48);
 }
 function playStepSfx() {
-  playUiAudioSfx(STEP_MOVE_SFX_PATH, 0.16, { mode: 'restart' });
+  playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.stepMove, 0.16, { mode: 'restart' });
+}
+function playErrorSfx() {
+  playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.errorAction, 0.3);
+}
+function playBubblePopSfx() {
+  playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.bubblePop, 0.26);
+}
+function playLevelCompleteSfx() {
+  playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.levelComplete, 0.5);
 }
 function stopLevelOneIntro({ reset = true } = {}) {
   clearLevelOneIntroBgmTimer();
@@ -642,6 +612,7 @@ function stopLevelOneIntro({ reset = true } = {}) {
 function playLevelOneIntroAndQueueBgm() {
   stopLevelOneIntro();
   const audio = getLevelOneIntroAudio();
+  clearLevelOneIntroBgmTimer();
   try {
     audio.currentTime = 0;
   } catch (_err) {
@@ -651,59 +622,22 @@ function playLevelOneIntroAndQueueBgm() {
   if (playAttempt?.catch) {
     playAttempt.catch(() => {});
   }
+  const startLoop = () => {
+    clearLevelOneIntroBgmTimer();
+    startBackgroundMusicLoop();
+  };
+  audio.onended = startLoop;
+  levelOneIntroBgmTimer = setTimeout(startLoop, 3200);
 }
-function resumePizzicatoBgm() {
-  if (!bgmStarted || bgmTicker) return;
-  const c = FX();
-  bgmNextNoteTime = c.currentTime + 0.05;
-  bgmTicker = setInterval(scheduleBgmLookahead, 120);
-  fadeInPizzicatoBgm(800);
-}
-function playLevelTransitionSfx() {
-  try {
-    const c = FX();
-    const notes = [740, 988, 1319];
-    notes.forEach((f, i) => {
-      const o = c.createOscillator();
-      const g = c.createGain();
-      o.type = 'triangle';
-      o.frequency.setValueAtTime(f, c.currentTime + i * 0.09);
-      g.gain.setValueAtTime(0.0001, c.currentTime + i * 0.09);
-      g.gain.exponentialRampToValueAtTime(0.08, c.currentTime + i * 0.09 + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + i * 0.09 + 0.22);
-      o.connect(g); g.connect(c.destination);
-      o.start(c.currentTime + i * 0.09);
-      o.stop(c.currentTime + i * 0.09 + 0.25);
-    });
-  } catch (_) {}
-}
-function playWinSfx() {
-  try {
-    const c = FX();
-    const t = c.currentTime;
-    const notes = [784, 988, 1175, 1568];
-    notes.forEach((f, i) => {
-      const o = c.createOscillator();
-      const g = c.createGain();
-      const lp = c.createBiquadFilter();
-      o.type = i % 2 === 0 ? 'triangle' : 'square';
-      o.frequency.setValueAtTime(f, t + i * 0.07);
-      o.frequency.exponentialRampToValueAtTime(f * 1.012, t + i * 0.07 + 0.12);
-      lp.type = 'lowpass';
-      lp.frequency.setValueAtTime(2200 + i * 180, t + i * 0.07);
-      g.gain.setValueAtTime(0.0001, t + i * 0.07);
-      g.gain.exponentialRampToValueAtTime(0.06, t + i * 0.07 + 0.015);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.07 + 0.24);
-      o.connect(lp);
-      lp.connect(g);
-      g.connect(c.destination);
-      o.start(t + i * 0.07);
-      o.stop(t + i * 0.07 + 0.26);
-    });
-  } catch (_) {}
+function resumeBackgroundMusicLoop() {
+  if (!backgroundMusicEnabled || !backgroundMusicStarted) return;
+  const audio = getBackgroundMusicAudio();
+  audio.volume = BACKGROUND_MUSIC_VOLUME;
+  const playAttempt = audio.play();
+  if (playAttempt?.catch) playAttempt.catch(() => {});
 }
 function playRunPressSfx() {
-  playUiAudioSfx(PLAY_PRESS_SFX_PATH, 0.34);
+  playUiAudioSfx(AUDIO_PATHS.sfx.ui.playPress, 0.34);
 }
 function playTurnSfx(dir = 'right') {
   try {
@@ -1028,17 +962,30 @@ async function playWinBurst() {
   }, 140);
   await sleep(220);
 }
+function clearScheduledWinFeedback() {
+  if (!scheduledWinFeedbackTimer) return;
+  clearTimeout(scheduledWinFeedbackTimer);
+  scheduledWinFeedbackTimer = null;
+}
 function triggerWinFeedbackNow() {
+  clearScheduledWinFeedback();
   const now = window.performance?.now ? window.performance.now() : Date.now();
   if (activeWinBurstPromise && (now - activeWinFeedbackAt) < 1400) {
     return activeWinBurstPromise;
   }
   activeWinFeedbackAt = now;
-  playWinSfx();
+  playLevelCompleteSfx();
   activeWinBurstPromise = playWinBurst().finally(() => {
     activeWinBurstPromise = null;
   });
   return activeWinBurstPromise;
+}
+function scheduleWinFeedback(delayMs = 0) {
+  if (scheduledWinFeedbackTimer || activeWinBurstPromise) return;
+  scheduledWinFeedbackTimer = setTimeout(() => {
+    scheduledWinFeedbackTimer = null;
+    triggerWinFeedbackNow();
+  }, delayMs);
 }
 
 // ═══ CLIP PATHS ═══
@@ -1459,6 +1406,7 @@ async function animTo(tx, ty) {
     {duration:MOVE_MS, easing:'cubic-bezier(.2,.9,.2,1)', fill:'forwards'}
   );
   if (enteringGoal) {
+    scheduleWinFeedback(1000);
     const popDelay = Math.max(20, Math.round(MOVE_MS * 0.2));
     popTimer = setTimeout(() => {
       popPromise = popGoalBubble();
@@ -4422,7 +4370,6 @@ async function run() {
 
   if(won) {
     if (!currentCustomLevel && currentLevel === 'level1') {
-      playLevelTransitionSfx();
       const transitionAnchor = getWinBurstAnchor();
         await sleep(260);
         await fadeTransition(1850, async () => {
@@ -4458,6 +4405,7 @@ async function run() {
     resetPlayerToStepStart();
     renderBoard(); renderFn();
   } else {
+    playErrorSfx();
     await sleep(400);
     if (editorMode && runStartPrograms) {
       prog = runStartPrograms.prog.map(block => block ? { ...block } : null);
@@ -4548,6 +4496,7 @@ function openAppFromGate({ openEditor = false, onOpen = null } = {}) {
   else {
     stopLevelOneIntro();
     clearLevelOneIntroBgmTimer();
+    startBackgroundMusicLoop();
   }
   setTimeout(() => gate?.classList.remove('show', 'hiding'), gateFadeMs);
   setTimeout(() => {
@@ -4789,12 +4738,12 @@ function refreshSceneAfterAppResume() {
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     if (gameStarted) {
-      resumePizzicatoBgm();
+      resumeBackgroundMusicLoop();
       requestAppFullscreen();
     }
     refreshSceneAfterAppResume();
   } else {
-    pausePizzicatoBgm();
+    pauseBackgroundMusicLoop();
   }
 });
 window.addEventListener('pageshow', () => {
