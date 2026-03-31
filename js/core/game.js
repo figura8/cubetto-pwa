@@ -355,7 +355,7 @@ const EDITOR_LEVELS_FILE_PICKER_SUGGESTED_NAME = 'editor-levels.json';
 const FILE_HANDLE_DB_NAME = 'boks-file-handles';
 const FILE_HANDLE_STORE_NAME = 'handles';
 const EDITOR_LEVELS_FILE_HANDLE_KEY = 'editor-levels-project-file';
-const FIRST_LEVEL_ONBOARDING_STORAGE_KEY = 'boks-first-level-onboarding-v4';
+const FIRST_LEVEL_ONBOARDING_STORAGE_KEY = 'boks-first-level-onboarding-v5';
 const CUSTOM_LEVEL_THEME = 'level1';
 const CUSTOM_ICONS = ['leaf', 'star', 'turtle', 'sun', 'moon', 'flower'];
   const DEFAULT_CHARACTER_ID = 'boks_green';
@@ -2714,12 +2714,24 @@ function refreshAvailableBlockGlowState({ suspendForActiveDrag = false } = {}) {
   queueFirstLevelOnboardingSync();
   return stepStartHintActive;
 }
+function getCurrentRuntimeBuild() {
+  const runtimeBuild = window.BOKS_RUNTIME_CONFIG?.build || document.body?.dataset?.build || '';
+  if (runtimeBuild) return runtimeBuild;
+  try {
+    return new URL(window.location.href).searchParams.get('_build') || '';
+  } catch (_err) {
+    return '';
+  }
+}
+function getFirstLevelOnboardingStorageEntryKey() {
+  const build = getCurrentRuntimeBuild();
+  const releaseChannel = window.BOKS_RUNTIME_CONFIG?.releaseChannel || document.body?.dataset?.releaseChannel || 'live';
+  return `${FIRST_LEVEL_ONBOARDING_STORAGE_KEY}:${releaseChannel}:${build || 'unknown'}`;
+}
 function readFirstLevelOnboardingDone() {
   if (window.BOKS_RUNTIME_CONFIG?.releaseChannel === 'main') return false;
   try {
-    const storedValue = localStorage.getItem(FIRST_LEVEL_ONBOARDING_STORAGE_KEY) || '';
-    const currentBuild = window.BOKS_RUNTIME_CONFIG?.build || document.body?.dataset?.build || '';
-    return !!currentBuild && storedValue === `done:${currentBuild}`;
+    return localStorage.getItem(getFirstLevelOnboardingStorageEntryKey()) === 'done';
   } catch (_err) {
     return false;
   }
@@ -2727,9 +2739,7 @@ function readFirstLevelOnboardingDone() {
 function writeFirstLevelOnboardingDone() {
   if (window.BOKS_RUNTIME_CONFIG?.releaseChannel === 'main') return;
   try {
-    const currentBuild = window.BOKS_RUNTIME_CONFIG?.build || document.body?.dataset?.build || '';
-    if (!currentBuild) return;
-    localStorage.setItem(FIRST_LEVEL_ONBOARDING_STORAGE_KEY, `done:${currentBuild}`);
+    localStorage.setItem(getFirstLevelOnboardingStorageEntryKey(), 'done');
   } catch (_err) {
     // ignore storage errors
   }
