@@ -803,6 +803,7 @@
       flex-direction: column;
       align-items: center;
       gap: 6px;
+      position: relative;
     }
 
     /* Available blocks row */
@@ -1003,6 +1004,170 @@
       50% { opacity: 0.38; transform: scale(1.03) rotate(10deg); }
     }
 
+    #firstLevelOnboarding {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 7;
+      opacity: 0;
+      transition: opacity 0.18s ease-out;
+      --first-onboarding-start-x: 0px;
+      --first-onboarding-start-y: 0px;
+      --first-onboarding-end-x: 0px;
+      --first-onboarding-end-y: 0px;
+    }
+    #firstLevelOnboarding.active {
+      opacity: 1;
+    }
+    #firstLevelOnboarding[data-stage="drag"] .first-level-onboarding__tap-demo {
+      display: none;
+    }
+    #firstLevelOnboarding[data-stage="play"] .first-level-onboarding__drag-demo,
+    #firstLevelOnboarding[data-stage="play"] .first-level-onboarding__path {
+      opacity: 0;
+    }
+    .first-level-onboarding__path {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+    .first-level-onboarding__path path {
+      fill: none;
+      stroke: transparent;
+      stroke-width: 3.2;
+      stroke-linecap: round;
+      stroke-dasharray: 8 8;
+      opacity: 0;
+      filter: none;
+      animation: none;
+    }
+    .first-level-onboarding__drag-demo,
+    .first-level-onboarding__tap-demo {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 0;
+      height: 0;
+    }
+    #firstLevelOnboarding[data-stage="drag"] .first-level-onboarding__drag-demo {
+      animation: firstOnboardingDragLoop 2.35s ease-in-out infinite;
+    }
+    #firstLevelOnboarding[data-stage="play"] .first-level-onboarding__tap-demo {
+      transform: translate(var(--first-onboarding-end-x), var(--first-onboarding-end-y));
+      animation: firstOnboardingTapLoop 1.35s ease-in-out infinite;
+    }
+    .first-level-onboarding__ghost {
+      position: absolute;
+      left: 0;
+      top: 0;
+      transform: translate(-50%, -50%) rotate(-12deg);
+      filter: drop-shadow(0 6px 10px rgba(58, 98, 104, 0.18));
+    }
+    .first-level-onboarding__ghost > * {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .first-level-onboarding__ghost .available-block-vfx {
+      display: none;
+    }
+    .first-level-onboarding__hand {
+      position: absolute;
+      width: 72px;
+      height: 72px;
+      filter: drop-shadow(0 8px 14px rgba(96, 66, 46, 0.18));
+    }
+    .first-level-onboarding__hand svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .first-level-onboarding__hand--drag {
+      left: 8px;
+      top: 10px;
+      transform: translate(-18%, -12%) rotate(-8deg);
+    }
+    .first-level-onboarding__hand--tap {
+      left: 0;
+      top: 0;
+      transform: translate(-20%, -30%) rotate(-10deg);
+    }
+    .first-level-onboarding__tap-ring {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 54px;
+      height: 54px;
+      margin-left: -27px;
+      margin-top: -27px;
+      border-radius: 999px;
+      border: 2px solid rgba(113, 198, 255, 0.85);
+      background: radial-gradient(circle, rgba(113,198,255,0.14) 0%, rgba(113,198,255,0.06) 45%, rgba(113,198,255,0) 72%);
+      box-shadow: 0 0 0 2px rgba(231, 247, 255, 0.34);
+      opacity: 0;
+    }
+    .first-level-onboarding__tap-ring--a {
+      animation: firstOnboardingTapRing 1.35s ease-out infinite;
+    }
+    .first-level-onboarding__tap-ring--b {
+      animation: firstOnboardingTapRing 1.35s ease-out infinite 0.22s;
+    }
+    @keyframes firstOnboardingDragLoop {
+      0% {
+        opacity: 0;
+        transform: translate(var(--first-onboarding-start-x), var(--first-onboarding-start-y)) scale(0.95);
+      }
+      14% {
+        opacity: 1;
+        transform: translate(var(--first-onboarding-start-x), var(--first-onboarding-start-y)) scale(1);
+      }
+      56% {
+        opacity: 1;
+        transform: translate(var(--first-onboarding-end-x), var(--first-onboarding-end-y)) scale(1);
+      }
+      72% {
+        opacity: 1;
+        transform: translate(var(--first-onboarding-end-x), var(--first-onboarding-end-y)) scale(1);
+      }
+      82% {
+        opacity: 0;
+        transform: translate(var(--first-onboarding-end-x), var(--first-onboarding-end-y)) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(var(--first-onboarding-start-x), var(--first-onboarding-start-y)) scale(0.95);
+      }
+    }
+    @keyframes firstOnboardingTapLoop {
+      0%, 100% {
+        opacity: 1;
+        transform: translate(var(--first-onboarding-end-x), var(--first-onboarding-end-y));
+      }
+      35% {
+        opacity: 1;
+        transform: translate(var(--first-onboarding-end-x), calc(var(--first-onboarding-end-y) + 4px));
+      }
+      60% {
+        opacity: 1;
+        transform: translate(var(--first-onboarding-end-x), var(--first-onboarding-end-y));
+      }
+    }
+    @keyframes firstOnboardingTapRing {
+      0% {
+        opacity: 0;
+        transform: scale(0.72);
+      }
+      20% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform: scale(1.28);
+      }
+    }
+
     /* Program board */
     #boardRow {
       width: 100%;
@@ -1101,6 +1266,16 @@
         inset 0 -1px 1px rgba(255,255,255,0.22),
         0 0 0 1px rgba(152,110,212,0.42);
     }
+    .pslot.first-level-onboarding-slot::after {
+      content: '';
+      position: absolute;
+      inset: -5px;
+      border-radius: 13px;
+      border: 2px solid rgba(255, 219, 122, 0.94);
+      box-shadow: 0 0 0 2px rgba(255, 239, 202, 0.34), 0 0 20px rgba(255, 205, 92, 0.28);
+      pointer-events: none;
+      animation: firstOnboardingSlotPulse 1.35s ease-in-out infinite;
+    }
     .pslot.locked {
       opacity: 0.34;
       filter: saturate(0.55);
@@ -1163,6 +1338,20 @@
       flex-shrink: 0;
       filter: drop-shadow(0 1px 0 rgba(255,255,255,0.35));
     }
+    #runBtn.first-level-onboarding-run {
+      position: relative;
+      box-shadow: 0 3px 0 #cdc2ab, 0 7px 14px rgba(43, 143, 212, 0.18);
+    }
+    #runBtn.first-level-onboarding-run::after {
+      content: '';
+      position: absolute;
+      inset: -6px;
+      border-radius: 10px;
+      border: 2px solid rgba(107, 196, 255, 0.72);
+      box-shadow: 0 0 0 2px rgba(210, 241, 255, 0.2), 0 0 14px rgba(43, 143, 212, 0.16);
+      pointer-events: none;
+      animation: firstOnboardingRunRing 1.35s ease-in-out infinite;
+    }
     @media (hover: hover) and (pointer: fine) {
       #runBtn:hover {
         transform: translateY(-1px);
@@ -1183,6 +1372,14 @@
     }
     #runBtn:active svg { transform: translateY(1px); }
     #runBtn.running { animation: pb 1s ease-in-out infinite; }
+    @keyframes firstOnboardingSlotPulse {
+      0%, 100% { opacity: 0.52; transform: scale(0.98); }
+      50% { opacity: 1; transform: scale(1.04); }
+    }
+    @keyframes firstOnboardingRunRing {
+      0%, 100% { opacity: 0.32; transform: scale(0.98); }
+      50% { opacity: 0.86; transform: scale(1.04); }
+    }
     @keyframes pb { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
 
     #ghost {

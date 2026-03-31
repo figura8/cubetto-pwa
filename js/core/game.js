@@ -355,6 +355,7 @@ const EDITOR_LEVELS_FILE_PICKER_SUGGESTED_NAME = 'editor-levels.json';
 const FILE_HANDLE_DB_NAME = 'boks-file-handles';
 const FILE_HANDLE_STORE_NAME = 'handles';
 const EDITOR_LEVELS_FILE_HANDLE_KEY = 'editor-levels-project-file';
+const FIRST_LEVEL_ONBOARDING_STORAGE_KEY = 'boks-first-level-onboarding-v2';
 const CUSTOM_LEVEL_THEME = 'level1';
 const CUSTOM_ICONS = ['leaf', 'star', 'turtle', 'sun', 'moon', 'flower'];
   const DEFAULT_CHARACTER_ID = 'boks_green';
@@ -428,6 +429,10 @@ let pendingNewLevelCharacterId = DEFAULT_CHARACTER_ID;
 let pendingNewLevelHints = {};
 let emptyRunHintTimers = [];
 let lastEmptyRunHintAt = 0;
+let firstLevelOnboardingStage = 'idle';
+let firstLevelOnboardingFrame = null;
+let firstLevelOnboardingReadyAt = 0;
+let firstLevelOnboardingDelayTimer = null;
 const WIN_BURST_ANGLES = [-108, -78, -52, -24, 8, 34, 62, 92, 122, 154, 186, 218, 250];
 let winBurstHideTimer = null;
 let activeWinBurstPromise = null;
@@ -2303,6 +2308,10 @@ function applyLevelSceneVars() {
 }
 function setLevel(levelId, { persist = true } = {}) {
   if (!LEVELS[levelId]) return false;
+  if (levelId !== 'level1') {
+    firstLevelOnboardingStage = 'idle';
+    clearFirstLevelOnboardingDelay();
+  }
   currentCustomLevel = null;
   currentLevel = levelId;
   tutorialSceneLevelId = resolveThemeLevelId(levelId === 'level1' ? CUSTOM_LEVEL_THEME : levelId);
@@ -2412,6 +2421,7 @@ function updateRunAvailability() {
   btn.classList.toggle('editor-run-locked', locked);
   btn.disabled = locked;
   btn.setAttribute('aria-disabled', locked ? 'true' : 'false');
+  queueFirstLevelOnboardingSync();
 }
 function updateDebugBadge() {
   const badge = ensureDebugBadge();
@@ -2590,7 +2600,9 @@ function setEditorMode(enabled) {
     updateRunAvailability();
     renderElementPalette();
   }
+  syncFirstLevelOnboardingDelayForCurrentView();
   updateQuickEditorButton();
+  queueFirstLevelOnboardingSync();
 }
 
 function toggleEditorSlot(zone, idx) {
@@ -2651,12 +2663,201 @@ function refreshAvailableBlockGlowState({ suspendForActiveDrag = false } = {}) {
   if (editorMode) {
     stepStartHintActive = false;
     syncAvailableBlockGlowUI();
+    queueFirstLevelOnboardingSync();
     return stepStartHintActive;
   }
   const draggingAvailableBlock = suspendForActiveDrag && dg?.active && dg.src === 'avail';
   stepStartHintActive = shouldShowAvailableBlockGlow() && !hasAnyPlacedProgramBlock() && !draggingAvailableBlock;
   syncAvailableBlockGlowUI();
+  queueFirstLevelOnboardingSync();
   return stepStartHintActive;
+}
+function readFirstLevelOnboardingDone() {
+  try {
+    return localStorage.getItem(FIRST_LEVEL_ONBOARDING_STORAGE_KEY) === 'done';
+  } catch (_err) {
+    return false;
+  }
+}
+function writeFirstLevelOnboardingDone() {
+  try {
+    localStorage.setItem(FIRST_LEVEL_ONBOARDING_STORAGE_KEY, 'done');
+  } catch (_err) {
+    // ignore storage errors
+  }
+}
+function renderFirstLevelOnboardingHandSvg(idSuffix = 'main') {
+  return `
+    <svg viewBox="0 0 128 128" aria-hidden="true">
+      <image
+        href="assets/props/hand_drag.png"
+        width="128"
+        height="128"
+        preserveAspectRatio="xMidYMid meet"
+      />
+    </svg>
+  `;
+}
+function ensureFirstLevelOnboardingRoot() {
+  const bottom = document.getElementById('bottom');
+  if (!bottom) return null;
+  let root = document.getElementById('firstLevelOnboarding');
+  if (root) return root;
+  root = document.createElement('div');
+  root.id = 'firstLevelOnboarding';
+  root.setAttribute('aria-hidden', 'true');
+  root.innerHTML = `
+    <svg class="first-level-onboarding__path" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <path></path>
+    </svg>
+    <div class="first-level-onboarding__drag-demo">
+      <div class="first-level-onboarding__ghost"></div>
+      <div class="first-level-onboarding__hand first-level-onboarding__hand--drag">
+        ${renderFirstLevelOnboardingHandSvg('drag')}
+      </div>
+    </div>
+    <div class="first-level-onboarding__tap-demo">
+      <span class="first-level-onboarding__tap-ring first-level-onboarding__tap-ring--a"></span>
+      <span class="first-level-onboarding__tap-ring first-level-onboarding__tap-ring--b"></span>
+      <div class="first-level-onboarding__hand first-level-onboarding__hand--tap">
+        ${renderFirstLevelOnboardingHandSvg('tap')}
+      </div>
+    </div>
+  `;
+  bottom.appendChild(root);
+  return root;
+}
+function clearFirstLevelOnboardingTargets() {
+  document.querySelectorAll('.pslot.first-level-onboarding-slot')
+    .forEach(slot => slot.classList.remove('first-level-onboarding-slot'));
+  document.getElementById('runBtn')?.classList.remove('first-level-onboarding-run');
+}
+function clearFirstLevelOnboardingDelay() {
+  if (firstLevelOnboardingDelayTimer) {
+    clearTimeout(firstLevelOnboardingDelayTimer);
+    firstLevelOnboardingDelayTimer = null;
+  }
+  firstLevelOnboardingReadyAt = 0;
+}
+function scheduleFirstLevelOnboardingDelay(delayMs = 5000) {
+  clearFirstLevelOnboardingDelay();
+  firstLevelOnboardingReadyAt = Date.now() + delayMs;
+  firstLevelOnboardingDelayTimer = setTimeout(() => {
+    firstLevelOnboardingDelayTimer = null;
+    queueFirstLevelOnboardingSync();
+  }, delayMs + 16);
+}
+function syncFirstLevelOnboardingDelayForCurrentView() {
+  if (readFirstLevelOnboardingDone() || editorMode || !isFirstLevelOnboardingContext()) {
+    clearFirstLevelOnboardingDelay();
+    return;
+  }
+  if (document.body.classList.contains('prestart')) {
+    clearFirstLevelOnboardingDelay();
+    return;
+  }
+  if (firstLevelOnboardingStage === 'play' || hasAnyPlacedProgramBlock()) {
+    clearFirstLevelOnboardingDelay();
+    return;
+  }
+  scheduleFirstLevelOnboardingDelay(5000);
+}
+function isFirstLevelOnboardingContext() {
+  return !currentCustomLevel && currentLevel === 'level1' && tutorialStepIndex === 0;
+}
+function shouldShowFirstLevelOnboarding() {
+  return gameStarted
+    && !document.body.classList.contains('prestart')
+    && !editorMode
+    && isFirstLevelOnboardingContext()
+    && !readFirstLevelOnboardingDone()
+    && (
+      firstLevelOnboardingStage === 'play'
+      || hasAnyPlacedProgramBlock()
+      || Date.now() >= firstLevelOnboardingReadyAt
+    );
+}
+function advanceFirstLevelOnboardingToPlay() {
+  if (editorMode || !isFirstLevelOnboardingContext() || readFirstLevelOnboardingDone()) return;
+  clearFirstLevelOnboardingDelay();
+  firstLevelOnboardingStage = 'play';
+  queueFirstLevelOnboardingSync();
+}
+function completeFirstLevelOnboarding() {
+  if (editorMode || !isFirstLevelOnboardingContext() || readFirstLevelOnboardingDone()) return;
+  clearFirstLevelOnboardingDelay();
+  writeFirstLevelOnboardingDone();
+  firstLevelOnboardingStage = 'done';
+  queueFirstLevelOnboardingSync();
+}
+function syncFirstLevelOnboarding() {
+  firstLevelOnboardingFrame = null;
+  const root = ensureFirstLevelOnboardingRoot();
+  const bottom = document.getElementById('bottom');
+  const pathSvg = root?.querySelector('.first-level-onboarding__path');
+  const path = root?.querySelector('.first-level-onboarding__path path');
+  const ghost = root?.querySelector('.first-level-onboarding__ghost');
+  const dragDemo = root?.querySelector('.first-level-onboarding__drag-demo');
+  const tapDemo = root?.querySelector('.first-level-onboarding__tap-demo');
+  if (!root || !bottom || !pathSvg || !path || !ghost || !dragDemo || !tapDemo) return;
+
+  clearFirstLevelOnboardingTargets();
+  root.classList.remove('active');
+  root.dataset.stage = 'hidden';
+  path.setAttribute('d', '');
+
+  if (!shouldShowFirstLevelOnboarding()) return;
+
+  const bottomRect = bottom.getBoundingClientRect();
+  pathSvg.setAttribute('viewBox', `0 0 ${Math.max(1, Math.round(bottomRect.width))} ${Math.max(1, Math.round(bottomRect.height))}`);
+  const clampX = (value, inset = 40) => Math.max(inset, Math.min(bottomRect.width - inset, value));
+  const stage = hasAnyPlacedProgramBlock() ? 'play' : 'drag';
+  firstLevelOnboardingStage = stage;
+
+  if (stage === 'drag') {
+    const sourceBlock = document.querySelector('#blocksRow .ablock:not(.disabled)');
+    const targetSlot = Array.from(document.querySelectorAll('.pslot[data-zone="main"]:not(.locked)'))
+      .find(slot => !slot.classList.contains('filled'));
+    if (!sourceBlock || !targetSlot) return;
+
+    const sourceRect = sourceBlock.getBoundingClientRect();
+    const targetRect = targetSlot.getBoundingClientRect();
+    const sourceX = sourceRect.left - bottomRect.left + (sourceRect.width * 0.5);
+    const sourceY = sourceRect.top - bottomRect.top + (sourceRect.height * 0.5);
+    const targetX = targetRect.left - bottomRect.left + (targetRect.width * 0.5);
+    const targetY = targetRect.top - bottomRect.top + (targetRect.height * 0.5);
+    const controlX = clampX(Math.min(sourceX, targetX) - Math.max(22, Math.min(42, targetRect.width * 0.8)));
+    const controlY = sourceY + ((targetY - sourceY) * 0.46);
+
+    ghost.innerHTML = sourceBlock.innerHTML;
+    ghost.style.width = `${Math.round(sourceRect.width)}px`;
+    ghost.style.height = `${Math.round(sourceRect.height)}px`;
+    targetSlot.classList.add('first-level-onboarding-slot');
+    root.dataset.stage = 'drag';
+    root.style.setProperty('--first-onboarding-start-x', `${sourceX}px`);
+    root.style.setProperty('--first-onboarding-start-y', `${sourceY}px`);
+    root.style.setProperty('--first-onboarding-end-x', `${targetX}px`);
+    root.style.setProperty('--first-onboarding-end-y', `${targetY}px`);
+    path.setAttribute('d', `M ${sourceX.toFixed(2)} ${sourceY.toFixed(2)} Q ${controlX.toFixed(2)} ${controlY.toFixed(2)} ${targetX.toFixed(2)} ${targetY.toFixed(2)}`);
+    root.classList.add('active');
+    return;
+  }
+
+  const runBtn = document.getElementById('runBtn');
+  if (!runBtn) return;
+  const btnRect = runBtn.getBoundingClientRect();
+  const targetX = btnRect.left - bottomRect.left + (btnRect.width * 0.5);
+  const targetY = btnRect.top - bottomRect.top + (btnRect.height * 0.5);
+
+  runBtn.classList.add('first-level-onboarding-run');
+  root.dataset.stage = 'play';
+  root.style.setProperty('--first-onboarding-end-x', `${targetX}px`);
+  root.style.setProperty('--first-onboarding-end-y', `${targetY}px`);
+  root.classList.add('active');
+}
+function queueFirstLevelOnboardingSync() {
+  if (firstLevelOnboardingFrame) return;
+  firstLevelOnboardingFrame = requestAnimationFrame(() => syncFirstLevelOnboarding());
 }
 function resetPlayerToStepStart() {
   const step = getCurrentCampaignLevel();
@@ -2669,6 +2870,8 @@ function applyTutorialStep(idx = 0) {
   const steps = getTutorialSteps();
   if (!steps.length) return false;
   tutorialStepIndex = ((idx % steps.length) + steps.length) % steps.length;
+  firstLevelOnboardingStage = tutorialStepIndex === 0 && !readFirstLevelOnboardingDone() ? 'drag' : 'idle';
+  clearFirstLevelOnboardingDelay();
   selectedEditorLevelId = getCampaignLevelIdForIndex(tutorialStepIndex);
   const step = steps[tutorialStepIndex];
   tutorialSceneLevelId = resolveThemeLevelId(step.baseLevel);
@@ -2707,6 +2910,7 @@ function applyTutorialStep(idx = 0) {
     setCharacterAction('idle');
     syncSprite();
   });
+  syncFirstLevelOnboardingDelayForCurrentView();
   updateDebugBadge();
   renderElementPalette();
   return true;
@@ -2714,6 +2918,8 @@ function applyTutorialStep(idx = 0) {
 
 function applyCustomLevel(level, { openEditor = false } = {}) {
   const normalized = normalizeCustomLevel(level);
+  firstLevelOnboardingStage = 'idle';
+  clearFirstLevelOnboardingDelay();
   currentCustomLevel = cloneCustomLevel(normalized);
   selectedEditorLevelId = normalized.id;
   currentLevel = 'custom';
@@ -3574,6 +3780,7 @@ function renderAvail() {
     row.appendChild(el);
   });
   alignAvailBlocksToSlots();
+  queueFirstLevelOnboardingSync();
 }
 
 function alignAvailBlocksToSlots() {
@@ -3701,6 +3908,7 @@ function renderBoard() {
 
   g.appendChild(slotsWrap);
   alignAvailBlocksToSlots();
+  queueFirstLevelOnboardingSync();
 
   // Traccia completa: riga1 → connettore → riga2
   requestAnimationFrame(() => {
@@ -3801,6 +4009,7 @@ function renderBoard() {
     sep.setAttribute('mask', 'url(#trackSlotMask)');
     svg.appendChild(sep);
     alignAvailBlocksToSlots();
+    queueFirstLevelOnboardingSync();
   });
 }
 
@@ -3913,6 +4122,7 @@ function moveDg(cx,cy) {
 
 function endDg(cx,cy) {
   if(!dg.active) return;
+  const hadPlacedProgramBlocks = hasAnyPlacedProgramBlock();
   document.getElementById('ghost').style.display='none';
   if(dg.hover) dg.hover.classList.remove('over');
   document.querySelectorAll('.ablock,.pblock').forEach(e=>{
@@ -3945,6 +4155,9 @@ function endDg(cx,cy) {
       if(dg.src==='avail') prog[ti]={id:`${dg.block.dir}${idN++}`,...POOL[dg.block.dir]};
       else if(dg.src==='prog'&&dg.si!==ti){ const tmp=prog[ti];prog[ti]=dg.block;prog[dg.si]=tmp; }
       else if(dg.src==='fn'){ prog[ti]={...dg.block}; fnProg[dg.si]=null; }
+    }
+    if (!hadPlacedProgramBlocks && zone === 'main' && prog[ti] && firstLevelOnboardingStage === 'drag') {
+      advanceFirstLevelOnboardingToPlay();
     }
   } else {
     if(dg.src==='prog') prog[dg.si]=null;
@@ -4053,6 +4266,7 @@ async function moveChar(dir) {
 async function run() {
   if(!gameStarted || running || animating) return;
   if (!playerPlaced || !goalPlaced) return;
+  if (firstLevelOnboardingStage === 'play') completeFirstLevelOnboarding();
   const runStartState = editorMode ? { pos: { ...pos }, ori } : null;
   const runStartPrograms = editorMode ? {
     prog: prog.map(block => block ? { ...block } : null),
@@ -4226,6 +4440,7 @@ function showStartGate() {
   document.body.classList.add('prestart');
   if (LEVEL_EDITOR_ENABLED) renderCustomLevels();
   document.getElementById('startGate')?.classList.add('show');
+  queueFirstLevelOnboardingSync();
 }
 function dismissSplash() {
   const splash = document.getElementById('splash');
@@ -4253,6 +4468,8 @@ function openAppFromGate({ openEditor = false, onOpen = null } = {}) {
     if (onOpen) onOpen();
     else setEditorMode(shouldOpenEditor);
     fadeInPizzicatoBgm(2200);
+    syncFirstLevelOnboardingDelayForCurrentView();
+    queueFirstLevelOnboardingSync();
   }, gateFadeMs + backgroundHoldMs);
 }
 function startGameFromGate() {
@@ -4272,10 +4489,12 @@ function returnToMainMenu() {
   if (editorMode) exitEditorMode();
   setEditorStylePanelOpen(false);
   gameStarted = false;
+  clearFirstLevelOnboardingDelay();
   const gate = document.getElementById('startGate');
   gate?.classList.remove('hiding');
   showStartGate();
   updateQuickEditorButton();
+  queueFirstLevelOnboardingSync();
 }
 function openSpritePreviewTool() {
   const targetUrl = new URL('tools/sprite-preview.html', window.location.href).toString();
@@ -4452,6 +4671,7 @@ window.addEventListener('resize', () => {
     drawBackground();
     syncSprite();
     refreshEditorDebug();
+    queueFirstLevelOnboardingSync();
   });
 });
 window.visualViewport?.addEventListener('resize', syncViewportHeight);
