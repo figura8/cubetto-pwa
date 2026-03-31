@@ -48,6 +48,9 @@
     }
 
     #app {
+      --app-center-shift-x: -50%;
+      --app-reveal-y: 0px;
+      --app-reveal-scale: 1;
       position: fixed;
       left: 50%;
       top: 0;
@@ -59,7 +62,8 @@
       justify-content: center;
       padding: calc(6px + var(--safe-top)) 12px calc(12px + var(--safe-bottom));
       gap: 8px;
-      transform: translateX(-50%);
+      transform-origin: 50% 50%;
+      transform: translateX(var(--app-center-shift-x)) translateY(var(--app-reveal-y)) scale(var(--app-reveal-scale));
     }
     #editorLayout,
     #editorMain {
@@ -78,6 +82,9 @@
         overflow-y: auto;
       }
       #app {
+        --app-center-shift-x: 0px;
+        --app-reveal-y: 0px;
+        --app-reveal-scale: 1;
         position: relative;
         left: auto;
         top: auto;
@@ -85,7 +92,7 @@
         height: auto;
         justify-content: flex-start;
         margin: 0 auto;
-        transform: none;
+        transform: translateX(var(--app-center-shift-x)) translateY(var(--app-reveal-y)) scale(var(--app-reveal-scale));
       }
       @media (min-width: 1120px) {
         body.editor-mode {
@@ -1722,8 +1729,9 @@
       pointer-events: none;
     }
     body.prestart #app {
+      --app-reveal-y: 10px;
+      --app-reveal-scale: 0.985;
       filter: blur(16px) saturate(0.94);
-      transform: translateY(10px) scale(0.985);
     }
     body.prestart {
       background: var(--bg-base);
