@@ -898,7 +898,6 @@ function consumeHardRefreshNotice() {
     const pendingBuild = window.sessionStorage?.getItem('boks-hard-refresh-notice') || '';
     if (!pendingBuild || pendingBuild !== currentBuild) return;
     window.sessionStorage?.removeItem('boks-hard-refresh-notice');
-    setTimeout(() => toast(`Hard refresh done · build ${currentBuild}`), 180);
   } catch (_err) {
     // ignore storage errors
   }
