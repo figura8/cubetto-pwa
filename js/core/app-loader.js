@@ -8,6 +8,7 @@
 
   window.BOKS_RUNTIME_CONFIG = {
     releaseChannel: body?.dataset.releaseChannel || 'main',
+    build,
     editorEnabled,
     debugToolsEnabled,
     buildBadgeEnabled,
@@ -28,14 +29,39 @@
     return `${day}/${month}/${year} ${hour}:${minute}:${second}`;
   }
 
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('_build') !== build) {
+      window.sessionStorage?.setItem('boks-hard-refresh-notice', build);
+      url.searchParams.set('_build', build);
+      window.location.replace(url.toString());
+      return;
+    }
+  } catch (_err) {
+    // ignore URL normalization issues
+  }
+
+  const lastSeenBuildKey = 'boks-last-seen-build';
+  let buildJustChanged = false;
+  try {
+    const lastSeenBuild = window.sessionStorage?.getItem(lastSeenBuildKey) || '';
+    buildJustChanged = !!lastSeenBuild && lastSeenBuild !== build;
+    window.sessionStorage?.setItem(lastSeenBuildKey, build);
+  } catch (_err) {
+    buildJustChanged = false;
+  }
+
   if (badge && buildBadgeEnabled) {
     const formattedStamp = formatBuildStamp(build);
-    badge.textContent = formattedStamp
-      ? `build ${build}\n${formattedStamp}`
-      : `build ${build}`;
+    badge.innerHTML = formattedStamp
+      ? `<strong>BUILD</strong>${build}\n${formattedStamp}\n${window.BOKS_RUNTIME_CONFIG.releaseChannel}`
+      : `<strong>BUILD</strong>${build}`;
+    badge.classList.toggle('build-fresh', buildJustChanged);
   } else if (badge) {
     badge.textContent = '';
   }
+
+  console.info(`[BOKS] build ${build} (${window.BOKS_RUNTIME_CONFIG.releaseChannel})`);
 
   const DEFAULT_CHARACTER_MANIFESTS = [
     'assets/animations/characters/boks_green/manifest.js'

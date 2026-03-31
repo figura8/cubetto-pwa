@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exportedAt": "2026-03-30T13:55:55.876Z",
+  "exportedAt": "2026-03-30T18:36:18.989Z",
   "levels": [
     {
       "id": "level1-step-1",
@@ -43,7 +43,10 @@
         "right": false,
         "function": false
       },
-      "themeOverrides": {}
+      "themeOverrides": {},
+      "levelHints": {
+        "availableBlockGlow": true
+      }
     },
     {
       "id": "level1-step-2",
@@ -88,6 +91,9 @@
       },
       "themeOverrides": {
         "--grid-bg": "#acd784"
+      },
+      "levelHints": {
+        "availableBlockGlow": true
       }
     },
     {
@@ -139,6 +145,9 @@
       "themeOverrides": {
         "--scene-grid-wrap-bg": "#3d4c29",
         "--grid-bg": "#b9dd98"
+      },
+      "levelHints": {
+        "availableBlockGlow": true
       }
     },
     {
@@ -189,6 +198,9 @@
       },
       "themeOverrides": {
         "--scene-grid-wrap-bg": "#c5e1a3"
+      },
+      "levelHints": {
+        "availableBlockGlow": true
       }
     },
     {
@@ -237,7 +249,10 @@
         "right": true,
         "function": false
       },
-      "themeOverrides": {}
+      "themeOverrides": {},
+      "levelHints": {
+        "availableBlockGlow": true
+      }
     },
     {
       "id": "level1-step-6",
@@ -280,7 +295,10 @@
         "right": false,
         "function": true
       },
-      "themeOverrides": {}
+      "themeOverrides": {},
+      "levelHints": {
+        "availableBlockGlow": true
+      }
     },
     {
       "id": "level1-step-7",
@@ -328,7 +346,10 @@
         "right": true,
         "function": true
       },
-      "themeOverrides": {}
+      "themeOverrides": {},
+      "levelHints": {
+        "availableBlockGlow": true
+      }
     },
     {
       "id": "level1-step-8",
@@ -376,7 +397,10 @@
         "right": false,
         "function": true
       },
-      "themeOverrides": {}
+      "themeOverrides": {},
+      "levelHints": {
+        "availableBlockGlow": true
+      }
     },
     {
       "id": "level1-step-9",
@@ -429,13 +453,15 @@
         "function": true
       },
       "themeOverrides": {
-        "--panel-bg": "#4767b3",
         "--scene-grid-wrap-bg": "#c0becb",
         "--cell-bg": "#605d83",
         "--cell-hi-bg": "#777e88",
         "--obstacle-bg-top": "#d1d1d1",
         "--obstacle-bg-bottom": "#b49e50",
         "--obstacle-edge": "#c5bfd4"
+      },
+      "levelHints": {
+        "availableBlockGlow": false
       }
     },
     {
@@ -488,7 +514,10 @@
         "right": true,
         "function": true
       },
-      "themeOverrides": {}
+      "themeOverrides": {},
+      "levelHints": {
+        "availableBlockGlow": false
+      }
     },
     {
       "id": "level1-step-11",
@@ -540,7 +569,10 @@
         "right": true,
         "function": true
       },
-      "themeOverrides": {}
+      "themeOverrides": {},
+      "levelHints": {
+        "availableBlockGlow": false
+      }
     },
     {
       "id": "level1-step-12",
@@ -592,7 +624,10 @@
         "right": true,
         "function": true
       },
-      "themeOverrides": {}
+      "themeOverrides": {},
+      "levelHints": {
+        "availableBlockGlow": false
+      }
     },
     {
       "id": "level1-step-13",
@@ -653,6 +688,9 @@
         "--cell-hi-bg": "#072116",
         "--cell-hi-edge": "#89e1b8",
         "--obstacle-bg-bottom": "#da9234"
+      },
+      "levelHints": {
+        "availableBlockGlow": false
       }
     }
   ]

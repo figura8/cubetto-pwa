@@ -402,6 +402,88 @@
     .light-cell {
       overflow: hidden;
     }
+    .available-block-cell {
+      overflow: visible;
+    }
+    .available-block-vfx {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 72%;
+      aspect-ratio: 1.25;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+    .available-block-vfx__glow {
+      position: absolute;
+      inset: -40%;
+      border-radius: 50%;
+      opacity: 0;
+      background:
+        radial-gradient(circle, rgba(255, 251, 214, 0.99) 0%, rgba(255, 231, 104, 0.94) 18%, rgba(255, 205, 46, 0.7) 42%, rgba(255, 184, 46, 0.2) 64%, rgba(255, 184, 46, 0) 82%);
+      filter: blur(12px);
+      transform: scale(0.62);
+    }
+    .available-block-vfx__spark,
+    .available-block-vfx__spark::before {
+      position: absolute;
+      inset: 0;
+      content: "";
+      pointer-events: none;
+    }
+    .available-block-vfx__spark {
+      opacity: 0;
+    }
+    .available-block-vfx__spark::before {
+      left: 50%;
+      top: 50%;
+      width: 16%;
+      height: 100%;
+      transform: translate(-50%, -50%);
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(233,255,204,0.88) 50%, rgba(255,255,255,0) 100%);
+      filter: blur(2px);
+    }
+    .available-block-vfx__spark::after {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 100%;
+      height: 16%;
+      transform: translate(-50%, -50%);
+      border-radius: 999px;
+      content: "";
+      background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(233,255,204,0.8) 50%, rgba(255,255,255,0) 100%);
+      filter: blur(2px);
+    }
+    .available-block-vfx svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 4px 0 rgba(58, 138, 57, 0.32)) drop-shadow(0 9px 12px rgba(56, 106, 36, 0.2));
+    }
+    .available-block-vfx::before {
+      content: "";
+      position: absolute;
+      inset: -8%;
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.04) 100%);
+      opacity: 0;
+      transform: scale(0.92);
+      box-shadow:
+        0 0 0 2px rgba(255, 234, 155, 0.24),
+        0 0 22px rgba(255, 212, 84, 0.36);
+    }
+    .playfield.is-block-glowing .available-block-vfx__glow {
+      animation: availableBlockGlow 1.8s ease-in-out infinite;
+    }
+    .playfield.is-block-glowing .available-block-vfx__spark {
+      animation: availableBlockSpark 1.8s ease-in-out infinite;
+    }
+    .playfield.is-block-glowing .available-block-vfx::before {
+      animation: availableBlockFlash 1.8s ease-in-out infinite;
+    }
     .light-effect {
       position: absolute;
       inset: 0;
@@ -504,6 +586,159 @@
       font-size: 0.84rem;
       line-height: 1.32;
     }
+    .play-demo {
+      border-radius: 18px;
+      border: 1px solid rgba(114, 86, 50, 0.18);
+      background: rgba(255,255,255,0.72);
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+    }
+    .play-demo__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .play-demo__head strong {
+      font-size: 0.98rem;
+    }
+    .play-demo__head span {
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.34;
+    }
+    .play-demo__board {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+    }
+    .play-demo__rows {
+      display: grid;
+      gap: 10px;
+    }
+    .play-demo__row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 52px;
+    }
+    .play-demo__label {
+      width: 52px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .play-demo__slots {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: nowrap;
+    }
+    .play-slot {
+      position: relative;
+      width: 56px;
+      height: 46px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(231, 212, 177, 0.98) 0%, rgba(215, 188, 144, 0.98) 100%);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.46),
+        inset 0 0 0 1px rgba(170, 136, 82, 0.18);
+    }
+    .play-slot::after {
+      content: "";
+      position: absolute;
+      inset: 7px 11px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, rgba(202, 170, 121, 0.2) 0%, rgba(185, 152, 102, 0.1) 100%);
+      box-shadow: inset 0 1px 2px rgba(158, 126, 75, 0.18);
+    }
+    .play-slot__block {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 72%;
+      aspect-ratio: 1.22;
+      transform: translate(-50%, -50%) scale(0.88);
+      opacity: 0;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+      z-index: 1;
+    }
+    .play-slot__block svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .play-demo.is-main-filled .play-slot--main .play-slot__block {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    .play-slot--fn {
+      opacity: 0.72;
+      filter: saturate(0.76);
+    }
+    .play-slot--fn::after {
+      background: linear-gradient(180deg, rgba(165, 203, 224, 0.16) 0%, rgba(126, 173, 208, 0.08) 100%);
+      box-shadow: inset 0 1px 2px rgba(86, 124, 154, 0.18);
+    }
+    .play-ready-run {
+      position: relative;
+      width: 68px;
+      height: 68px;
+      border-radius: 0;
+      border: 2px solid var(--edge);
+      background: linear-gradient(180deg, #f6f0e3 0%, #ece3d4 100%);
+      box-shadow: 0 3px 0 #cdc2ab, 0 7px 12px rgba(95, 78, 52, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      overflow: visible;
+      pointer-events: none;
+    }
+    .play-ready-run svg {
+      width: 28px;
+      height: 28px;
+      filter: drop-shadow(0 1px 0 rgba(255,255,255,0.36));
+    }
+    .play-ready-run::before {
+      content: "";
+      position: absolute;
+      inset: -18px;
+      border-radius: 22px;
+      background: radial-gradient(circle, rgba(255, 242, 168, 0.98) 0%, rgba(255, 216, 74, 0.72) 30%, rgba(255, 216, 74, 0) 74%);
+      box-shadow:
+        0 0 0 2px rgba(255, 216, 74, 0.22),
+        0 0 28px rgba(255, 216, 74, 0.44);
+      opacity: 0;
+      transform: scale(0.82);
+      z-index: -1;
+    }
+    .play-ready-run::after {
+      content: "PLAY";
+      position: absolute;
+      left: 50%;
+      top: calc(100% + 8px);
+      transform: translateX(-50%);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #8a6400;
+      opacity: 0.82;
+    }
+    .play-demo.is-play-glowing .play-ready-run {
+      animation: playReadyGlow 0.9s steps(2, end) infinite;
+    }
+    .play-demo.is-play-glowing .play-ready-run::before {
+      animation: playReadyHalo 0.9s steps(2, end) infinite;
+    }
+    .play-demo.is-play-glowing .play-ready-run svg {
+      animation: playReadyIcon 0.9s steps(2, end) infinite;
+    }
     @keyframes bubbleFloat {
       0%, 100% { transform: translateY(0) scale(1); }
       50% { transform: translateY(-3%) scale(1.015); }
@@ -604,10 +839,48 @@
       22% { opacity: 1; transform: translate(10px, 8px) scale(1); }
       100% { opacity: 0; transform: translate(20px, 18px) scale(0.42); }
     }
+    @keyframes availableBlockGlow {
+      0%, 100% { opacity: 0.14; transform: scale(0.82); }
+      50% { opacity: 0.82; transform: scale(1.08); }
+    }
+    @keyframes availableBlockFlash {
+      0%, 100% { opacity: 0.1; transform: scale(0.96); }
+      50% { opacity: 0.5; transform: scale(1.02); }
+    }
+    @keyframes availableBlockSpark {
+      0%, 100% { opacity: 0.08; transform: scale(0.92) rotate(0deg); }
+      50% { opacity: 0.38; transform: scale(1.03) rotate(10deg); }
+    }
+    @keyframes playReadyGlow {
+      0%, 44% {
+        transform: translateY(0) scale(1);
+        box-shadow: 0 3px 0 #cdc2ab, 0 7px 12px rgba(95, 78, 52, 0.2);
+        filter: none;
+      }
+      50%, 100% {
+        transform: translateY(-1px) scale(1.05);
+        box-shadow:
+          0 4px 0 #cdc2ab,
+          0 10px 16px rgba(95, 78, 52, 0.22),
+          0 0 18px rgba(255, 218, 74, 0.62),
+          0 0 34px rgba(255, 218, 74, 0.38);
+        filter: saturate(1.06) brightness(1.04);
+      }
+    }
+    @keyframes playReadyHalo {
+      0%, 44% { opacity: 0.1; transform: scale(0.82); }
+      50%, 100% { opacity: 1; transform: scale(1.12); }
+    }
+    @keyframes playReadyIcon {
+      0%, 44% { transform: scale(1); filter: drop-shadow(0 1px 0 rgba(255,255,255,0.36)); }
+      50%, 100% { transform: scale(1.08); filter: drop-shadow(0 1px 0 rgba(255,255,255,0.36)) drop-shadow(0 0 12px rgba(255, 221, 102, 0.46)); }
+    }
     @media (max-width: 1040px) {
       .shell { grid-template-columns: 1fr; }
       .viewport { min-height: 520px; }
       .legend { grid-template-columns: 1fr; }
+      .play-demo__board { grid-template-columns: 1fr; }
+      .play-ready-run { justify-self: start; }
     }
   </style>
 </head>
@@ -623,6 +896,7 @@
         <p class="group-title">Posizionamento</p>
         <p class="hint">Scegli quale VFX spostare e poi clicca una cella della griglia per riposizionarlo.</p>
         <div class="actions">
+          <button id="placeBlockBtn" type="button">Sposta blocco</button>
           <button id="placeBubbleBtn" type="button">Sposta bubble</button>
           <button id="placeCanvasBubbleBtn" type="button">Sposta bubble canvas</button>
           <button id="placeLightBtn" type="button">Sposta luce</button>
@@ -635,9 +909,11 @@
         <p class="group-title">Trigger</p>
         <p class="hint">Seleziona uno o piu effetti e poi lanciali insieme con un solo trigger.</p>
         <div class="actions">
+          <button id="blockGlowBtn" type="button">Blocco disponibile</button>
           <button id="bubbleCanvasIdleBtn" type="button">Bubble Idle Canvas</button>
           <button id="bubblePopBtn" type="button">Bubble Pop</button>
           <button id="bubbleCanvasBtn" type="button">Bubble Pop Canvas</button>
+          <button id="playReadyBtn" type="button">Play pronto</button>
           <button id="lightGlowBtn" type="button">Luce luminosa</button>
           <button id="triggerSelectedBtn" type="button">Trigger selezionati</button>
           <button id="resetStageBtn" type="button" class="secondary">Reset stage</button>
@@ -646,8 +922,20 @@
       </section>
 
       <section class="group">
+        <p class="group-title">Condizione Play</p>
+        <p class="hint">Qui simuliamo il momento in cui la sequenza principale e completa. La riga funzione non conta.</p>
+        <div class="actions">
+          <button id="fillMainSequenceBtn" type="button" class="secondary">Main completa: On</button>
+        </div>
+      </section>
+
+      <section class="group">
         <p class="group-title">Catalogo iniziale</p>
         <div class="catalog">
+          <div class="catalog-item">
+            <strong>Blocco disponibile glow</strong>
+            <span>Il blocco verde “forward” emette un bagliore vivo per dire al giocatore che va preso e usato. L’effetto si deve interrompere quando il blocco viene inserito in uno slot.</span>
+          </div>
           <div class="catalog-item">
             <strong>Goal Bubble Idle</strong>
             <span>Bolla grande una cella, fiore al centro, galleggiamento minimo, shell trasparente morbida.</span>
@@ -667,6 +955,10 @@
           <div class="catalog-item">
             <strong>Luce luminosa</strong>
             <span>Bagliore ampio e caldo che si apre oltre la cella, con core chiaro, bloom morbido e piccoli pulviscoli luminosi.</span>
+          </div>
+          <div class="catalog-item">
+            <strong>Play pronto</strong>
+            <span>Il bottone Play si accende solo quando la sequenza principale e piena. La funzione resta fuori da questo trigger.</span>
           </div>
         </div>
       </section>
@@ -717,7 +1009,17 @@
                 <span class="light-speck" data-pos="d"></span>
               </span>
             </div>
-            <div class="cell"></div>
+            <div class="cell available-block-cell">
+              <span class="available-block-vfx">
+                <span class="available-block-vfx__glow"></span>
+                <span class="available-block-vfx__spark"></span>
+                <svg viewBox="0 0 40 32" aria-hidden="true">
+                  <path d="M4,8 Q4,4 8,4 L32,4 Q36,4 36,8 L36,24 Q36,28 32,28 L8,28 Q4,28 4,24 Z" fill="#3a8a39" transform="translate(0 3)"></path>
+                  <path d="M4,8 Q4,4 8,4 L32,4 Q36,4 36,8 L36,24 Q36,28 32,28 L8,28 Q4,28 4,24 Z" fill="#5bc85a"></path>
+                  <path d="M4,8 Q4,4 8,4 L32,4 Q36,4 36,8 L36,24 Q36,28 32,28 L8,28 Q4,28 4,24 Z" fill="#8de88c" opacity="0.35" clip-path="inset(0 0 55% 0)"></path>
+                </svg>
+              </span>
+            </div>
             <div class="cell"></div>
             <div class="cell"></div>
             <div class="cell"></div>
@@ -778,6 +1080,45 @@
           </div>
         </div>
       </div>
+
+      <div id="playDemo" class="play-demo is-main-filled">
+        <div class="play-demo__head">
+          <div>
+            <strong>Scenario Play</strong>
+            <span>Il glow del Play va testato solo quando i 4 slot main sono pieni. La riga funzione resta neutra.</span>
+          </div>
+        </div>
+        <div class="play-demo__board">
+          <div class="play-demo__rows" aria-hidden="true">
+            <div class="play-demo__row">
+              <span class="play-demo__label">Main</span>
+              <div class="play-demo__slots">
+                <span class="play-slot play-slot--main"><span class="play-slot__block"><svg viewBox="0 0 40 32"><path d="M4,8 Q4,4 8,4 L32,4 Q36,4 36,8 L36,24 Q36,28 32,28 L8,28 Q4,28 4,24 Z" fill="#3a8a39" transform="translate(0 3)"></path><path d="M4,8 Q4,4 8,4 L32,4 Q36,4 36,8 L36,24 Q36,28 32,28 L8,28 Q4,28 4,24 Z" fill="#5bc85a"></path><path d="M4,8 Q4,4 8,4 L32,4 Q36,4 36,8 L36,24 Q36,28 32,28 L8,28 Q4,28 4,24 Z" fill="#8de88c" opacity="0.35" clip-path="inset(0 0 55% 0)"></path></svg></span></span>
+                <span class="play-slot play-slot--main"><span class="play-slot__block"><svg viewBox="0 0 40 32"><path d="M4,8 Q4,4 8,4 L32,4 Q36,4 36,8 L36,24 Q36,28 32,28 L8,28 Q4,28 4,24 Z" fill="#b8920a" transform="translate(0 3)"></path><path d="M4,8 Q4,4 8,4 L32,4 Q36,4 36,8 L36,24 Q36,28 32,28 L8,28 Q4,28 4,24 Z" fill="#f5c842"></path><path d="M4,8 Q4,4 8,4 L32,4 Q36,4 36,8 L36,24 Q36,28 32,28 L8,28 Q4,28 4,24 Z" fill="#ffe87a" opacity="0.35" clip-path="inset(0 0 55% 0)"></path></svg></span></span>
+                <span class="play-slot play-slot--main"><span class="play-slot__block"><svg viewBox="0 0 40 32"><path d="M4,8 Q4,4 8,4 L32,4 Q36,4 36,8 L36,24 Q36,28 32,28 L8,28 Q4,28 4,24 Z" fill="#a02820" transform="translate(0 3)"></path><path d="M4,8 Q4,4 8,4 L32,4 Q36,4 36,8 L36,24 Q36,28 32,28 L8,28 Q4,28 4,24 Z" fill="#e8504a"></path><path d="M4,8 Q4,4 8,4 L32,4 Q36,4 36,8 L36,24 Q36,28 32,28 L8,28 Q4,28 4,24 Z" fill="#ff8a84" opacity="0.35" clip-path="inset(0 0 55% 0)"></path></svg></span></span>
+                <span class="play-slot play-slot--main"><span class="play-slot__block"><svg viewBox="0 0 40 32"><path d="M4,8 Q4,4 8,4 L32,4 Q36,4 36,8 L36,24 Q36,28 32,28 L8,28 Q4,28 4,24 Z" fill="#3a8a39" transform="translate(0 3)"></path><path d="M4,8 Q4,4 8,4 L32,4 Q36,4 36,8 L36,24 Q36,28 32,28 L8,28 Q4,28 4,24 Z" fill="#5bc85a"></path><path d="M4,8 Q4,4 8,4 L32,4 Q36,4 36,8 L36,24 Q36,28 32,28 L8,28 Q4,28 4,24 Z" fill="#8de88c" opacity="0.35" clip-path="inset(0 0 55% 0)"></path></svg></span></span>
+              </div>
+            </div>
+            <div class="play-demo__row">
+              <span class="play-demo__label">Fn</span>
+              <div class="play-demo__slots">
+                <span class="play-slot play-slot--fn"></span>
+                <span class="play-slot play-slot--fn"></span>
+                <span class="play-slot play-slot--fn"></span>
+                <span class="play-slot play-slot--fn"></span>
+              </div>
+            </div>
+          </div>
+          <button id="playReadyStageBtn" type="button" class="play-ready-run" aria-label="Play pronto">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M12 12 L12 7.5 A4.5 4.5 0 0 1 16.5 12 Z" fill="#2B8FD4"></path>
+              <path d="M12 12 L16.5 12 A4.5 4.5 0 0 1 12 16.5 Z" fill="#FFD31A"></path>
+              <path d="M12 12 L12 16.5 A4.5 4.5 0 0 1 7.5 12 Z" fill="#FF3B3B"></path>
+              <path d="M12 12 L7.5 12 A4.5 4.5 0 0 1 12 7.5 Z" fill="#3F9A62"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -789,10 +1130,16 @@
     const goalBubble = document.querySelector('.goal-bubble');
     const lightEffect = document.querySelector('.light-effect');
     const canvasBubbleAnchor = document.querySelector('.canvas-bubble-anchor');
+    const availableBlock = document.querySelector('.available-block-vfx');
+    const blockGlowBtn = document.getElementById('blockGlowBtn');
+    const placeBlockBtn = document.getElementById('placeBlockBtn');
     const bubbleCanvasIdleBtn = document.getElementById('bubbleCanvasIdleBtn');
     const bubblePopBtn = document.getElementById('bubblePopBtn');
     const bubbleCanvasBtn = document.getElementById('bubbleCanvasBtn');
+    const playReadyBtn = document.getElementById('playReadyBtn');
     const lightGlowBtn = document.getElementById('lightGlowBtn');
+    const fillMainSequenceBtn = document.getElementById('fillMainSequenceBtn');
+    const playDemo = document.getElementById('playDemo');
     const placeBubbleBtn = document.getElementById('placeBubbleBtn');
     const placeCanvasBubbleBtn = document.getElementById('placeCanvasBubbleBtn');
     const placeLightBtn = document.getElementById('placeLightBtn');
@@ -801,12 +1148,14 @@
     const placementStatus = document.getElementById('placementStatus');
     const triggerStatus = document.getElementById('triggerStatus');
     const resetStageBtn = document.getElementById('resetStageBtn');
+    let blockCell = document.querySelector('.available-block-cell');
     let bubbleCell = document.querySelector('.goal-cell');
     let canvasBubbleCell = document.querySelector('.canvas-bubble-cell');
     let lightCell = document.querySelector('.light-cell');
     let resetTimer = null;
     let placementMode = null;
     let allowOverlap = true;
+    let mainSequenceFilled = true;
     const selectedTriggers = new Set();
     let canvasFxFrame = null;
     let canvasFxStart = 0;
@@ -1149,29 +1498,59 @@
     function setPlacementMode(mode) {
       placementMode = mode;
       playfield.classList.toggle('is-placing', Boolean(mode));
+      placeBlockBtn?.classList.toggle('toggle-on', mode === 'block');
       placeBubbleBtn?.classList.toggle('toggle-on', mode === 'bubble');
       placeCanvasBubbleBtn?.classList.toggle('toggle-on', mode === 'bubble-canvas');
       placeLightBtn?.classList.toggle('toggle-on', mode === 'light');
+      const modeLabel = mode === 'block'
+        ? 'blocco disponibile'
+        : mode === 'bubble'
+          ? 'bubble'
+          : mode === 'bubble-canvas'
+            ? 'bubble canvas'
+            : mode === 'light'
+              ? 'luce'
+              : '';
       placementStatus.textContent = mode
-        ? `Modalita attiva: ${mode === 'bubble' ? 'bubble' : mode === 'bubble-canvas' ? 'bubble canvas' : 'luce'} . Clicca una cella della griglia.`
+        ? `Modalita attiva: ${modeLabel}. Clicca una cella della griglia.`
         : 'Nessun VFX in modalita spostamento.';
       gridCells.forEach(cell => cell.classList.toggle('is-placement-target', Boolean(mode)));
     }
 
     function updateTriggerButtons() {
+      blockGlowBtn?.classList.toggle('toggle-on', selectedTriggers.has('block'));
       bubbleCanvasIdleBtn?.classList.toggle('toggle-on', bubbleIdleCanvasEnabled);
       bubblePopBtn?.classList.toggle('toggle-on', selectedTriggers.has('bubble'));
       bubbleCanvasBtn?.classList.toggle('toggle-on', selectedTriggers.has('bubble-canvas'));
+      playReadyBtn?.classList.toggle('toggle-on', selectedTriggers.has('play'));
       lightGlowBtn?.classList.toggle('toggle-on', selectedTriggers.has('light'));
       if (!selectedTriggers.size) {
         triggerStatus.textContent = 'Nessun VFX selezionato.';
         return;
       }
       const labels = [];
+      if (selectedTriggers.has('block')) labels.push('Blocco disponibile');
       if (selectedTriggers.has('bubble')) labels.push('Bubble Pop');
       if (selectedTriggers.has('bubble-canvas')) labels.push('Bubble Pop Canvas');
+      if (selectedTriggers.has('play')) labels.push('Play pronto');
       if (selectedTriggers.has('light')) labels.push('Luce luminosa');
       triggerStatus.textContent = `Selezionati: ${labels.join(' + ')}.`;
+    }
+
+    function updatePlayDemoState() {
+      playDemo?.classList.toggle('is-main-filled', mainSequenceFilled);
+      fillMainSequenceBtn.textContent = `Main completa: ${mainSequenceFilled ? 'On' : 'Off'}`;
+      fillMainSequenceBtn.classList.toggle('toggle-on', mainSequenceFilled);
+      fillMainSequenceBtn.classList.toggle('secondary', !mainSequenceFilled);
+    }
+
+    function moveBlockTo(targetCell) {
+      if (!targetCell || targetCell === blockCell) return;
+      blockCell?.classList.remove('available-block-cell');
+      targetCell.classList.add('available-block-cell');
+      targetCell.appendChild(availableBlock);
+      blockCell = targetCell;
+      placementStatus.textContent = 'Blocco disponibile spostato.';
     }
 
     function updateOverlapToggle() {
@@ -1246,6 +1625,8 @@
       window.clearTimeout(resetTimer);
       playfield.classList.remove('is-popping');
       playfield.classList.remove('is-lighting');
+      playfield.classList.remove('is-block-glowing');
+      playDemo?.classList.remove('is-play-glowing');
       if (canvasFxFrame) {
         window.cancelAnimationFrame(canvasFxFrame);
         canvasFxFrame = null;
@@ -1259,6 +1640,10 @@
       resetStage();
       requestAnimationFrame(() => {
         let duration = 0;
+        if (selectedTriggers.has('block')) {
+          playfield.classList.add('is-block-glowing');
+          duration = Math.max(duration, 2600);
+        }
         if (selectedTriggers.has('bubble')) {
           syncBubblePopOrigin();
           playfield.classList.add('is-popping');
@@ -1272,9 +1657,18 @@
           playfield.classList.add('is-lighting');
           duration = Math.max(duration, 2800);
         }
+        if (selectedTriggers.has('play')) {
+          if (mainSequenceFilled) {
+            playDemo?.classList.add('is-play-glowing');
+            duration = Math.max(duration, 2600);
+          } else {
+            triggerStatus.textContent = 'Play pronto richiede la sequenza main piena.';
+          }
+        }
         resetTimer = window.setTimeout(() => {
           playfield.classList.remove('is-popping');
           playfield.classList.remove('is-lighting');
+          playDemo?.classList.remove('is-play-glowing');
         }, duration || 0);
       });
     }
@@ -1288,6 +1682,7 @@
     gridCells.forEach(cell => {
       cell.addEventListener('click', () => {
         if (!placementMode) return;
+        if (placementMode === 'block') moveBlockTo(cell);
         if (placementMode === 'bubble') moveBubbleTo(cell);
         if (placementMode === 'bubble-canvas') moveCanvasBubbleTo(cell);
         if (placementMode === 'light') moveLightTo(cell);
@@ -1295,9 +1690,13 @@
       });
     });
 
+    placeBlockBtn?.addEventListener('click', () => {
+      setPlacementMode(placementMode === 'block' ? null : 'block');
+    });
     placeBubbleBtn?.addEventListener('click', () => {
       setPlacementMode(placementMode === 'bubble' ? null : 'bubble');
     });
+    blockGlowBtn?.addEventListener('click', () => toggleTrigger('block'));
     placeCanvasBubbleBtn?.addEventListener('click', () => {
       setPlacementMode(placementMode === 'bubble-canvas' ? null : 'bubble-canvas');
     });
@@ -1318,7 +1717,12 @@
     });
     bubblePopBtn?.addEventListener('click', () => toggleTrigger('bubble'));
     bubbleCanvasBtn?.addEventListener('click', () => toggleTrigger('bubble-canvas'));
+    playReadyBtn?.addEventListener('click', () => toggleTrigger('play'));
     lightGlowBtn?.addEventListener('click', () => toggleTrigger('light'));
+    fillMainSequenceBtn?.addEventListener('click', () => {
+      mainSequenceFilled = !mainSequenceFilled;
+      updatePlayDemoState();
+    });
     triggerSelectedBtn?.addEventListener('click', triggerSelectedEffects);
     resetStageBtn?.addEventListener('click', resetStage);
     window.addEventListener('resize', () => {
@@ -1331,6 +1735,7 @@
     sizeBubbleCanvas();
     updateOverlapToggle();
     updateTriggerButtons();
+    updatePlayDemoState();
     syncBubblePopOrigin();
     syncCanvasBubbleOrigin();
   </script>

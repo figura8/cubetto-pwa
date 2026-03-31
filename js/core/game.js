@@ -425,6 +425,7 @@ let selectedElementTool = null;
 let editorStylePanelOpen = false;
 let pendingNewLevelThemeOverrides = {};
 let pendingNewLevelCharacterId = DEFAULT_CHARACTER_ID;
+let pendingNewLevelHints = {};
 let emptyRunHintTimers = [];
 let lastEmptyRunHintAt = 0;
 const WIN_BURST_ANGLES = [-108, -78, -52, -24, 8, 34, 62, 92, 122, 154, 186, 218, 250];
@@ -891,6 +892,17 @@ function toast(msg, cls='', aboveEl=null) {
   }
   clearTimeout(el._t); if(msg) el._t = setTimeout(() => el.className='', 3000);
 }
+function consumeHardRefreshNotice() {
+  try {
+    const currentBuild = window.BOKS_RUNTIME_CONFIG?.build || document.body?.dataset?.build || '';
+    const pendingBuild = window.sessionStorage?.getItem('boks-hard-refresh-notice') || '';
+    if (!pendingBuild || pendingBuild !== currentBuild) return;
+    window.sessionStorage?.removeItem('boks-hard-refresh-notice');
+    setTimeout(() => toast(`Hard refresh done · build ${currentBuild}`), 180);
+  } catch (_err) {
+    // ignore storage errors
+  }
+}
 function ensureWinBurst() {
   let root = document.getElementById('winBurst');
   if (root) return root;
@@ -1025,6 +1037,21 @@ function mkB(block, w, h, cls='') {
   svg.appendChild(hi);
 
   el.appendChild(svg);
+
+  if (cls.includes('ablock')) {
+    const fx = document.createElement('span');
+    fx.className = 'available-block-vfx';
+
+    const glow = document.createElement('span');
+    glow.className = 'available-block-vfx__glow';
+    fx.appendChild(glow);
+
+    const spark = document.createElement('span');
+    spark.className = 'available-block-vfx__spark';
+    fx.appendChild(spark);
+
+    el.appendChild(fx);
+  }
   return el;
 }
 
@@ -1480,9 +1507,17 @@ function getCharacterDefs() {
 }
 
 function getCharacterIds() {
-  const ids = Object.keys(getCharacterDefs()).filter(id => typeof id === 'string' && id.trim());
-  if (!ids.includes(DEFAULT_CHARACTER_ID)) ids.unshift(DEFAULT_CHARACTER_ID);
-  return [...new Set(ids)];
+  const defs = getCharacterDefs();
+  const seen = new Set();
+  const ids = [];
+  Object.entries(defs).forEach(([key, def]) => {
+    const canonicalId = typeof def?.id === 'string' && def.id.trim() ? def.id.trim() : key;
+    if (!canonicalId || seen.has(canonicalId)) return;
+    seen.add(canonicalId);
+    ids.push(canonicalId);
+  });
+  if (!seen.has(DEFAULT_CHARACTER_ID)) ids.unshift(DEFAULT_CHARACTER_ID);
+  return ids;
 }
 
 function resolveRuntimeCharacterId(characterId) {
@@ -1494,6 +1529,13 @@ function resolveRuntimeCharacterId(characterId) {
 
 function resolveCharacterId(characterId) {
   const raw = typeof characterId === 'string' ? characterId.trim() : '';
+  const defs = getCharacterDefs();
+  if (raw && defs[raw]) {
+    const canonicalId = typeof defs[raw]?.id === 'string' && defs[raw].id.trim()
+      ? defs[raw].id.trim()
+      : raw;
+    return canonicalId;
+  }
   const ids = getCharacterIds();
   if (raw && ids.includes(raw)) return raw;
   return ids[0] || DEFAULT_CHARACTER_ID;
@@ -1593,6 +1635,13 @@ function sanitizeThemeOverrides(source = {}) {
   return sanitized;
 }
 
+function sanitizeLevelHints(source = {}) {
+  if (!source || typeof source !== 'object') return {};
+  return {
+    availableBlockGlow: !!source.availableBlockGlow
+  };
+}
+
 function getCurrentEditorThemeOverrides() {
   if (currentCustomLevel) {
     return sanitizeThemeOverrides(currentCustomLevel.themeOverrides || {});
@@ -1607,10 +1656,25 @@ function getCurrentEditorThemeOverrides() {
   return {};
 }
 
+function getCurrentEditorLevelHints() {
+  if (currentCustomLevel) {
+    return sanitizeLevelHints(currentCustomLevel.levelHints || {});
+  }
+  if (selectedEditorLevelId === NEW_EDITOR_LEVEL_ID) {
+    return sanitizeLevelHints(pendingNewLevelHints || {});
+  }
+  const fallbackLevel = findCustomLevel(selectedEditorLevelId || '');
+  if (fallbackLevel) {
+    return sanitizeLevelHints(fallbackLevel.levelHints || {});
+  }
+  return {};
+}
+
 function setCurrentEditorThemeOverrides(overrides) {
   const normalized = sanitizeThemeOverrides(overrides);
   if (currentCustomLevel) {
     currentCustomLevel.themeOverrides = normalized;
+    syncCurrentEditorLevelToSessionCache();
     return true;
   }
   if (selectedEditorLevelId === NEW_EDITOR_LEVEL_ID) {
@@ -1630,6 +1694,35 @@ function setCurrentEditorThemeOverrides(overrides) {
     name: selectedLevel.name,
     themeOverrides: normalized
   });
+  syncCurrentEditorLevelToSessionCache();
+  return true;
+}
+
+function setCurrentEditorLevelHints(levelHints) {
+  const normalized = sanitizeLevelHints(levelHints);
+  if (currentCustomLevel) {
+    currentCustomLevel.levelHints = normalized;
+    syncCurrentEditorLevelToSessionCache();
+    return true;
+  }
+  if (selectedEditorLevelId === NEW_EDITOR_LEVEL_ID) {
+    pendingNewLevelHints = normalized;
+    return true;
+  }
+  const selectedLevel = findCustomLevel(selectedEditorLevelId || '');
+  if (!selectedLevel) return false;
+  const draft = collectCurrentEditorLevel();
+  currentCustomLevel = normalizeCustomLevel({
+    ...selectedLevel,
+    ...draft,
+    id: selectedLevel.id,
+    number: selectedLevel.number,
+    campaignIndex: selectedLevel.campaignIndex ?? selectedLevel.baseStepIndex ?? null,
+    baseStepIndex: selectedLevel.baseStepIndex,
+    name: selectedLevel.name,
+    levelHints: normalized
+  });
+  syncCurrentEditorLevelToSessionCache();
   return true;
 }
 
@@ -1657,7 +1750,8 @@ async function applyCurrentStyleToSelectedLevel() {
     ...current,
     baseLevel: getCurrentEditorThemeId(),
     characterId: getCurrentEditorCharacterId(),
-    themeOverrides: getCurrentEditorThemeOverrides()
+    themeOverrides: getCurrentEditorThemeOverrides(),
+    levelHints: getCurrentEditorLevelHints()
   });
   levels[idx] = updated;
   const persistResult = await persistEditorLevels(levels, { promptIfMissing: true });
@@ -1667,7 +1761,8 @@ async function applyCurrentStyleToSelectedLevel() {
       ...currentCustomLevel,
       baseLevel: updated.baseLevel,
       characterId: updated.characterId,
-      themeOverrides: updated.themeOverrides
+      themeOverrides: updated.themeOverrides,
+      levelHints: updated.levelHints
     });
     applyLevelSceneVars();
     applyEditorBoardChanges();
@@ -1743,6 +1838,7 @@ function setCurrentEditorCharacterId(characterId) {
   const resolved = resolveCharacterId(characterId);
   if (currentCustomLevel) {
     currentCustomLevel.characterId = resolved;
+    syncCurrentEditorLevelToSessionCache();
     return true;
   }
   if (selectedEditorLevelId === NEW_EDITOR_LEVEL_ID) {
@@ -1762,6 +1858,7 @@ function setCurrentEditorCharacterId(characterId) {
     name: selectedLevel.name,
     characterId: resolved
   });
+  syncCurrentEditorLevelToSessionCache();
   return true;
 }
 
@@ -1865,6 +1962,7 @@ function applyEditorTheme(themeId) {
     }
   }
   if (!changed) return;
+  syncCurrentEditorLevelToSessionCache();
   applyLevelSceneVars();
   applyEditorBoardChanges();
   renderThemeEditorPanel();
@@ -1969,6 +2067,10 @@ function writeCustomLevels(levels) {
   return levelStorage.writeCustomLevels(levels);
 }
 
+function updateCachedLevel(level) {
+  return levelStorage.updateCachedLevel(level);
+}
+
 function exportableLevelsPayload(levels = readCustomLevels()) {
   return levelStorage.exportableLevelsPayload(levels);
 }
@@ -1987,6 +2089,25 @@ function normalizeThemeOverrides(source = {}) {
 
 function normalizeCustomLevel(level) {
   return levelStorage.normalizeCustomLevel(level);
+}
+
+function syncCurrentEditorLevelToSessionCache() {
+  if (!LEVEL_EDITOR_ENABLED || !currentCustomLevel?.id) return null;
+  if (selectedEditorLevelId === NEW_EDITOR_LEVEL_ID) return null;
+  const savedLevel = findCustomLevel(currentCustomLevel.id) || currentCustomLevel;
+  const draft = collectCurrentEditorLevel();
+  const merged = normalizeCustomLevel({
+    ...savedLevel,
+    ...draft,
+    id: savedLevel.id,
+    number: savedLevel.number,
+    campaignIndex: savedLevel.campaignIndex ?? savedLevel.baseStepIndex ?? null,
+    baseStepIndex: savedLevel.baseStepIndex,
+    name: savedLevel.name
+  });
+  updateCachedLevel(merged);
+  currentCustomLevel = cloneCustomLevel(merged);
+  return merged;
 }
 
 function findCustomLevel(levelId) {
@@ -2360,6 +2481,7 @@ function setBlockedCells(obstacles = []) {
 function resetPrograms() {
   for (let j = 0; j < SLOTS; j++) prog[j] = null;
   for (let j = 0; j < FSLOTS; j++) fnProg[j] = null;
+  refreshAvailableBlockGlowState();
 }
 function setAvailableBlocks(blocks = ['forward', 'right', 'left']) {
   avail.length = 0;
@@ -2459,6 +2581,10 @@ function setEditorMode(enabled) {
     setEditorStylePanelOpen(editorStylePanelOpen);
     refreshEditorDebug();
   } else {
+    refreshAvailableBlockGlowState();
+    renderAvail();
+    renderBoard();
+    renderFn();
     setEditorStylePanelOpen(false);
     selectedElementTool = null;
     lastEditorSolutionCount = 0;
@@ -2506,6 +2632,33 @@ function isFunctionTutorialStep() {
   const blocks = step.availableBlocks || [];
   return (step.fnSlots || 0) > 0 && blocks.includes('function');
 }
+function shouldShowAvailableBlockGlow(level = currentCustomLevel || getCurrentCampaignLevel()) {
+  return !!level?.levelHints?.availableBlockGlow;
+}
+function hasAnyPlacedProgramBlock() {
+  return prog.some(Boolean) || fnProg.some(Boolean);
+}
+function syncAvailableBlockGlowUI() {
+  const row = document.getElementById('blocksRow');
+  if (!row || editorMode) return;
+  row.classList.toggle('available-block-guided', !!stepStartHintActive);
+  row.querySelectorAll('.ablock').forEach((blockEl, idx) => {
+    const shouldGlow = !!stepStartHintActive;
+    blockEl.classList.toggle('tutorial-focus', shouldGlow);
+    blockEl.style.setProperty('--available-block-glow-delay', shouldGlow ? `${(idx % 6) * 0.42}s` : '0s');
+  });
+}
+function refreshAvailableBlockGlowState({ suspendForActiveDrag = false } = {}) {
+  if (editorMode) {
+    stepStartHintActive = false;
+    syncAvailableBlockGlowUI();
+    return stepStartHintActive;
+  }
+  const draggingAvailableBlock = suspendForActiveDrag && dg?.active && dg.src === 'avail';
+  stepStartHintActive = shouldShowAvailableBlockGlow() && !hasAnyPlacedProgramBlock() && !draggingAvailableBlock;
+  syncAvailableBlockGlowUI();
+  return stepStartHintActive;
+}
 function resetPlayerToStepStart() {
   const step = getCurrentCampaignLevel();
   pos = { ...START };
@@ -2525,7 +2678,7 @@ function applyTutorialStep(idx = 0) {
   activeFnSlots = Math.max(0, Math.min(FSLOTS, step.fnSlots ?? 0));
   setSlotMasks(activeMainSlots, activeFnSlots);
   fnUnlockHintActive = false;
-  stepStartHintActive = true;
+  stepStartHintActive = shouldShowAvailableBlockGlow(step);
   selectedElementTool = null;
   const normalizedStart = normalizePoint(step.start);
   const normalizedGoal = normalizePoint(step.goal);
@@ -2577,7 +2730,7 @@ function applyCustomLevel(level, { openEditor = false } = {}) {
   running = false;
   tutorialStepIndex = 0;
   fnUnlockHintActive = false;
-  stepStartHintActive = false;
+  stepStartHintActive = !!normalized.levelHints?.availableBlockGlow;
   selectedElementTool = null;
   mainSlotEnabled = normalizeSlotArray(normalized.mainSlotEnabled, SLOTS);
   fnSlotEnabled = normalizeSlotArray(normalized.fnSlotEnabled, FSLOTS);
@@ -2626,7 +2779,8 @@ function collectCurrentEditorLevel() {
     mainSlotEnabled: [...mainSlotEnabled],
     fnSlotEnabled: [...fnSlotEnabled],
     enabledBlocks: { ...editorBlockEnabled },
-    themeOverrides: getCurrentEditorThemeOverrides()
+    themeOverrides: getCurrentEditorThemeOverrides(),
+    levelHints: getCurrentEditorLevelHints()
   });
 }
 
@@ -2717,6 +2871,15 @@ function renderEditorSetupControls(palette) {
     characterRow.appendChild(btn);
   });
   card.appendChild(characterRow);
+
+  const levelRulesTitle = document.createElement('div');
+  levelRulesTitle.className = 'editor-setup-title';
+  levelRulesTitle.textContent = 'Caratteristiche livello';
+  card.appendChild(levelRulesTitle);
+
+  const hintControls = document.createElement('div');
+  renderLevelHintControls(hintControls);
+  card.appendChild(hintControls);
 
   palette.appendChild(card);
 }
@@ -2865,6 +3028,50 @@ function renderCharacterPicker() {
   window.BOKS_CHARACTER_RENDERER?.mountIn?.(picker);
 }
 
+function renderLevelHintControls(controls) {
+  if (!controls) return;
+  if (!editorMode) {
+    controls.innerHTML = '';
+    return;
+  }
+
+  const hints = getCurrentEditorLevelHints();
+  controls.innerHTML = '';
+
+  const item = document.createElement('div');
+  item.className = 'level-hint-item';
+  item.innerHTML = `
+    <div class="level-hint-copy">
+      <span class="level-hint-label">Blocchi iniziali con glow</span>
+      <span class="level-hint-hint">Accende il bagliore sui blocchi disponibili all'apertura del livello, finche non ne inserisci uno.</span>
+    </div>
+  `;
+
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'level-hint-toggle' + (hints.availableBlockGlow ? ' active' : '');
+  toggle.setAttribute('aria-pressed', hints.availableBlockGlow ? 'true' : 'false');
+  toggle.textContent = hints.availableBlockGlow ? 'On' : 'Off';
+  toggle.addEventListener('click', () => {
+    const currentValue = !!getCurrentEditorLevelHints().availableBlockGlow;
+    const nextHints = {
+      ...getCurrentEditorLevelHints(),
+      availableBlockGlow: !currentValue
+    };
+    if (!setCurrentEditorLevelHints(nextHints)) return;
+    if (currentCustomLevel?.campaignIndex != null || currentCustomLevel?.baseStepIndex != null) {
+      refreshAvailableBlockGlowState();
+    }
+    renderElementPalette();
+    renderThemeEditorPanel();
+    renderAvail();
+    renderCustomLevels();
+  });
+
+  item.appendChild(toggle);
+  controls.appendChild(item);
+}
+
 function renderThemeColorControls() {
   const controls = document.getElementById('themeColorControls');
   if (!controls) return;
@@ -2959,6 +3166,7 @@ function startBlankEditorLevel() {
   currentLevel = resolveThemeLevelId(CUSTOM_LEVEL_THEME);
   tutorialSceneLevelId = currentLevel;
   pendingNewLevelCharacterId = resolveCharacterId(getLevel()?.characterId);
+  pendingNewLevelHints = {};
   applyLevelSceneVars();
   playerPlaced = false;
   goalPlaced = false;
@@ -3349,19 +3557,16 @@ function renderAvail() {
   }
 
   row.classList.remove('editor-blocks-row');
+  const showAvailableBlockGlow = !editorMode && stepStartHintActive && shouldShowAvailableBlockGlow();
+  row.classList.toggle('available-block-guided', showAvailableBlockGlow);
 
   avail.forEach((block, i) => {
     const el = mkB(block, sz, sz, 'ablock');
-    if (!editorMode && currentLevel === 'level1' && stepStartHintActive) {
+    el.dataset.blockDir = block.dir || block.direction || '';
+    if (showAvailableBlockGlow) {
       el.classList.add('tutorial-focus');
-    } else if (!editorMode && currentLevel === 'level1' && isFunctionTutorialStep()) {
-      if (!fnUnlockHintActive && block.dir === 'forward') {
-        el.classList.add('tutorial-focus');
-      }
-      if (fnUnlockHintActive && block.dir === 'function') {
-        el.classList.add('tutorial-focus', 'function-hint');
-      }
     }
+    el.style.setProperty('--available-block-glow-delay', showAvailableBlockGlow ? `${(i % 6) * 0.42}s` : '0s');
     el.dataset.ai = i;
     el.style.position = 'absolute';
     el.style.top = '50%';
@@ -3453,11 +3658,11 @@ function renderBoard() {
     { idxs:[0,1,2,3], reverse:false, zone:'fn'   },
   ];
 
-  rowDefs.forEach(({ idxs, reverse, zone }, rowIdx) => {
-    const rowEl = document.createElement('div');
-    rowEl.className = 'board-row' + (reverse ? ' reverse' : '');
-    rowEl.style.cssText = `height:${slotH}px; gap:${gapX}px; padding:0 ${rowPadX}px;`;
-    if(rowIdx > 0) rowEl.style.marginTop = gapH + 'px';
+    rowDefs.forEach(({ idxs, reverse, zone }, rowIdx) => {
+      const rowEl = document.createElement('div');
+      rowEl.className = 'board-row' + (reverse ? ' reverse' : '');
+      rowEl.style.cssText = `height:${slotH}px; gap:${gapX}px; padding:0 ${rowPadX}px;`;
+      if(rowIdx > 0) rowEl.style.marginTop = gapH + 'px';
 
     idxs.forEach(i => {
       const arr = zone === 'fn' ? fnProg : prog;
@@ -3588,11 +3793,12 @@ function renderBoard() {
     arrow(arrowX, y3, 'rgba(43,143,212,0.55)');
     const ySep = 2 * slotH + 2 * gapH - gapH / 2;
     const sep = document.createElementNS('http://www.w3.org/2000/svg','line');
-    sep.setAttribute('x1', String(startX)); sep.setAttribute('x2', String(endX));
+    sep.setAttribute('x1', String(Math.max(8, rowPadX - 10))); sep.setAttribute('x2', String(Math.min(innerW - 8, innerW - rowPadX + 10)));
     sep.setAttribute('y1', ySep); sep.setAttribute('y2', ySep);
-    sep.setAttribute('stroke', 'rgba(43,143,212,0.3)');
-    sep.setAttribute('stroke-width', '1.5');
-    sep.setAttribute('stroke-dasharray', '5 4');
+    sep.setAttribute('stroke', 'rgba(77,182,255,0.92)');
+    sep.setAttribute('stroke-width', '2.6');
+    sep.setAttribute('stroke-dasharray', '9 6');
+    sep.setAttribute('stroke-linecap', 'round');
     sep.setAttribute('mask', 'url(#trackSlotMask)');
     svg.appendChild(sep);
     alignAvailBlocksToSlots();
@@ -3640,11 +3846,12 @@ function drawTrack(svg, slotH, gapH, totalH, W, mainActive, fnActive) {
   // ── divisore sottile tra main e fn ──
   const ydiv = y2 + (y3 - y2) / 2;
   const divLine = document.createElementNS('http://www.w3.org/2000/svg','line');
-  divLine.setAttribute('x1', '0'); divLine.setAttribute('x2', W);
+  divLine.setAttribute('x1', '8'); divLine.setAttribute('x2', String(Math.max(8, W - 8)));
   divLine.setAttribute('y1', ydiv); divLine.setAttribute('y2', ydiv);
-  divLine.setAttribute('stroke', 'rgba(124,58,237,0.2)');
-  divLine.setAttribute('stroke-width', '1.5');
-  divLine.setAttribute('stroke-dasharray', '4 4');
+  divLine.setAttribute('stroke', 'rgba(77,182,255,0.92)');
+  divLine.setAttribute('stroke-width', '2.6');
+  divLine.setAttribute('stroke-dasharray', '9 6');
+  divLine.setAttribute('stroke-linecap', 'round');
   svg.appendChild(divLine);
 
   // ── fn row (→) ──
@@ -3675,11 +3882,17 @@ function startDg(cx,cy,src,idx,sz) {
   const block = src==='avail' ? avail[idx] : src==='fn' ? fnProg[idx] : prog[idx];
   if(!block) return;
   dg = {active:true, block, src, si:idx, hover:null};
+  if(src==='avail') refreshAvailableBlockGlowState({ suspendForActiveDrag: true });
   const g = document.getElementById('ghost');
   g.innerHTML=''; g.appendChild(mkB(block,sz,sz));
   g.style.cssText=`display:block;width:${sz}px;height:${sz}px;left:${cx}px;top:${cy}px;border-radius:5px;`;
   if(src==='avail') {
-    document.querySelectorAll('.ablock').forEach(el=>{ if(+el.dataset.ai===idx) el.style.opacity='0.3'; });
+    document.querySelectorAll('.ablock').forEach(el=>{
+      if(+el.dataset.ai===idx) {
+        el.style.opacity='0';
+        el.classList.add('drag-source-hidden');
+      }
+    });
   } else {
     const zone = src==='fn' ? 'fn' : 'main';
     const s=document.querySelector(`.pslot[data-zone="${zone}"][data-slot="${idx}"] .sinner`);
@@ -3703,7 +3916,10 @@ function endDg(cx,cy) {
   if(!dg.active) return;
   document.getElementById('ghost').style.display='none';
   if(dg.hover) dg.hover.classList.remove('over');
-  document.querySelectorAll('.ablock,.pblock').forEach(e=>e.style.opacity='1');
+  document.querySelectorAll('.ablock,.pblock').forEach(e=>{
+    e.style.opacity='1';
+    e.classList.remove('drag-source-hidden');
+  });
   document.querySelectorAll('.sinner').forEach(e=>e.style.opacity='1');
   const u=document.elementFromPoint(cx,cy);
   const slot=u?.closest('.pslot');
@@ -3739,11 +3955,8 @@ function endDg(cx,cy) {
     const firstFnForwardPlaced = fnProg.some(b => (b?.dir || b?.direction) === 'forward');
     if (firstFnForwardPlaced) fnUnlockHintActive = true;
   }
-  if (stepStartHintActive) {
-    const hasAnyPlacedBlock = prog.some(Boolean) || fnProg.some(Boolean);
-    if (hasAnyPlacedBlock) stepStartHintActive = false;
-  }
   dg.active=false;
+  refreshAvailableBlockGlowState();
   renderAvail(); renderBoard(); renderFn();
   refreshEditorDebug();
 }
@@ -4037,6 +4250,7 @@ function openAppFromGate({ openEditor = false, onOpen = null } = {}) {
   setTimeout(() => gate?.classList.remove('show', 'hiding'), gateFadeMs);
   setTimeout(() => {
     document.body.classList.remove('prestart');
+    consumeHardRefreshNotice();
     if (onOpen) onOpen();
     else setEditorMode(shouldOpenEditor);
     fadeInPizzicatoBgm(2200);

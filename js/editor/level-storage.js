@@ -39,6 +39,13 @@
       }, {});
     }
 
+    function normalizeLevelHints(source = {}) {
+      if (!source || typeof source !== 'object') return {};
+      return {
+        availableBlockGlow: !!source.availableBlockGlow
+      };
+    }
+
     function normalizeCharacterId(characterId) {
       if (typeof api.resolveCharacterId === 'function') {
         return api.resolveCharacterId(characterId);
@@ -76,7 +83,8 @@
         mainSlotEnabled: normalizeSlotArray(level.mainSlotEnabled, api.slots),
         fnSlotEnabled: normalizeSlotArray(level.fnSlotEnabled, api.fnSlots),
         enabledBlocks: normalizeEnabledBlocks(level.enabledBlocks || {}),
-        themeOverrides: normalizeThemeOverrides(level.themeOverrides || {})
+        themeOverrides: normalizeThemeOverrides(level.themeOverrides || {}),
+        levelHints: normalizeLevelHints(level.levelHints || {})
       };
       return normalized;
     }
@@ -94,7 +102,8 @@
         fnSlots: normalized.fnSlotEnabled.filter(Boolean).length,
         availableBlocks: Object.keys(normalized.enabledBlocks).filter(dir => normalized.enabledBlocks[dir]),
         obstacles: normalized.obstacles || [],
-        themeOverrides: normalizeThemeOverrides(normalized.themeOverrides || {})
+        themeOverrides: normalizeThemeOverrides(normalized.themeOverrides || {}),
+        levelHints: normalizeLevelHints(normalized.levelHints || {})
       };
     }
 
@@ -154,6 +163,18 @@
     function writeCustomLevels(levels) {
       const normalizedLevels = writeStoredLevels(api.editorLevelsStorageKey, levels);
       editorLevelsCache = normalizedLevels;
+    }
+
+    function updateCachedLevel(level) {
+      const normalized = normalizeCustomLevel(level);
+      const sourceLevels = editorLevelsCache.length
+        ? editorLevelsCache.map(normalizeCustomLevel)
+        : buildInitialEditorLevels();
+      const idx = sourceLevels.findIndex(entry => entry.id === normalized.id);
+      if (idx >= 0) sourceLevels[idx] = normalized;
+      else sourceLevels.push(normalized);
+      editorLevelsCache = sourceLevels.map(normalizeCustomLevel);
+      return normalized;
     }
 
     function exportableLevelsPayload(levels = readCustomLevels()) {
@@ -333,6 +354,7 @@
       normalizeSlotArray,
       persistEditorLevels,
       readCustomLevels,
+      updateCachedLevel,
       writeCustomLevels
     };
   }
