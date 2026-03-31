@@ -433,6 +433,8 @@ let firstLevelOnboardingStage = 'idle';
 let firstLevelOnboardingFrame = null;
 let firstLevelOnboardingReadyAt = 0;
 let firstLevelOnboardingDelayTimer = null;
+let appSceneRevealReadyAt = 0;
+let appSceneRevealTimer = null;
 const WIN_BURST_ANGLES = [-108, -78, -52, -24, 8, 34, 62, 92, 122, 154, 186, 218, 250];
 let winBurstHideTimer = null;
 let activeWinBurstPromise = null;
@@ -457,7 +459,10 @@ let bgmStep = 0;
 let bgmNextNoteTime = 0;
 let bgmSharedLowpass;
 let bgmSharedHighpass;
+let levelOneIntroAudio = null;
+let levelOneIntroBgmTimer = null;
 const BGM_TARGET_GAIN = 0.02;
+const LEVEL_ONE_INTRO_AUDIO_PATH = 'assets/audio/intro_level_01_V2.ogg';
 const FX = () => {
   if (!fxAc) fxAc = new (window.AudioContext || window.webkitAudioContext)();
   if (fxAc.state === 'suspended') fxAc.resume();
@@ -563,6 +568,43 @@ function pausePizzicatoBgm() {
   if (!bgmTicker) return;
   clearInterval(bgmTicker);
   bgmTicker = null;
+}
+function clearLevelOneIntroBgmTimer() {
+  if (!levelOneIntroBgmTimer) return;
+  clearTimeout(levelOneIntroBgmTimer);
+  levelOneIntroBgmTimer = null;
+}
+function getLevelOneIntroAudio() {
+  if (levelOneIntroAudio) return levelOneIntroAudio;
+  const build = window.BOKS_RUNTIME_CONFIG?.build || document.body?.dataset?.build || 'dev';
+  const audio = new Audio(`${LEVEL_ONE_INTRO_AUDIO_PATH}?v=${encodeURIComponent(build)}`);
+  audio.preload = 'auto';
+  audio.volume = 0.32;
+  levelOneIntroAudio = audio;
+  return levelOneIntroAudio;
+}
+function stopLevelOneIntro({ reset = true } = {}) {
+  clearLevelOneIntroBgmTimer();
+  if (!levelOneIntroAudio) return;
+  try {
+    levelOneIntroAudio.pause();
+    if (reset) levelOneIntroAudio.currentTime = 0;
+  } catch (_err) {
+    // ignore media stop errors
+  }
+}
+function playLevelOneIntroAndQueueBgm() {
+  stopLevelOneIntro();
+  const audio = getLevelOneIntroAudio();
+  try {
+    audio.currentTime = 0;
+  } catch (_err) {
+    // ignore seek issues
+  }
+  const playAttempt = audio.play();
+  if (playAttempt?.catch) {
+    playAttempt.catch(() => {});
+  }
 }
 function resumePizzicatoBgm() {
   if (!bgmStarted || bgmTicker) return;
@@ -874,7 +916,6 @@ function updateOrientationGuard() {
   document.body.classList.toggle('landscape-block', !portrait && mobileLike);
 }
 async function requestAppFullscreen() {
-  startPizzicatoBgm();
   // Evita lo snap automatico a schermo intero al primo click.
   // Se in futuro vuoi reintrodurlo, legalo a un'azione esplicita dell'utente.
   // blocca orientamento portrait su Android
@@ -2311,6 +2352,7 @@ function setLevel(levelId, { persist = true } = {}) {
   if (levelId !== 'level1') {
     firstLevelOnboardingStage = 'idle';
     clearFirstLevelOnboardingDelay();
+    clearAppSceneRevealWindow();
   }
   currentCustomLevel = null;
   currentLevel = levelId;
@@ -2673,15 +2715,21 @@ function refreshAvailableBlockGlowState({ suspendForActiveDrag = false } = {}) {
   return stepStartHintActive;
 }
 function readFirstLevelOnboardingDone() {
+  if (window.BOKS_RUNTIME_CONFIG?.releaseChannel === 'main') return false;
   try {
-    return localStorage.getItem(FIRST_LEVEL_ONBOARDING_STORAGE_KEY) === 'done';
+    const storedValue = localStorage.getItem(FIRST_LEVEL_ONBOARDING_STORAGE_KEY) || '';
+    const currentBuild = window.BOKS_RUNTIME_CONFIG?.build || document.body?.dataset?.build || '';
+    return !!currentBuild && storedValue === `done:${currentBuild}`;
   } catch (_err) {
     return false;
   }
 }
 function writeFirstLevelOnboardingDone() {
+  if (window.BOKS_RUNTIME_CONFIG?.releaseChannel === 'main') return;
   try {
-    localStorage.setItem(FIRST_LEVEL_ONBOARDING_STORAGE_KEY, 'done');
+    const currentBuild = window.BOKS_RUNTIME_CONFIG?.build || document.body?.dataset?.build || '';
+    if (!currentBuild) return;
+    localStorage.setItem(FIRST_LEVEL_ONBOARDING_STORAGE_KEY, `done:${currentBuild}`);
   } catch (_err) {
     // ignore storage errors
   }
@@ -2739,7 +2787,23 @@ function clearFirstLevelOnboardingDelay() {
   }
   firstLevelOnboardingReadyAt = 0;
 }
-function scheduleFirstLevelOnboardingDelay(delayMs = 5000) {
+function clearAppSceneRevealWindow() {
+  if (appSceneRevealTimer) {
+    clearTimeout(appSceneRevealTimer);
+    appSceneRevealTimer = null;
+  }
+  appSceneRevealReadyAt = 0;
+}
+function startAppSceneRevealWindow(durationMs = 4200) {
+  clearAppSceneRevealWindow();
+  appSceneRevealReadyAt = Date.now() + durationMs;
+  appSceneRevealTimer = setTimeout(() => {
+    appSceneRevealTimer = null;
+    queueFirstLevelOnboardingSync();
+    syncFirstLevelOnboardingDelayForCurrentView();
+  }, durationMs + 16);
+}
+function scheduleFirstLevelOnboardingDelay(delayMs = 0) {
   clearFirstLevelOnboardingDelay();
   firstLevelOnboardingReadyAt = Date.now() + delayMs;
   firstLevelOnboardingDelayTimer = setTimeout(() => {
@@ -2756,11 +2820,15 @@ function syncFirstLevelOnboardingDelayForCurrentView() {
     clearFirstLevelOnboardingDelay();
     return;
   }
+  if (Date.now() < appSceneRevealReadyAt) {
+    clearFirstLevelOnboardingDelay();
+    return;
+  }
   if (firstLevelOnboardingStage === 'play' || hasAnyPlacedProgramBlock()) {
     clearFirstLevelOnboardingDelay();
     return;
   }
-  scheduleFirstLevelOnboardingDelay(5000);
+  scheduleFirstLevelOnboardingDelay(0);
 }
 function isFirstLevelOnboardingContext() {
   return !currentCustomLevel && currentLevel === 'level1' && tutorialStepIndex === 0;
@@ -2771,6 +2839,7 @@ function shouldShowFirstLevelOnboarding() {
     && !editorMode
     && isFirstLevelOnboardingContext()
     && !readFirstLevelOnboardingDone()
+    && Date.now() >= appSceneRevealReadyAt
     && (
       firstLevelOnboardingStage === 'play'
       || hasAnyPlacedProgramBlock()
@@ -2872,6 +2941,7 @@ function applyTutorialStep(idx = 0) {
   tutorialStepIndex = ((idx % steps.length) + steps.length) % steps.length;
   firstLevelOnboardingStage = tutorialStepIndex === 0 && !readFirstLevelOnboardingDone() ? 'drag' : 'idle';
   clearFirstLevelOnboardingDelay();
+  if (tutorialStepIndex !== 0) clearAppSceneRevealWindow();
   selectedEditorLevelId = getCampaignLevelIdForIndex(tutorialStepIndex);
   const step = steps[tutorialStepIndex];
   tutorialSceneLevelId = resolveThemeLevelId(step.baseLevel);
@@ -2920,6 +2990,7 @@ function applyCustomLevel(level, { openEditor = false } = {}) {
   const normalized = normalizeCustomLevel(level);
   firstLevelOnboardingStage = 'idle';
   clearFirstLevelOnboardingDelay();
+  clearAppSceneRevealWindow();
   currentCustomLevel = cloneCustomLevel(normalized);
   selectedEditorLevelId = normalized.id;
   currentLevel = 'custom';
@@ -4456,18 +4527,24 @@ function openAppFromGate({ openEditor = false, onOpen = null } = {}) {
   if (gameStarted) return;
   gameStarted = true;
   const shouldOpenEditor = LEVEL_EDITOR_ENABLED && openEditor;
+  const shouldPlayLevelOneIntro = !shouldOpenEditor && !currentCustomLevel && currentLevel === 'level1';
   const gate = document.getElementById('startGate');
-  const gateFadeMs = 1100;
-  const backgroundHoldMs = 500;
+  const gateFadeMs = 1650;
+  const backgroundHoldMs = 850;
   gate?.classList.add('hiding');
   requestAppFullscreen();
+  if (shouldPlayLevelOneIntro) playLevelOneIntroAndQueueBgm();
+  else {
+    stopLevelOneIntro();
+    clearLevelOneIntroBgmTimer();
+  }
   setTimeout(() => gate?.classList.remove('show', 'hiding'), gateFadeMs);
   setTimeout(() => {
     document.body.classList.remove('prestart');
+    startAppSceneRevealWindow(4200);
     consumeHardRefreshNotice();
     if (onOpen) onOpen();
     else setEditorMode(shouldOpenEditor);
-    fadeInPizzicatoBgm(2200);
     syncFirstLevelOnboardingDelayForCurrentView();
     queueFirstLevelOnboardingSync();
   }, gateFadeMs + backgroundHoldMs);
@@ -4489,7 +4566,9 @@ function returnToMainMenu() {
   if (editorMode) exitEditorMode();
   setEditorStylePanelOpen(false);
   gameStarted = false;
+  stopLevelOneIntro();
   clearFirstLevelOnboardingDelay();
+  clearAppSceneRevealWindow();
   const gate = document.getElementById('startGate');
   gate?.classList.remove('hiding');
   showStartGate();
