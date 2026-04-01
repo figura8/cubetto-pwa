@@ -440,6 +440,7 @@ let winBurstHideTimer = null;
 let activeWinBurstPromise = null;
 let activeWinFeedbackAt = 0;
 let scheduledWinFeedbackTimer = null;
+let settingsOpen = false;
 document.body?.classList.add('prestart');
 document.body?.classList.toggle('debug-visible', DEBUG_TOOLS_ENABLED && debugVisible);
 if (DEBUG_TOOLS_ENABLED && animationDebugVisible) {
@@ -458,8 +459,11 @@ let backgroundMusicStarted = false;
 let levelOneIntroAudio = null;
 let levelOneIntroBgmTimer = null;
 const BACKGROUND_MUSIC_VOLUME = 0.18;
-const LEVEL_ONE_INTRO_VOLUME = 0.5;
+const LEVEL_ONE_INTRO_VOLUME = 0.72;
 const BACKGROUND_MUSIC_STORAGE_KEY = 'boks-bgm-enabled';
+const BACKGROUND_MUSIC_VOLUME_STORAGE_KEY = 'boks-bgm-volume';
+const SOUND_EFFECTS_STORAGE_KEY = 'boks-sfx-enabled';
+const PROGRESS_STORAGE_KEY = 'boks-progress-v1';
 const AUDIO_PATHS = Object.freeze({
   music: {
     gameLoop: 'assets/audio/music/game_loop_main.mp3',
@@ -490,40 +494,151 @@ function getVersionedAudioPath(path) {
   const build = window.BOKS_RUNTIME_CONFIG?.build || document.body?.dataset?.build || 'dev';
   return `${path}?v=${encodeURIComponent(build)}`;
 }
-function readBackgroundMusicEnabledPreference() {
+function readSoundEffectsEnabledPreference() {
   try {
-    const stored = localStorage.getItem(BACKGROUND_MUSIC_STORAGE_KEY);
+    const stored = localStorage.getItem(SOUND_EFFECTS_STORAGE_KEY);
     return stored == null ? true : stored !== 'false';
   } catch (_err) {
     return true;
   }
 }
-let backgroundMusicEnabled = readBackgroundMusicEnabledPreference();
-function setBackgroundMusicEnabled(enabled, { persist = true } = {}) {
-  backgroundMusicEnabled = !!enabled;
+function clampUnitVolume(value, fallback = 1) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.max(0, Math.min(1, numeric));
+}
+function readBackgroundMusicVolumePreference() {
+  try {
+    const storedVolume = localStorage.getItem(BACKGROUND_MUSIC_VOLUME_STORAGE_KEY);
+    if (storedVolume != null && storedVolume !== '') return clampUnitVolume(storedVolume, 1);
+    const storedEnabled = localStorage.getItem(BACKGROUND_MUSIC_STORAGE_KEY);
+    if (storedEnabled == null) return 1;
+    return storedEnabled === 'false' ? 0 : 1;
+  } catch (_err) {
+    return 1;
+  }
+}
+function sanitizeProgressState(raw) {
+  const currentCampaignStep = Number.isFinite(raw?.currentCampaignStep)
+    ? Math.max(0, Math.floor(raw.currentCampaignStep))
+    : 0;
+  const completedLevelIds = Array.isArray(raw?.completedLevelIds)
+    ? [...new Set(raw.completedLevelIds.filter(id => typeof id === 'string' && id.trim()))]
+    : [];
+  const seenJourneyHints = Array.isArray(raw?.seenJourneyHints)
+    ? [...new Set(raw.seenJourneyHints.filter(id => typeof id === 'string' && id.trim()))]
+    : [];
+  return {
+    currentCampaignStep,
+    completedLevelIds,
+    seenJourneyHints
+  };
+}
+function readProgressState() {
+  try {
+    const stored = localStorage.getItem(PROGRESS_STORAGE_KEY);
+    if (!stored) return sanitizeProgressState({});
+    return sanitizeProgressState(JSON.parse(stored));
+  } catch (_err) {
+    return sanitizeProgressState({});
+  }
+}
+let backgroundMusicVolume = readBackgroundMusicVolumePreference();
+let backgroundMusicEnabled = backgroundMusicVolume > 0.001;
+let soundEffectsEnabled = readSoundEffectsEnabledPreference();
+let progressState = readProgressState();
+function getBackgroundMusicLoopVolume() {
+  return BACKGROUND_MUSIC_VOLUME * backgroundMusicVolume;
+}
+function getLevelOneIntroMixVolume() {
+  return LEVEL_ONE_INTRO_VOLUME * backgroundMusicVolume;
+}
+function setProgressState(nextState, { persist = true } = {}) {
+  progressState = sanitizeProgressState(nextState);
+  if (!persist) return;
+  try {
+    localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progressState));
+  } catch (_err) {
+    // ignore persistence issues
+  }
+}
+function rememberCurrentCampaignStep(stepIndex = tutorialStepIndex) {
+  if (currentCustomLevel || currentLevel !== 'level1') return;
+  setProgressState({
+    ...progressState,
+    currentCampaignStep: Math.max(0, Math.floor(stepIndex || 0))
+  });
+}
+function rememberCompletedCampaignLevel(levelId = getCampaignLevelIdForIndex(tutorialStepIndex)) {
+  if (!levelId) return;
+  if (progressState.completedLevelIds.includes(levelId)) return;
+  setProgressState({
+    ...progressState,
+    completedLevelIds: [...progressState.completedLevelIds, levelId]
+  });
+}
+function resetJourneyProgressState() {
+  setProgressState({
+    currentCampaignStep: 0,
+    completedLevelIds: [],
+    seenJourneyHints: []
+  });
+}
+function applyBackgroundMusicVolumeToActiveAudio() {
+  if (backgroundMusicAudio) {
+    backgroundMusicAudio.muted = !backgroundMusicEnabled;
+    backgroundMusicAudio.volume = getBackgroundMusicLoopVolume();
+  }
+  if (levelOneIntroAudio) {
+    levelOneIntroAudio.muted = !backgroundMusicEnabled;
+    levelOneIntroAudio.volume = getLevelOneIntroMixVolume();
+  }
+}
+function setBackgroundMusicVolume(nextVolume, { persist = true } = {}) {
+  backgroundMusicVolume = clampUnitVolume(nextVolume, backgroundMusicVolume);
+  backgroundMusicEnabled = backgroundMusicVolume > 0.001;
   if (persist) {
     try {
+      localStorage.setItem(BACKGROUND_MUSIC_VOLUME_STORAGE_KEY, String(backgroundMusicVolume));
       localStorage.setItem(BACKGROUND_MUSIC_STORAGE_KEY, backgroundMusicEnabled ? 'true' : 'false');
     } catch (_err) {
       // ignore persistence issues
     }
   }
-  if (!backgroundMusicEnabled) pauseBackgroundMusicLoop();
-  else if (gameStarted) startBackgroundMusicLoop();
+  applyBackgroundMusicVolumeToActiveAudio();
+  if (!backgroundMusicEnabled) {
+    stopLevelOneIntro();
+    pauseBackgroundMusicLoop();
+  } else if (gameStarted) {
+    startBackgroundMusicLoop();
+  }
+  syncSettingsPanelUi();
+}
+function setSoundEffectsEnabled(enabled, { persist = true } = {}) {
+  soundEffectsEnabled = !!enabled;
+  if (persist) {
+    try {
+      localStorage.setItem(SOUND_EFFECTS_STORAGE_KEY, soundEffectsEnabled ? 'true' : 'false');
+    } catch (_err) {
+      // ignore persistence issues
+    }
+  }
+  syncSettingsPanelUi();
 }
 function getBackgroundMusicAudio() {
   if (backgroundMusicAudio) return backgroundMusicAudio;
   const audio = new Audio(getVersionedAudioPath(AUDIO_PATHS.music.gameLoop));
   audio.preload = 'auto';
   audio.loop = true;
-  audio.volume = BACKGROUND_MUSIC_VOLUME;
+  audio.muted = !backgroundMusicEnabled;
+  audio.volume = getBackgroundMusicLoopVolume();
   backgroundMusicAudio = audio;
   return backgroundMusicAudio;
 }
 function startBackgroundMusicLoop() {
   if (!backgroundMusicEnabled) return;
   const audio = getBackgroundMusicAudio();
-  audio.volume = BACKGROUND_MUSIC_VOLUME;
+  audio.volume = getBackgroundMusicLoopVolume();
   backgroundMusicStarted = true;
   if (!audio.paused) return;
   const playAttempt = audio.play();
@@ -546,7 +661,8 @@ function getLevelOneIntroAudio() {
   if (levelOneIntroAudio) return levelOneIntroAudio;
   const audio = new Audio(getVersionedAudioPath(AUDIO_PATHS.music.level01Intro));
   audio.preload = 'auto';
-  audio.volume = LEVEL_ONE_INTRO_VOLUME;
+  audio.muted = !backgroundMusicEnabled;
+  audio.volume = getLevelOneIntroMixVolume();
   levelOneIntroAudio = audio;
   return levelOneIntroAudio;
 }
@@ -559,6 +675,7 @@ function getUiAudioSfxPlayer(path) {
   return audio;
 }
 function playUiAudioSfx(path, volume = 0.5, { mode = 'oneshot' } = {}) {
+  if (!soundEffectsEnabled) return;
   try {
     const audio = mode === 'restart'
       ? getUiAudioSfxPlayer(path)
@@ -603,6 +720,7 @@ function stopLevelOneIntro({ reset = true } = {}) {
   clearLevelOneIntroBgmTimer();
   if (!levelOneIntroAudio) return;
   try {
+    levelOneIntroAudio.onended = null;
     levelOneIntroAudio.pause();
     if (reset) levelOneIntroAudio.currentTime = 0;
   } catch (_err) {
@@ -610,6 +728,11 @@ function stopLevelOneIntro({ reset = true } = {}) {
   }
 }
 function playLevelOneIntroAndQueueBgm() {
+  if (!backgroundMusicEnabled) {
+    stopLevelOneIntro();
+    clearLevelOneIntroBgmTimer();
+    return;
+  }
   stopLevelOneIntro();
   const audio = getLevelOneIntroAudio();
   clearLevelOneIntroBgmTimer();
@@ -632,7 +755,7 @@ function playLevelOneIntroAndQueueBgm() {
 function resumeBackgroundMusicLoop() {
   if (!backgroundMusicEnabled || !backgroundMusicStarted) return;
   const audio = getBackgroundMusicAudio();
-  audio.volume = BACKGROUND_MUSIC_VOLUME;
+  audio.volume = getBackgroundMusicLoopVolume();
   const playAttempt = audio.play();
   if (playAttempt?.catch) playAttempt.catch(() => {});
 }
@@ -640,6 +763,7 @@ function playRunPressSfx() {
   playUiAudioSfx(AUDIO_PATHS.sfx.ui.playPress, 0.34);
 }
 function playTurnSfx(dir = 'right') {
+  if (!soundEffectsEnabled) return;
   try {
     const c = FX();
     const t = c.currentTime;
@@ -880,6 +1004,112 @@ function toast(msg, cls='', aboveEl=null) {
     el.style.left = '50%';
   }
   clearTimeout(el._t); if(msg) el._t = setTimeout(() => el.className='', 3000);
+}
+function syncSettingsPanelUi() {
+  const header = document.getElementById('header');
+  const settingsModal = document.getElementById('settingsModal');
+  const sfxBtn = document.getElementById('settingsSfxBtn');
+  const sfxSwitch = document.getElementById('settingsSfxSwitch');
+  const musicSlider = document.getElementById('settingsMusicVolume');
+  const musicValue = document.getElementById('settingsMusicVolumeValue');
+  const creditsMeta = document.getElementById('settingsBuildMeta');
+  const creditsBtn = document.getElementById('settingsCreditsBtn');
+  const creditsPanel = document.getElementById('settingsCreditsPanel');
+  const creditsPill = creditsBtn?.querySelector('.settings-pill');
+  const resetBtn = document.getElementById('settingsResetProgressBtn');
+  const resetPanel = document.getElementById('settingsResetProgressPanel');
+  const resetPill = resetBtn?.querySelector('.settings-pill');
+  if (settingsModal) {
+    settingsModal.classList.toggle('show', settingsOpen);
+    settingsModal.setAttribute('aria-hidden', settingsOpen ? 'false' : 'true');
+  }
+  if (header) {
+    const headerLabel = settingsOpen ? 'Close settings' : 'Open settings';
+    header.setAttribute('aria-label', headerLabel);
+    header.setAttribute('title', headerLabel);
+  }
+  if (sfxBtn) sfxBtn.setAttribute('aria-pressed', soundEffectsEnabled ? 'true' : 'false');
+  if (sfxSwitch) sfxSwitch.classList.toggle('is-on', soundEffectsEnabled);
+  if (musicSlider) musicSlider.value = String(Math.round(backgroundMusicVolume * 100));
+  if (musicValue) musicValue.textContent = `${Math.round(backgroundMusicVolume * 100)}%`;
+  if (creditsBtn && creditsPanel) {
+    const expanded = !creditsPanel.hidden;
+    creditsBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    if (creditsPill) creditsPill.textContent = expanded ? 'Close' : 'Open';
+  }
+  if (resetBtn && resetPanel) {
+    const expanded = !resetPanel.hidden;
+    resetBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    if (resetPill) resetPill.textContent = expanded ? 'Close' : 'Open';
+  }
+  if (creditsMeta) {
+    const build = window.BOKS_RUNTIME_CONFIG?.build || document.body?.dataset?.build || 'dev';
+    const channel = window.BOKS_RUNTIME_CONFIG?.releaseChannel || document.body?.dataset?.releaseChannel || 'main';
+    creditsMeta.textContent = `Build ${build}\nChannel ${channel}`;
+  }
+}
+function closeSettingsPanel() {
+  if (!settingsOpen) return;
+  document.getElementById('settingsCreditsPanel')?.setAttribute('hidden', '');
+  document.getElementById('settingsResetProgressPanel')?.setAttribute('hidden', '');
+  settingsOpen = false;
+  syncSettingsPanelUi();
+}
+function openSettingsPanel() {
+  if (document.body.classList.contains('prestart')) return;
+  if (running || animating) {
+    toast('Wait for the move to finish');
+    return;
+  }
+  closeSaveLevelModal();
+  settingsOpen = true;
+  syncSettingsPanelUi();
+}
+function toggleSettingsPanel() {
+  if (settingsOpen) {
+    closeSettingsPanel();
+    return;
+  }
+  openSettingsPanel();
+}
+function toggleSettingsCredits() {
+  const panel = document.getElementById('settingsCreditsPanel');
+  const resetPanel = document.getElementById('settingsResetProgressPanel');
+  if (!panel) return;
+  const shouldOpen = panel.hidden;
+  panel.hidden = !shouldOpen;
+  if (resetPanel) resetPanel.hidden = true;
+  syncSettingsPanelUi();
+}
+function toggleResetProgressPanel() {
+  const panel = document.getElementById('settingsResetProgressPanel');
+  const creditsPanel = document.getElementById('settingsCreditsPanel');
+  if (!panel) return;
+  const shouldOpen = panel.hidden;
+  panel.hidden = !shouldOpen;
+  if (creditsPanel) creditsPanel.hidden = true;
+  syncSettingsPanelUi();
+}
+function openLanguageComingSoonNotice() {
+  toast('More languages coming soon');
+}
+function resetJourneyProgress() {
+  resetJourneyProgressState();
+  closeSettingsPanel();
+  closeSaveLevelModal();
+  if (editorMode) setEditorMode(false);
+  currentCustomLevel = null;
+  setLevel('level1');
+  applyCampaignLevel(0);
+  if (!document.body.classList.contains('prestart')) {
+    returnToMainMenu();
+  }
+  updateDebugBadge();
+  toast('Journey progress erased');
+}
+function goToMainMenuFromSettings() {
+  closeSettingsPanel();
+  returnToMainMenu();
 }
 function consumeHardRefreshNotice() {
   try {
@@ -2874,6 +3104,7 @@ function applyTutorialStep(idx = 0) {
   const steps = getTutorialSteps();
   if (!steps.length) return false;
   tutorialStepIndex = ((idx % steps.length) + steps.length) % steps.length;
+  rememberCurrentCampaignStep(tutorialStepIndex);
   firstLevelOnboardingStage = tutorialStepIndex === 0 ? 'drag' : 'idle';
   clearFirstLevelOnboardingDelay();
   if (tutorialStepIndex !== 0) clearAppSceneRevealWindow();
@@ -4370,6 +4601,7 @@ async function run() {
 
   if(won) {
     if (!currentCustomLevel && currentLevel === 'level1') {
+      rememberCompletedCampaignLevel();
       const transitionAnchor = getWinBurstAnchor();
         await sleep(260);
         await fadeTransition(1850, async () => {
@@ -4429,7 +4661,7 @@ async function init() {
   currentLevel = 'level1';
   setLevel('level1', { persist: false });
   document.getElementById('gridWrap').style.position = 'relative';
-  if (!applyCampaignLevel(0)) {
+  if (!applyCampaignLevel(progressState.currentCampaignStep || 0)) {
     activeMainSlots = SLOTS;
     activeFnSlots = FSLOTS;
     setSlotMasks(activeMainSlots, activeFnSlots);
@@ -4522,11 +4754,13 @@ function returnToMainMenu() {
     toast('Aspetta che il movimento finisca');
     return;
   }
+  closeSettingsPanel();
   closeSaveLevelModal();
   if (editorMode) exitEditorMode();
   setEditorStylePanelOpen(false);
   gameStarted = false;
   stopLevelOneIntro();
+  pauseBackgroundMusicLoop();
   clearFirstLevelOnboardingDelay();
   clearAppSceneRevealWindow();
   const gate = document.getElementById('startGate');
@@ -4630,11 +4864,26 @@ document.getElementById('openSpritePreviewBtn')?.addEventListener('click', openS
 document.getElementById('openVfxToolBtn')?.addEventListener('click', openVfxTool);
 document.getElementById('openLottieInspectorBtn')?.addEventListener('click', openLottieInspectorTool);
 document.getElementById('openLottieInspectorBtnEditor')?.addEventListener('click', openLottieInspectorTool);
-document.getElementById('header')?.addEventListener('click', returnToMainMenu);
+document.getElementById('header')?.addEventListener('click', toggleSettingsPanel);
 document.getElementById('header')?.addEventListener('keydown', e => {
   if (e.key !== 'Enter' && e.key !== ' ') return;
   e.preventDefault();
-  returnToMainMenu();
+  toggleSettingsPanel();
+});
+document.getElementById('closeSettingsBtn')?.addEventListener('click', closeSettingsPanel);
+document.getElementById('settingsSfxBtn')?.addEventListener('click', () => setSoundEffectsEnabled(!soundEffectsEnabled));
+document.getElementById('settingsMusicVolume')?.addEventListener('input', e => {
+  const nextValue = Number(e.target?.value);
+  setBackgroundMusicVolume(nextValue / 100);
+});
+document.getElementById('settingsLanguageBtn')?.addEventListener('click', openLanguageComingSoonNotice);
+document.getElementById('settingsCreditsBtn')?.addEventListener('click', toggleSettingsCredits);
+document.getElementById('settingsResetProgressBtn')?.addEventListener('click', toggleResetProgressPanel);
+document.getElementById('cancelResetProgressBtn')?.addEventListener('click', toggleResetProgressPanel);
+document.getElementById('confirmResetProgressBtn')?.addEventListener('click', resetJourneyProgress);
+document.getElementById('settingsMenuBtn')?.addEventListener('click', goToMainMenuFromSettings);
+document.getElementById('settingsModal')?.addEventListener('click', e => {
+  if (e.target?.id === 'settingsModal' || e.target?.classList?.contains('settings-shell')) closeSettingsPanel();
 });
 document.getElementById('quickEditorBtn')?.addEventListener('click', toggleEditorFromCurrentLevel);
 document.getElementById('saveLevelBtn')?.addEventListener('click', openSaveLevelModal);
@@ -4670,6 +4919,10 @@ document.addEventListener('keydown', e => {
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) return;
   const key = (e.key || '').toLowerCase();
   if (key === 'escape') {
+    if (settingsOpen) {
+      closeSettingsPanel();
+      return;
+    }
     if (editorStylePanelOpen) {
       setEditorStylePanelOpen(false);
       return;
@@ -4718,6 +4971,7 @@ window.visualViewport?.addEventListener('scroll', syncViewportHeight);
 window.addEventListener('orientationchange', syncViewportHeight);
 updateQuickEditorButton();
 updateStyleEditorButtons();
+syncSettingsPanelUi();
 
 function refreshSceneAfterAppResume() {
   syncViewportHeight();

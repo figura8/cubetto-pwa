@@ -117,7 +117,7 @@
       </div>
       <div id="editorMain">
         <!-- BÖKS header -->
-        <div id="header" role="button" tabindex="0" aria-label="Torna al menu principale" title="Torna al menu principale">
+        <div id="header" role="button" tabindex="0" aria-label="Open settings" title="Open settings">
           <span class="logo-letter logo-b">B</span><span class="logo-letter logo-o">Ö</span><span class="logo-letter logo-k">K</span><span class="logo-letter logo-s">S</span>
         </div>
         <!-- Row 1: grid (flexible) -->
@@ -162,6 +162,73 @@
   </svg>
 </div>
 <div id="buildBadge" aria-label="Build version"></div>
+<div id="settingsModal" aria-hidden="true">
+  <div class="settings-shell">
+    <div class="settings-card" role="dialog" aria-modal="true" aria-label="Settings">
+      <button id="closeSettingsBtn" class="settings-close" type="button" aria-label="Close settings">×</button>
+      <div class="settings-head">
+        <div class="settings-brand">
+          <span class="logo-letter logo-b">B</span><span class="logo-letter logo-o">Ö</span><span class="logo-letter logo-k">K</span><span class="logo-letter logo-s">S</span>
+        </div>
+      </div>
+      <div class="settings-list">
+        <button id="settingsSfxBtn" class="settings-row" type="button" aria-label="Turn sound effects on or off">
+          <span class="settings-row__icon" aria-hidden="true"><img src="assets/ui/settings/sound.svg" alt=""></span>
+          <span class="settings-row__copy">
+            <strong>Sound</strong>
+          </span>
+          <span id="settingsSfxSwitch" class="settings-switch" aria-hidden="true"><span class="settings-switch__thumb"></span></span>
+        </button>
+        <div id="settingsMusicControl" class="settings-row settings-row--volume" aria-label="Music volume">
+          <span class="settings-row__icon" aria-hidden="true"><img src="assets/ui/settings/music.svg" alt=""></span>
+          <span class="settings-row__copy">
+            <strong>Music</strong>
+          </span>
+          <div class="settings-volume">
+            <input id="settingsMusicVolume" class="settings-volume__slider" type="range" min="0" max="100" step="1" value="100" aria-label="Music volume slider">
+            <span id="settingsMusicVolumeValue" class="settings-volume__value" aria-hidden="true">100%</span>
+          </div>
+        </div>
+        <button id="settingsLanguageBtn" class="settings-row" type="button" aria-label="Current language">
+          <span class="settings-row__icon" aria-hidden="true"><img src="assets/ui/settings/language.svg" alt=""></span>
+          <span class="settings-row__copy">
+            <strong>Language</strong>
+          </span>
+          <span class="settings-pill">Soon</span>
+        </button>
+        <button id="settingsCreditsBtn" class="settings-row" type="button" aria-expanded="false" aria-controls="settingsCreditsPanel">
+          <span class="settings-row__icon" aria-hidden="true"><img src="assets/ui/settings/credits.svg" alt=""></span>
+          <span class="settings-row__copy">
+            <strong>Credits</strong>
+          </span>
+          <span class="settings-pill settings-pill--ghost">Open</span>
+        </button>
+        <button id="settingsResetProgressBtn" class="settings-row settings-row--quiet" type="button" aria-expanded="false" aria-controls="settingsResetProgressPanel">
+          <span class="settings-row__icon" aria-hidden="true"><img src="assets/ui/settings/reset-progress.svg" alt=""></span>
+          <span class="settings-row__copy">
+            <strong>Erase journey progress</strong>
+          </span>
+          <span class="settings-pill settings-pill--ghost">Open</span>
+        </button>
+      </div>
+      <div id="settingsCreditsPanel" class="settings-credits" hidden>
+        <p class="settings-credits__title">BÖKS</p>
+        <p id="settingsBuildMeta" class="settings-credits__meta"></p>
+      </div>
+      <div id="settingsResetProgressPanel" class="settings-credits settings-credits--warning" hidden>
+        <p class="settings-credits__title">Erase all journey progress?</p>
+        <p class="settings-credits__text">Returns to Level 1. Settings and custom levels stay safe.</p>
+        <div class="settings-inline-actions">
+          <button id="cancelResetProgressBtn" class="settings-inline-btn" type="button">Cancel</button>
+          <button id="confirmResetProgressBtn" class="settings-inline-btn settings-inline-btn--primary" type="button">Erase progress</button>
+        </div>
+      </div>
+      <div class="settings-actions">
+        <button id="settingsMenuBtn" class="settings-secondary-btn" type="button">Main Menu</button>
+      </div>
+    </div>
+  </div>
+</div>
 <div id="saveLevelModal" aria-hidden="true">
   <div class="save-level-card" role="dialog" aria-modal="true" aria-labelledby="saveLevelTitle">
     <h2 id="saveLevelTitle">Salva livello</h2>
