@@ -3,6 +3,29 @@ const COLS = 6, ROWS = 6, SLOTS = 8, FSLOTS = 4;
 let GOAL = {x:5,y:5};
 let START = {x:2,y:2};
 const gridCellEls = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+const coarsePointer = window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : true;
+const runtimePerf = window.BOKS_RUNTIME_CONFIG?.perf || null;
+let appSceneVisible = document.visibilityState !== 'hidden';
+
+function getCanvasDprCap() {
+  return coarsePointer ? 1.6 : 2;
+}
+
+function getEffectiveCanvasDpr() {
+  return Math.max(1, Math.min(getCanvasDprCap(), window.devicePixelRatio || 1));
+}
+
+function recordPerfMetric(name, durationMs, detail = {}) {
+  return runtimePerf?.record?.(name, durationMs, detail) || null;
+}
+
+function markPerfMetricStart(name) {
+  runtimePerf?.markStart?.(name);
+}
+
+function markPerfMetricEnd(name, detail = {}) {
+  return runtimePerf?.markEnd?.(name, detail) || null;
+}
 
 function getGridCell(x, y) {
   if (!Number.isInteger(x) || !Number.isInteger(y)) return null;
@@ -46,8 +69,8 @@ function moveGoal() {
 }
 let goalIdleCanvasFrame = null;
 let goalPopCanvasFrame = null;
-let goalPopCanvasDpr = Math.max(1, window.devicePixelRatio || 1);
-let goalIdleCanvasDpr = Math.max(1, window.devicePixelRatio || 1);
+let goalPopCanvasDpr = getEffectiveCanvasDpr();
+let goalIdleCanvasDpr = getEffectiveCanvasDpr();
 let goalBubblePopUntil = 0;
 let goalCanvasPopStartedAt = 0;
 let goalCanvasParticles = [];
@@ -96,7 +119,7 @@ function sizeGoalCanvasLayers() {
   const left = rect.left - wrapRect.left;
   const top = rect.top - wrapRect.top;
   [layers.idle, layers.pop].forEach((canvas, index) => {
-    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const dpr = getEffectiveCanvasDpr();
     if (index === 0) goalIdleCanvasDpr = dpr;
     else goalPopCanvasDpr = dpr;
     canvas.width = Math.round(width * dpr);
@@ -117,7 +140,7 @@ function clearCanvas(canvas, dpr) {
 }
 function drawGoalIdleCanvas(now) {
   const idleCanvas = document.getElementById('goalIdleCanvas');
-  if (!idleCanvas || !goalPlaced) {
+  if (!idleCanvas || !goalPlaced || !appSceneVisible) {
     goalIdleCanvasFrame = null;
     return;
   }
@@ -518,7 +541,8 @@ let decorationBrushSettings = {
 };
 const decorationFxState = {
   raf: 0,
-  beeActors: new Map()
+  beeActors: new Map(),
+  lottieRuntimeRequested: false
 };
 const decorationTouchCooldowns = new Map();
 let editorStylePanelOpen = false;
@@ -560,6 +584,7 @@ if (DEBUG_TOOLS_ENABLED && animationDebugVisible) {
 // ═══ UTILS ═══
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
+let fpsProbeRaf = 0;
 let fxAc;
 let backgroundMusicAudio = null;
 let backgroundMusicStarted = false;
@@ -567,6 +592,41 @@ let levelOneIntroAudio = null;
 let levelOneIntroBgmTimer = null;
 const BACKGROUND_MUSIC_VOLUME = 0.18;
 const LEVEL_ONE_INTRO_VOLUME = 0.72;
+
+function startFpsProbe(label = 'scene', sampleMs = 2200) {
+  if (!appSceneVisible || fpsProbeRaf) return;
+  const startedAt = window.performance?.now?.() || Date.now();
+  let lastAt = startedAt;
+  let frames = 0;
+  let worstFrameMs = 0;
+
+  const step = now => {
+    frames += 1;
+    const delta = now - lastAt;
+    lastAt = now;
+    if (delta > worstFrameMs) worstFrameMs = delta;
+    if ((now - startedAt) >= sampleMs) {
+      fpsProbeRaf = 0;
+      const elapsed = Math.max(1, now - startedAt);
+      recordPerfMetric('fps-probe', 0, {
+        label,
+        frames,
+        avgFps: Math.round((frames * 1000) / elapsed),
+        worstFrameMs: Math.round(worstFrameMs * 100) / 100
+      });
+      return;
+    }
+    fpsProbeRaf = requestAnimationFrame(step);
+  };
+
+  fpsProbeRaf = requestAnimationFrame(step);
+}
+
+function stopFpsProbe() {
+  if (!fpsProbeRaf) return;
+  cancelAnimationFrame(fpsProbeRaf);
+  fpsProbeRaf = 0;
+}
 const BACKGROUND_MUSIC_STORAGE_KEY = 'boks-bgm-enabled';
 const BACKGROUND_MUSIC_VOLUME_STORAGE_KEY = 'boks-bgm-volume';
 const SOUND_EFFECTS_STORAGE_KEY = 'boks-sfx-enabled';
@@ -2142,7 +2202,7 @@ function setupSpriteDrag() {
 }
 
 function setupGoalDrag() {
-  levelEditor.setupGoalDrag();
+  getLevelEditor()?.setupGoalDrag();
 }
 
 function normalizeLevelName(name = '') {
@@ -2489,6 +2549,22 @@ function stopBeeDecorationLoop() {
   }
 }
 
+function requestLottieRuntimeForDecor() {
+  if (decorationFxState.lottieRuntimeRequested) return;
+  const loader = window.BOKS_RUNTIME_CONFIG?.ensureLottieRuntime;
+  if (typeof loader !== 'function') return;
+  decorationFxState.lottieRuntimeRequested = true;
+  loader()
+    .catch(() => false)
+    .finally(() => {
+      decorationFxState.lottieRuntimeRequested = false;
+      if (appSceneVisible && decorationFxState.beeActors.size) {
+        updateBeeDecorationActors();
+        startBeeDecorationLoop();
+      }
+    });
+}
+
 function pickBeeDecorationTarget(actor, metrics = getGridMetrics()) {
   if (!actor || !metrics) return;
   const bounds = getBeeFlightBounds(metrics);
@@ -2617,6 +2693,8 @@ function ensureBeeDecorationActor(entry, index = 0, globalIndex = index) {
       actor.animation = null;
       actor.mount.classList.remove('is-lottie-ready');
     }
+  } else if (prefersLottie && !window.lottie?.loadAnimation) {
+    requestLottieRuntimeForDecor();
   }
 
   return actor;
@@ -2698,9 +2776,9 @@ function updateBeeDecorationActors(now = window.performance?.now?.() || Date.now
 }
 
 function startBeeDecorationLoop() {
-  if (decorationFxState.raf || !decorationFxState.beeActors.size) return;
+  if (decorationFxState.raf || !decorationFxState.beeActors.size || !appSceneVisible) return;
   const step = now => {
-    if (!decorationFxState.beeActors.size) {
+    if (!decorationFxState.beeActors.size || !appSceneVisible) {
       stopBeeDecorationLoop();
       clearHeroBeeNearState();
       return;
@@ -4190,70 +4268,134 @@ function setAvailableBlocks(blocks = ['forward', 'right', 'left']) {
   });
   idN += blocks.length;
 }
-const editorSolver = window.BOKS_EDITOR_SOLVER({
-  getMainSlotEnabled: () => mainSlotEnabled,
-  getFnSlotEnabled: () => fnSlotEnabled,
-  setActiveMainSlots: value => { activeMainSlots = value; },
-  setActiveFnSlots: value => { activeFnSlots = value; },
-  getAvail: () => avail,
-  getBoardMeta: () => ({ cols: COLS, rows: ROWS }),
-  isBlockedCell,
-  getGoal: () => GOAL,
-  getPlayer: () => ({ pos, ori })
-});
-const levelEditor = window.BOKS_LEVEL_EDITOR({
-  isEditorMode: () => editorMode,
-  setEditorModeFlag: value => { editorMode = value; },
-  isBusy: () => running || animating,
-  getEditorBlockEnabled: () => editorBlockEnabled,
-  resetEditorBlockEnabled: () => {
-    editorBlockEnabled = { forward: false, left: false, right: false, function: false };
-  },
-  getMainSlotEnabled: () => mainSlotEnabled,
-  getFnSlotEnabled: () => fnSlotEnabled,
-  getProg: () => prog,
-  getFnProg: () => fnProg,
-  getActiveMainSlots: () => activeMainSlots,
-  getActiveFnSlots: () => activeFnSlots,
-  setSlotMasks,
-  setAvailableBlocks,
-  resetPrograms,
-  setFnUnlockHintActive: value => { fnUnlockHintActive = value; },
-  setStepStartHintActive: value => { stepStartHintActive = value; },
-  renderAvail: () => renderAvail(),
-  renderBoard: () => renderBoard(),
-  renderFn: () => renderFn(),
-  refreshEditorValues: () => refreshEditorValues(),
-  refreshEditorDebug: () => refreshEditorDebug(),
-  updateDebugBadge,
-  mkB,
-  bindDrag,
-  getPool: () => POOL,
-  getAvail: () => avail,
-  goalSVG,
-  initGrid,
-  drawBackground,
-  syncSprite,
-  isBlockedCell,
-  hasGoal: () => goalPlaced,
-  getPlayer: () => ({ pos, ori }),
-  setGoal: value => { GOAL = value; }
-});
+let editorSolver = null;
+let levelEditor = null;
+let editorSupportReady = false;
+let editorSupportPromise = null;
+
+function createEditorSolver() {
+  if (!window.BOKS_EDITOR_SOLVER) return null;
+  return window.BOKS_EDITOR_SOLVER({
+    getMainSlotEnabled: () => mainSlotEnabled,
+    getFnSlotEnabled: () => fnSlotEnabled,
+    setActiveMainSlots: value => { activeMainSlots = value; },
+    setActiveFnSlots: value => { activeFnSlots = value; },
+    getAvail: () => avail,
+    getBoardMeta: () => ({ cols: COLS, rows: ROWS }),
+    isBlockedCell,
+    getGoal: () => GOAL,
+    getPlayer: () => ({ pos, ori })
+  });
+}
+
+function createLevelEditor() {
+  if (!window.BOKS_LEVEL_EDITOR) return null;
+  return window.BOKS_LEVEL_EDITOR({
+    isEditorMode: () => editorMode,
+    setEditorModeFlag: value => { editorMode = value; },
+    isBusy: () => running || animating,
+    getEditorBlockEnabled: () => editorBlockEnabled,
+    resetEditorBlockEnabled: () => {
+      editorBlockEnabled = { forward: false, left: false, right: false, function: false };
+    },
+    getMainSlotEnabled: () => mainSlotEnabled,
+    getFnSlotEnabled: () => fnSlotEnabled,
+    getProg: () => prog,
+    getFnProg: () => fnProg,
+    getActiveMainSlots: () => activeMainSlots,
+    getActiveFnSlots: () => activeFnSlots,
+    setSlotMasks,
+    setAvailableBlocks,
+    resetPrograms,
+    setFnUnlockHintActive: value => { fnUnlockHintActive = value; },
+    setStepStartHintActive: value => { stepStartHintActive = value; },
+    renderAvail: () => renderAvail(),
+    renderBoard: () => renderBoard(),
+    renderFn: () => renderFn(),
+    refreshEditorValues: () => refreshEditorValues(),
+    refreshEditorDebug: () => refreshEditorDebug(),
+    updateDebugBadge,
+    mkB,
+    bindDrag,
+    getPool: () => POOL,
+    getAvail: () => avail,
+    goalSVG,
+    initGrid,
+    drawBackground,
+    syncSprite,
+    isBlockedCell,
+    hasGoal: () => goalPlaced,
+    getPlayer: () => ({ pos, ori }),
+    setGoal: value => { GOAL = value; }
+  });
+}
+
+function getEditorSolver() {
+  if (!editorSolver && window.BOKS_EDITOR_SOLVER) {
+    editorSolver = createEditorSolver();
+  }
+  return editorSolver;
+}
+
+function getLevelEditor() {
+  if (!levelEditor && window.BOKS_LEVEL_EDITOR) {
+    levelEditor = createLevelEditor();
+  }
+  return levelEditor;
+}
+
+function prepareEditorUi() {
+  if (!LEVEL_EDITOR_ENABLED) return;
+  const initialLevels = readCustomLevels();
+  if (!selectedEditorLevelId && initialLevels.length) selectedEditorLevelId = initialLevels[0].id;
+  renderCustomLevels();
+  renderElementPalette();
+  renderIconPicker();
+}
+
+async function ensureEditorSupportLoaded() {
+  if (!LEVEL_EDITOR_ENABLED) return false;
+  if (editorSupportReady) return true;
+  if (editorSupportPromise) return editorSupportPromise;
+  const loader = window.BOKS_RUNTIME_CONFIG?.ensureEditorSupport;
+  editorSupportPromise = (async () => {
+    markPerfMetricStart('editor-support-ready');
+    if (typeof loader === 'function') {
+      await loader();
+    }
+    editorSolver = getEditorSolver();
+    levelEditor = getLevelEditor();
+    setupGoalDrag();
+    setupEditorElementPlacement();
+    prepareEditorUi();
+    editorSupportReady = true;
+    markPerfMetricEnd('editor-support-ready', { type: 'editor' });
+    return true;
+  })().finally(() => {
+    editorSupportPromise = null;
+  });
+  return editorSupportPromise;
+}
 function countEnabledMainSlots() {
-  return editorSolver.countEnabledMainSlots();
+  const solver = getEditorSolver();
+  return solver ? solver.countEnabledMainSlots() : activeMainSlots;
 }
 
 function countEnabledFnSlots() {
-  return editorSolver.countEnabledFnSlots();
+  const solver = getEditorSolver();
+  return solver ? solver.countEnabledFnSlots() : activeFnSlots;
 }
 
 function refreshEditorValues() {
-  editorSolver.refreshEditorValues();
+  const solver = getEditorSolver();
+  if (!solver) return;
+  solver.refreshEditorValues();
 }
 
 function countEditorSolutions() {
   if (!playerPlaced || !goalPlaced) return 0;
-  return editorSolver.countEditorSolutions();
+  const solver = getEditorSolver();
+  return solver ? solver.countEditorSolutions() : 0;
 }
 
 function refreshEditorDebug() {
@@ -4266,16 +4408,16 @@ function refreshEditorDebug() {
 }
 
 function syncEditorAvailableBlocks() {
-  levelEditor.syncEditorAvailableBlocks();
+  getLevelEditor()?.syncEditorAvailableBlocks();
 }
 
 function toggleEditorBlock(dir) {
-  levelEditor.toggleEditorBlock(dir);
+  getLevelEditor()?.toggleEditorBlock(dir);
 }
 
 function setEditorMode(enabled) {
   if (!LEVEL_EDITOR_ENABLED && enabled) return;
-  levelEditor.setEditorMode(enabled);
+  getLevelEditor()?.setEditorMode(enabled);
   if (enabled) {
     setEditorStylePanelOpen(editorStylePanelOpen);
     refreshEditorDebug();
@@ -4296,7 +4438,7 @@ function setEditorMode(enabled) {
 }
 
 function toggleEditorSlot(zone, idx) {
-  levelEditor.toggleEditorSlot(zone, idx);
+  getLevelEditor()?.toggleEditorSlot(zone, idx);
 }
 function getTutorialSteps() {
   if (currentCustomLevel) return [];
@@ -4562,6 +4704,8 @@ function resetPlayerToStepStart() {
   syncSprite();
 }
 function applyTutorialStep(idx = 0) {
+  const perfLabel = `level-load:campaign:${idx}`;
+  markPerfMetricStart(perfLabel);
   const steps = getTutorialSteps();
   if (!steps.length) return false;
   tutorialStepIndex = ((idx % steps.length) + steps.length) % steps.length;
@@ -4612,10 +4756,14 @@ function applyTutorialStep(idx = 0) {
   syncFirstLevelOnboardingDelayForCurrentView();
   updateDebugBadge();
   renderElementPalette();
+  markPerfMetricEnd(perfLabel, { type: 'level', mode: 'campaign', levelIndex: tutorialStepIndex });
+  startFpsProbe(`campaign-${tutorialStepIndex}`);
   return true;
 }
 
 function applyCustomLevel(level, { openEditor = false } = {}) {
+  const perfLabel = `level-load:custom:${level?.id || 'unknown'}`;
+  markPerfMetricStart(perfLabel);
   const normalized = normalizeCustomLevel(level);
   firstLevelOnboardingStage = 'idle';
   clearFirstLevelOnboardingDelay();
@@ -4667,6 +4815,12 @@ function applyCustomLevel(level, { openEditor = false } = {}) {
   }
   updateDebugBadge();
   renderElementPalette();
+  markPerfMetricEnd(perfLabel, {
+    type: 'level',
+    mode: openEditor ? 'editor' : 'custom',
+    levelId: normalized.id
+  });
+  startFpsProbe(openEditor ? `editor-${normalized.id}` : `custom-${normalized.id}`);
 }
 
 function collectCurrentEditorLevel() {
@@ -5852,7 +6006,7 @@ function renderAvail() {
   const sz = 52;
 
   if (editorMode) {
-    levelEditor.renderEditorAvail(row, sz);
+    getLevelEditor()?.renderEditorAvail(row, sz);
     return;
   }
 
@@ -6542,6 +6696,7 @@ async function run() {
 
 // ═══ INIT ═══
 async function init() {
+  markPerfMetricStart('game-init');
   await loadEditorLevelsSource();
   syncViewportHeight();
   currentLevel = 'level1';
@@ -6566,27 +6721,19 @@ async function init() {
       drawBackground();
       syncSprite();
       setupSpriteDrag();
-      setupGoalDrag();
-      setupEditorElementPlacement();
+      startFpsProbe('initial-scene');
     });
   }));
   updateDebugBadge();
   refreshEditorValues();
   updateRunAvailability();
-  if (LEVEL_EDITOR_ENABLED) {
-    const initialLevels = readCustomLevels();
-    if (!selectedEditorLevelId && initialLevels.length) selectedEditorLevelId = initialLevels[0].id;
-    renderCustomLevels();
-    renderElementPalette();
-    renderIconPicker();
-  }
+  markPerfMetricEnd('game-init', { type: 'startup' });
 }
 
 void init();
 
 function showStartGate() {
   document.body.classList.add('prestart');
-  if (LEVEL_EDITOR_ENABLED) renderCustomLevels();
   document.getElementById('startGate')?.classList.add('show');
   queueFirstLevelOnboardingSync();
 }
@@ -6603,6 +6750,7 @@ function dismissSplash() {
 function openAppFromGate({ openEditor = false, onOpen = null } = {}) {
   if (gameStarted) return;
   gameStarted = true;
+  markPerfMetricStart('app-open-to-interactive');
   const shouldOpenEditor = LEVEL_EDITOR_ENABLED && openEditor;
   const shouldPlayLevelOneIntro = !shouldOpenEditor && !currentCustomLevel && currentLevel === 'level1';
   const gate = document.getElementById('startGate');
@@ -6625,13 +6773,16 @@ function openAppFromGate({ openEditor = false, onOpen = null } = {}) {
     else setEditorMode(shouldOpenEditor);
     syncFirstLevelOnboardingDelayForCurrentView();
     queueFirstLevelOnboardingSync();
+    markPerfMetricEnd('app-open-to-interactive', { type: 'interactive', editor: shouldOpenEditor });
+    startFpsProbe(shouldOpenEditor ? 'editor-open' : 'game-open');
   }, gateFadeMs + backgroundHoldMs);
 }
 function startGameFromGate() {
   openAppFromGate({ openEditor: false });
 }
-function startEditorFromGate() {
+async function startEditorFromGate() {
   if (!LEVEL_EDITOR_ENABLED) return;
+  await ensureEditorSupportLoaded();
   openAppFromGate({ openEditor: true });
 }
 function returnToMainMenu() {
@@ -6683,20 +6834,21 @@ function updateQuickEditorButton() {
     editorMode ? 'Torna al livello in gioco' : 'Apri editor con il livello corrente'
   );
 }
-function toggleEditorFromCurrentLevel() {
+async function toggleEditorFromCurrentLevel() {
   if (!LEVEL_EDITOR_ENABLED) return;
   if (editorMode) {
     exitEditorMode();
     return;
   }
-  enterEditorFromCurrentLevel();
+  await enterEditorFromCurrentLevel();
 }
-function enterEditorFromCurrentLevel() {
+async function enterEditorFromCurrentLevel() {
   if (!LEVEL_EDITOR_ENABLED) return;
   if (running || animating) {
     toast('Aspetta che il movimento finisca');
     return;
   }
+  await ensureEditorSupportLoaded();
   closeSaveLevelModal();
   if (currentCustomLevel) {
     applyCustomLevel(currentCustomLevel, { openEditor: true });
@@ -6845,54 +6997,65 @@ document.addEventListener('keydown', e => {
   }
 });
 
-window.addEventListener('resize', () => {
-  syncViewportHeight();
-  renderAvail();
-  requestAnimationFrame(() => {
-    sizeGrid();
-    renderBoard();
-    renderFn();
-    drawBackground();
-    syncSprite();
-    refreshEditorDebug();
-    queueFirstLevelOnboardingSync();
-  });
-});
-window.visualViewport?.addEventListener('resize', syncViewportHeight);
-window.visualViewport?.addEventListener('scroll', syncViewportHeight);
-window.addEventListener('orientationchange', syncViewportHeight);
 updateQuickEditorButton();
 updateStyleEditorButtons();
 syncSettingsPanelUi();
 window.BOKS_PREVIEW_ENDING = () => previewEndingCinematic();
 
-function refreshSceneAfterAppResume() {
-  syncViewportHeight();
-  renderAvail();
-  requestAnimationFrame(() => {
+let sceneRefreshRaf = 0;
+function scheduleSceneRefresh({ syncOnboarding = true, label = 'scene-refresh' } = {}) {
+  if (sceneRefreshRaf) return;
+  sceneRefreshRaf = requestAnimationFrame(() => {
+    sceneRefreshRaf = 0;
+    syncViewportHeight();
+    renderAvail();
     sizeGrid();
     renderBoard();
     renderFn();
     drawBackground();
     syncSprite();
     refreshEditorDebug();
-    syncFirstLevelOnboardingDelayForCurrentView();
-    queueFirstLevelOnboardingSync();
+    if (syncOnboarding) {
+      syncFirstLevelOnboardingDelayForCurrentView();
+      queueFirstLevelOnboardingSync();
+    }
+    startFpsProbe(label);
   });
+}
+
+function refreshSceneAfterAppResume() {
+  ensureGoalIdleCanvasLoop();
+  renderGridDecorations();
+  scheduleSceneRefresh({ label: 'resume' });
 }
 
 // ri-entra in fullscreen se l'utente torna sull'app (es. dopo notifica)
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') {
+  appSceneVisible = document.visibilityState === 'visible';
+  if (appSceneVisible) {
     if (gameStarted) {
       resumeBackgroundMusicLoop();
       requestAppFullscreen();
     }
+    ensureGoalIdleCanvasLoop();
+    renderGridDecorations();
     refreshSceneAfterAppResume();
   } else {
+    stopFpsProbe();
+    stopBeeDecorationLoop();
+    if (goalIdleCanvasFrame) {
+      cancelAnimationFrame(goalIdleCanvasFrame);
+      goalIdleCanvasFrame = null;
+    }
     pauseBackgroundMusicLoop();
   }
 });
 window.addEventListener('pageshow', () => {
   refreshSceneAfterAppResume();
 });
+window.addEventListener('resize', () => {
+  scheduleSceneRefresh({ syncOnboarding: true, label: 'resize' });
+});
+window.visualViewport?.addEventListener('resize', () => scheduleSceneRefresh({ syncOnboarding: false, label: 'viewport' }));
+window.visualViewport?.addEventListener('scroll', () => scheduleSceneRefresh({ syncOnboarding: false, label: 'viewport' }));
+window.addEventListener('orientationchange', () => scheduleSceneRefresh({ syncOnboarding: true, label: 'orientation' }));

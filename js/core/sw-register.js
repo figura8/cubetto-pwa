@@ -8,15 +8,30 @@
       return;
     }
 
-    window.addEventListener('load', async () => {
+    let lastUpdateCheckAt = 0;
+    function maybeUpdateRegistration(registration, minIntervalMs = 5 * 60 * 1000) {
+      const now = Date.now();
+      if (!registration || (now - lastUpdateCheckAt) < minIntervalMs) return;
+      lastUpdateCheckAt = now;
+      registration.update().catch(() => {});
+    }
+
+    function scheduleRegistration(task) {
+      if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(task, { timeout: 2500 });
+        return;
+      }
+      window.setTimeout(task, 1200);
+    }
+
+    window.addEventListener('load', () => {
+      scheduleRegistration(async () => {
       try {
         const reg = await navigator.serviceWorker.register('service-worker.js', {
           updateViaCache: 'none'
         });
 
-        // Force periodic update checks while testing packaged app builds.
-        reg.update();
-        setInterval(() => reg.update(), 30000);
+        maybeUpdateRegistration(reg, 0);
 
         if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
         reg.addEventListener('updatefound', () => {
@@ -35,8 +50,15 @@
           refreshing = true;
           window.location.reload();
         });
+
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            maybeUpdateRegistration(reg);
+          }
+        });
       } catch (err) {
         console.error('Service worker registration failed:', err);
       }
+      });
     });
   }

@@ -357,28 +357,35 @@
     }
 
     async function loadEditorLevelsSource() {
-      let projectLevels = [];
-
-      try {
-        const response = await fetch(api.editorLevelsFilePath, { cache: 'no-store' });
-        if (response.ok) {
+      async function fetchProjectLevels() {
+        try {
+          const response = await fetch(api.editorLevelsFilePath, { cache: 'no-cache' });
+          if (!response.ok) return [];
           const levels = extractLevels(await response.json());
-          if (levels.length) {
-            projectLevelsSeed = levels.map(normalizeCustomLevel);
-            writeStoredLevels(api.projectLevelsCacheKey, levels);
-            projectLevels = levels.map(normalizeCustomLevel);
-          }
+          if (!levels.length) return [];
+          projectLevelsSeed = levels.map(normalizeCustomLevel);
+          writeStoredLevels(api.projectLevelsCacheKey, levels);
+          return levels.map(normalizeCustomLevel);
+        } catch (_) {
+          return [];
         }
-      } catch (_) {}
+      }
+
+      let projectLevels = [];
+      const cachedProjectLevels = readStoredLevels(api.projectLevelsCacheKey);
 
       if (api.preferProjectLevelsFile) {
-        if (projectLevels.length) {
-          setActiveLevels(projectLevels);
-          return;
-        }
-        const cachedProjectLevels = readStoredLevels(api.projectLevelsCacheKey);
         if (cachedProjectLevels.length) {
           setActiveLevels(cachedProjectLevels);
+          void fetchProjectLevels().then(levels => {
+            if (!levels.length) return;
+            editorLevelsCache = levels.map(normalizeCustomLevel);
+          });
+          return;
+        }
+        projectLevels = await fetchProjectLevels();
+        if (projectLevels.length) {
+          setActiveLevels(projectLevels);
           return;
         }
         return;
@@ -390,12 +397,11 @@
         return;
       }
 
+      projectLevels = await fetchProjectLevels();
       if (projectLevels.length) {
         setActiveLevels(projectLevels);
         return;
       }
-
-      const cachedProjectLevels = readStoredLevels(api.projectLevelsCacheKey);
       if (cachedProjectLevels.length) {
         setActiveLevels(cachedProjectLevels);
         return;

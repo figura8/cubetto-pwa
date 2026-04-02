@@ -223,6 +223,12 @@
     return new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
   }
 
+  function requestLottieRuntime() {
+    const loader = window.BOKS_RUNTIME_CONFIG?.ensureLottieRuntime;
+    if (typeof loader !== 'function') return null;
+    return loader().catch(() => false);
+  }
+
   function getPlaybackBounds(instance) {
     if (!instance || typeof instance.getDuration !== 'function') return null;
     const totalFrames = Number(instance.getDuration(true));
@@ -389,6 +395,13 @@
       wraps.forEach(wrap => {
         wrap.classList.add('is-unavailable');
       });
+      const pending = requestLottieRuntime();
+      if (pending) {
+        pending.then(isReady => {
+          if (!isReady || !root?.isConnected) return;
+          mountIn(root);
+        });
+      }
       return;
     }
 
