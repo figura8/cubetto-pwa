@@ -16,7 +16,13 @@ function getGridCell(x, y) {
 
 function moveGoal() {
   const old = document.querySelector('.goal-cell');
-  if(old) { old.classList.remove('goal-cell'); old.innerHTML = ''; old.style.position=''; old.style.overflow=''; }
+  if(old) {
+    old.classList.remove('is-annoyed');
+    old.classList.remove('goal-cell');
+    old.innerHTML = '';
+    old.style.position = '';
+    old.style.overflow = '';
+  }
   let nx, ny, attempts = 0;
   do {
     nx = Math.floor(Math.random()*COLS);
@@ -34,6 +40,7 @@ function moveGoal() {
     cell.classList.add('goal-cell');
     cell.style.position = 'relative';
     cell.style.overflow = 'visible';
+    applyGoalTapAnnoyanceState();
   }
   sizeGoalCanvasLayers();
 }
@@ -123,11 +130,24 @@ function drawGoalIdleCanvas(now) {
   clearCanvas(idleCanvas, goalIdleCanvasDpr);
   if ((window.performance?.now?.() || Date.now()) >= goalBubblePopUntil) {
     const t = now / 1000;
-    const driftY = Math.sin(t * 1.4) * 4.5;
+    const annoyanceProgress = getGoalTapAnnoyanceProgress();
+    const annoyanceWave = annoyanceProgress > 0
+      ? Math.sin(annoyanceProgress * Math.PI * 1.18)
+      : 0;
+    const annoyanceLift = annoyanceProgress > 0
+      ? Math.sin(annoyanceProgress * Math.PI) * 8.5
+      : 0;
+    const annoyanceSquashX = annoyanceProgress > 0
+      ? 1 + (annoyanceWave * 0.08)
+      : 1;
+    const annoyanceSquashY = annoyanceProgress > 0
+      ? 1 - (annoyanceWave * 0.1)
+      : 1;
+    const driftY = Math.sin(t * 1.4) * 4.5 - annoyanceLift;
     const driftX = Math.cos(t * 0.9) * 1.8;
-    const shellRx = 28 + Math.sin(t * 1.2) * 1.8;
-    const shellRy = 31 + Math.cos(t * 1.05) * 2.6;
-    const wobble = Math.sin(t * 2.1) * 0.08;
+    const shellRx = (28 + Math.sin(t * 1.2) * 1.8) * annoyanceSquashX;
+    const shellRy = (31 + Math.cos(t * 1.05) * 2.6) * annoyanceSquashY;
+    const wobble = (Math.sin(t * 2.1) * 0.08) + (annoyanceWave * 0.12);
     const glossShift = Math.sin(t * 1.7) * 3.2;
     const bubbleX = origin.x + driftX;
     const bubbleY = origin.y + driftY;
@@ -138,7 +158,7 @@ function drawGoalIdleCanvas(now) {
     glow.addColorStop(1, 'rgba(216,245,255,0)');
     ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(bubbleX, bubbleY, 54, 0, Math.PI * 2);
+    ctx.arc(bubbleX, bubbleY, 54 + (annoyanceWave * 3), 0, Math.PI * 2);
     ctx.fill();
 
     ctx.save();
@@ -338,7 +358,7 @@ async function popGoalBubble() {
   if (!goalCell || goalCell.classList.contains('is-popping')) return;
   triggerGoalCanvasPop();
   playBubblePopSfx();
-  await sleep(1200);
+  await sleep(GOAL_BUBBLE_POP_DURATION_MS);
 }
 let ori = 'right';
 const MOVE_MS = 650, TURN_MS = 520, STEP_MS = 180;
@@ -358,6 +378,16 @@ const FILE_HANDLE_DB_NAME = 'boks-file-handles';
 const FILE_HANDLE_STORE_NAME = 'handles';
 const EDITOR_LEVELS_FILE_HANDLE_KEY = 'editor-levels-project-file';
 const CUSTOM_LEVEL_THEME = 'level1';
+const BOKS_TOUCH_REBUKE_DURATION_MS = 560;
+const BOKS_TOUCH_REBUKE_COOLDOWN_MS = 950;
+const BOKS_GOAL_BUBBLE_LEAD_IN_MS = 90;
+const GOAL_BUBBLE_POP_DURATION_MS = 1200;
+const BOKS_GOAL_BUBBLE_EYE_REOPEN_LEAD_MS = 280;
+const GOAL_TAP_ANNOYANCE_DURATION_MS = 460;
+const GOAL_TAP_ANNOYANCE_COOLDOWN_MS = 700;
+const DECORATION_TOUCH_REACTION_DURATION_MS = 520;
+const DECORATION_TOUCH_REACTION_COOLDOWN_MS = 760;
+const DECORATION_TOUCH_SPRITE_INSET_RATIO = 0.04;
 const CUSTOM_ICONS = ['leaf', 'star', 'turtle', 'sun', 'moon', 'flower'];
   const DEFAULT_CHARACTER_ID = 'boks_green';
 const LOCKED_THEME_SCENE_VAR_KEYS = ['--scene-body-bg', '--bg-base'];
@@ -374,6 +404,61 @@ const EDITOR_THEME_COLOR_CONTROLS = [
   { key: '--obstacle-edge', label: 'Bordo mattoni' }
 ];
 const EDITOR_THEME_COLOR_KEYS = new Set(EDITOR_THEME_COLOR_CONTROLS.map(control => control.key));
+const DECORATION_BEE_LOTTIE_SRC = 'assets/animations/decor/bee_swarm_hover.json';
+const DECORATION_BEE_BASE_SIZE = 16;
+const DECORATION_BEE_PLAYBACK_SPEED = 2;
+const DECORATION_BEE_MAX_LOTTIE_ACTORS = 2;
+const DECORATION_LAYERS = ['ground', 'object', 'overlay'];
+const DECORATION_ERASE_TOOL = '__decor_erase__';
+const DECORATION_ASSET_DEFS = {
+  tree_small: {
+    label: 'Alberello',
+    layer: 'object',
+    hint: 'Scalabile e colorabile',
+    editable: true,
+    touchReactive: true,
+    touchHitbox: {
+      scaleX: 0.92,
+      scaleY: 0.9,
+      offsetY: 0.03
+    },
+    defaults: {
+      scale: 1,
+      foliageColor: '#5dae61',
+      trunkColor: '#8f6136'
+    }
+  },
+  daisy_flower: {
+    label: 'Margherita',
+    layer: 'object',
+    hint: 'Fiorellino decorativo leggero',
+    touchReactive: true,
+    touchHitbox: {
+      scaleX: 0.9,
+      scaleY: 0.9,
+      offsetY: 0.08
+    },
+    defaults: {
+      scale: 0.9
+    }
+  },
+  bee_hover: {
+    label: 'Api',
+    layer: 'overlay',
+    hint: 'Stormo decorativo con numero di istanze regolabile',
+    animated: true,
+    renderAboveSprite: true,
+    defaults: {
+      scale: 1,
+      count: 3
+    }
+  },
+  bridge: {
+    label: 'Ponte',
+    layer: 'overlay',
+    hint: 'Lo teniamo come placeholder visivo per ora'
+  }
+};
 const RUNTIME_CONFIG = window.BOKS_RUNTIME_CONFIG || {};
 const LEVEL_EDITOR_ENABLED = RUNTIME_CONFIG.editorEnabled !== false;
 const DEBUG_TOOLS_ENABLED = RUNTIME_CONFIG.debugToolsEnabled !== false;
@@ -425,6 +510,17 @@ const NEW_EDITOR_LEVEL_ID = '__new_editor_level__';
 let playerPlaced = true;
 let goalPlaced = true;
 let selectedElementTool = null;
+let selectedDecorationBrush = null;
+let activeLevelDecorations = [];
+let decorationBrushSettings = {
+  tree_small: { scale: 1, foliageColor: '#5dae61', trunkColor: '#8f6136' },
+  bee_hover: { scale: 1, count: 3 }
+};
+const decorationFxState = {
+  raf: 0,
+  beeActors: new Map()
+};
+const decorationTouchCooldowns = new Map();
 let editorStylePanelOpen = false;
 let pendingNewLevelThemeOverrides = {};
 let pendingNewLevelCharacterId = DEFAULT_CHARACTER_ID;
@@ -444,6 +540,14 @@ let activeWinFeedbackAt = 0;
 let scheduledWinFeedbackTimer = null;
 let endingCinematicPromise = null;
 let settingsOpen = false;
+let boksTouchRebukeUntil = 0;
+let boksTouchRebukeCooldownUntil = 0;
+let boksTouchRebukeTimer = null;
+let boksGoalBubbleImpactActive = false;
+let boksGoalBubbleEyeReopenTimer = null;
+let goalTapAnnoyanceUntil = 0;
+let goalTapAnnoyanceCooldownUntil = 0;
+let goalTapAnnoyanceTimer = null;
 document.body?.classList.add('prestart');
 document.body?.classList.toggle('debug-visible', DEBUG_TOOLS_ENABLED && debugVisible);
 if (DEBUG_TOOLS_ENABLED && animationDebugVisible) {
@@ -482,6 +586,12 @@ const AUDIO_PATHS = Object.freeze({
     gameplay: {
       stepMove: 'assets/audio/sfx/gameplay/step_move.mp3',
       errorAction: 'assets/audio/sfx/gameplay/error_action.mp3',
+      boksAnnoyed: 'assets/audio/sfx/gameplay/boks_annoyed.ogg',
+      decorRubberTap: [
+        'assets/audio/sfx/gameplay/decor_rubber_tap_01.ogg',
+        'assets/audio/sfx/gameplay/decor_rubber_tap_02.ogg'
+      ],
+      goalBubbleBounce: 'assets/audio/sfx/gameplay/goal_bubble_bounce.ogg',
       bubblePop: 'assets/audio/sfx/gameplay/bubble_pop_main.ogg',
       levelComplete: 'assets/audio/sfx/gameplay/level_complete_main.mp3'
     }
@@ -714,6 +824,17 @@ function playStepSfx() {
 }
 function playErrorSfx() {
   playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.errorAction, 0.3);
+}
+function playBoksAnnoyedSfx() {
+  playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.boksAnnoyed, 0.34);
+}
+function playDecorationRubberSfx() {
+  const variants = AUDIO_PATHS.sfx.gameplay.decorRubberTap;
+  const path = variants[Math.floor(Math.random() * variants.length)] || variants[0];
+  playUiAudioSfx(path, 0.26);
+}
+function playGoalBubbleBounceSfx() {
+  playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.goalBubbleBounce, 0.28);
 }
 function playBubblePopSfx() {
   playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.bubblePop, 0.26);
@@ -1404,6 +1525,7 @@ function mkB(block, w, h, cls='') {
 function initGrid() {
   const g = document.getElementById('gameGrid');
   g.innerHTML = '';
+  bindDecorationTapReactions();
   gridCellEls.forEach(row => row.fill(null));
   const lv = getLevel();
   for(let y=0; y<ROWS; y++) for(let x=0; x<COLS; x++) {
@@ -1419,10 +1541,12 @@ function initGrid() {
       c.classList.add('goal-cell');
       c.style.position = 'relative';
       c.style.overflow = 'visible';
+      bindGoalTapAnnoyance(c);
     }
     gridCellEls[y][x] = c;
     g.appendChild(c);
   }
+  renderGridDecorations();
   ensureGoalIdleCanvasLoop();
   sizeGoalCanvasLayers();
 }
@@ -1445,6 +1569,7 @@ function sizeGrid() {
   grid.style.width  = sq + 'px';
   grid.style.height = sq + 'px';
   wrap.style.height = sq + 'px'; // shrink wrap to exact grid size, no extra space
+  renderGridDecorations();
   sizeGoalCanvasLayers();
 }
 
@@ -1510,6 +1635,145 @@ function clearSpriteSwapTimer(spriteEl) {
   spriteEl._heroSwapTimer = null;
 }
 
+function clearBoksTouchRebukeTimer() {
+  if (!boksTouchRebukeTimer) return;
+  clearTimeout(boksTouchRebukeTimer);
+  boksTouchRebukeTimer = null;
+}
+
+function clearBoksGoalBubbleEyeReopenTimer() {
+  if (!boksGoalBubbleEyeReopenTimer) return;
+  clearTimeout(boksGoalBubbleEyeReopenTimer);
+  boksGoalBubbleEyeReopenTimer = null;
+}
+
+function getGoalCellEl() {
+  return document.querySelector('.goal-cell');
+}
+
+function clearGoalTapAnnoyanceTimer() {
+  if (!goalTapAnnoyanceTimer) return;
+  clearTimeout(goalTapAnnoyanceTimer);
+  goalTapAnnoyanceTimer = null;
+}
+
+function applyGoalTapAnnoyanceState() {
+  const goalCell = getGoalCellEl();
+  if (!goalCell) return;
+  goalCell.classList.toggle('is-annoyed', Date.now() < goalTapAnnoyanceUntil);
+}
+
+function clearGoalTapAnnoyanceState() {
+  goalTapAnnoyanceUntil = 0;
+  clearGoalTapAnnoyanceTimer();
+  const goalCell = getGoalCellEl();
+  if (goalCell) goalCell.classList.remove('is-annoyed');
+}
+
+function bindGoalTapAnnoyance(cell) {
+  if (!cell || cell.dataset.goalTapBound === 'true') return;
+  cell.dataset.goalTapBound = 'true';
+  const onInteract = () => {
+    triggerGoalTapAnnoyance();
+  };
+  cell.addEventListener('pointerdown', onInteract);
+  cell.addEventListener('click', onInteract);
+}
+
+function triggerGoalTapAnnoyance() {
+  const now = Date.now();
+  const goalCell = getGoalCellEl();
+  if (!goalCell || editorMode || !goalPlaced) return false;
+  if (goalCell.classList.contains('is-popping') || running || animating) return false;
+  if (now < goalTapAnnoyanceCooldownUntil) return false;
+  goalTapAnnoyanceUntil = now + GOAL_TAP_ANNOYANCE_DURATION_MS;
+  goalTapAnnoyanceCooldownUntil = now + GOAL_TAP_ANNOYANCE_COOLDOWN_MS;
+  applyGoalTapAnnoyanceState();
+  clearGoalTapAnnoyanceTimer();
+  goalTapAnnoyanceTimer = setTimeout(() => {
+    goalTapAnnoyanceUntil = 0;
+    applyGoalTapAnnoyanceState();
+    clearGoalTapAnnoyanceTimer();
+  }, GOAL_TAP_ANNOYANCE_DURATION_MS + 20);
+  playGoalBubbleBounceSfx();
+
+  return true;
+}
+
+function getGoalTapAnnoyanceProgress() {
+  if (!goalTapAnnoyanceUntil) return 0;
+  const remaining = goalTapAnnoyanceUntil - Date.now();
+  if (remaining <= 0) return 0;
+  return 1 - (remaining / GOAL_TAP_ANNOYANCE_DURATION_MS);
+}
+
+function getBoksHeroEl() {
+  return document.querySelector('#sprite .boks-hero');
+}
+
+function applyBoksTouchRebukeState() {
+  const hero = getBoksHeroEl();
+  if (!hero) return;
+  hero.dataset.touchRebuke = (Date.now() < boksTouchRebukeUntil) ? 'true' : 'false';
+}
+
+function applyBoksGoalBubbleImpactState() {
+  const hero = getBoksHeroEl();
+  if (!hero) return;
+  hero.dataset.goalBubbleImpact = boksGoalBubbleImpactActive ? 'true' : 'false';
+}
+
+function applyBoksReactionStates() {
+  applyBoksTouchRebukeState();
+  applyBoksGoalBubbleImpactState();
+}
+
+function clearBoksTouchRebukeState() {
+  boksTouchRebukeUntil = 0;
+  clearBoksTouchRebukeTimer();
+  const hero = getBoksHeroEl();
+  if (hero) hero.dataset.touchRebuke = 'false';
+}
+
+function clearBoksGoalBubbleImpactState() {
+  boksGoalBubbleImpactActive = false;
+  clearBoksGoalBubbleEyeReopenTimer();
+  const hero = getBoksHeroEl();
+  if (hero) hero.dataset.goalBubbleImpact = 'false';
+}
+
+function triggerBoksTouchRebuke() {
+  const now = Date.now();
+  if (editorMode || running || animating || !playerPlaced) return false;
+  if (now < boksTouchRebukeCooldownUntil) return false;
+  boksTouchRebukeUntil = now + BOKS_TOUCH_REBUKE_DURATION_MS;
+  boksTouchRebukeCooldownUntil = now + BOKS_TOUCH_REBUKE_COOLDOWN_MS;
+  applyBoksTouchRebukeState();
+  clearBoksTouchRebukeTimer();
+  boksTouchRebukeTimer = setTimeout(() => {
+    boksTouchRebukeUntil = 0;
+    applyBoksTouchRebukeState();
+    clearBoksTouchRebukeTimer();
+  }, BOKS_TOUCH_REBUKE_DURATION_MS + 20);
+  playBoksAnnoyedSfx();
+  return true;
+}
+
+function triggerBoksGoalBubbleImpact() {
+  if (!playerPlaced) return false;
+  boksGoalBubbleImpactActive = true;
+  applyBoksGoalBubbleImpactState();
+  return true;
+}
+
+function scheduleBoksGoalBubbleEyeReopen() {
+  clearBoksGoalBubbleEyeReopenTimer();
+  const delay = Math.max(120, GOAL_BUBBLE_POP_DURATION_MS - BOKS_GOAL_BUBBLE_EYE_REOPEN_LEAD_MS);
+  boksGoalBubbleEyeReopenTimer = setTimeout(() => {
+    clearBoksGoalBubbleImpactState();
+  }, delay);
+}
+
 function pruneSpriteHeroes(spriteEl) {
   if (!spriteEl) return null;
   const heroes = Array.from(spriteEl.querySelectorAll('.boks-hero'));
@@ -1540,6 +1804,8 @@ function applySpriteMarkup(spriteEl, markup, renderToken, { animate = true, pres
 function resetSpritePresentation() {
   const sprite = document.getElementById('sprite');
   setCharacterAction('idle');
+  clearBoksTouchRebukeState();
+  clearBoksGoalBubbleImpactState();
   if (sprite) {
     clearSpriteSwapTimer(sprite);
     window.BOKS_CHARACTER_RENDERER?.destroyIn?.(sprite);
@@ -1563,10 +1829,14 @@ function resetSpritePresentation() {
 function syncSprite(overrides = null) {
   const s = document.getElementById('sprite');
   if (!s) {
+    clearDecorationTouchCooldowns();
     updateAnimationDebugBadge();
     return;
   }
   if (!playerPlaced) {
+    clearDecorationTouchCooldowns();
+    clearBoksTouchRebukeState();
+    clearBoksGoalBubbleImpactState();
     clearSpriteSwapTimer(s);
     window.BOKS_CHARACTER_RENDERER?.destroyIn?.(s);
     delete s.dataset.heroRenderToken;
@@ -1582,6 +1852,7 @@ function syncSprite(overrides = null) {
   }
   const r = cellPos(pos.x, pos.y);
   if(!r) {
+    clearDecorationTouchCooldowns();
     updateAnimationDebugBadge();
     return;
   }
@@ -1599,11 +1870,16 @@ function syncSprite(overrides = null) {
   const renderToken = window.BOKS_CHARACTER_RENDERER?.getRenderToken?.(renderState) || '';
   if (renderToken && s.dataset.heroRenderToken === renderToken && s.innerHTML) {
     window.BOKS_CHARACTER_RENDERER?.mountIn?.(s);
+    applyBoksReactionStates();
+    if (!animating) requestAnimationFrame(() => triggerTouchedDecorationReactions());
     updateAnimationDebugBadge();
     return;
   }
   const markup = svgRobot(renderState);
   if (!markup) {
+    clearDecorationTouchCooldowns();
+    clearBoksTouchRebukeState();
+    clearBoksGoalBubbleImpactState();
     clearSpriteSwapTimer(s);
     window.BOKS_CHARACTER_RENDERER?.destroyIn?.(s);
     delete s.dataset.heroRenderToken;
@@ -1613,6 +1889,8 @@ function syncSprite(overrides = null) {
   }
   const preservePlayback = renderInfo?.resolved?.state?.restartPlayback !== true;
   applySpriteMarkup(s, markup, renderToken, { animate: true, preservePlayback });
+  applyBoksReactionStates();
+  if (!animating) requestAnimationFrame(() => triggerTouchedDecorationReactions());
   updateAnimationDebugBadge();
   requestAnimationFrame(() => updateAnimationDebugBadge());
 }
@@ -1720,6 +1998,8 @@ async function animTo(tx, ty) {
   const enteringGoal = goalPlaced && tx === GOAL.x && ty === GOAL.y;
   let popTimer = null;
   let popPromise = null;
+  let impactTimer = null;
+  let goalImpactTriggered = false;
   let fr = cellPos(pos.x, pos.y), to = cellPos(tx, ty);
   if(!fr || !to) {
     sizeGrid();
@@ -1751,18 +2031,31 @@ async function animTo(tx, ty) {
   );
   if (enteringGoal) {
     scheduleWinFeedback(1000);
+    const impactDelay = Math.max(20, Math.min(Math.round(MOVE_MS * 0.28), BOKS_GOAL_BUBBLE_LEAD_IN_MS));
+    impactTimer = setTimeout(() => {
+      goalImpactTriggered = triggerBoksGoalBubbleImpact();
+    }, impactDelay);
     const popDelay = Math.max(20, Math.round(MOVE_MS * 0.2));
     popTimer = setTimeout(() => {
       popPromise = popGoalBubble();
+      scheduleBoksGoalBubbleEyeReopen();
     }, popDelay);
   }
   await a.finished.catch(()=>{});
+  if (impactTimer) {
+    clearTimeout(impactTimer);
+    impactTimer = null;
+  }
   if (popTimer) {
     clearTimeout(popTimer);
     popTimer = null;
   }
+  if (enteringGoal && !goalImpactTriggered) {
+    triggerBoksGoalBubbleImpact();
+  }
   if (enteringGoal && !popPromise) {
     popPromise = popGoalBubble();
+    scheduleBoksGoalBubbleEyeReopen();
   }
   if (popPromise) {
     await popPromise;
@@ -1772,6 +2065,7 @@ async function animTo(tx, ty) {
   pos={x:tx,y:ty};
   setCharacterAction('idle');
   syncSprite();
+  triggerTouchedDecorationReactions();
   animating=false;
 }
 
@@ -1816,9 +2110,16 @@ function setupSpriteDrag() {
       }
     }
     syncSprite();
+    requestAnimationFrame(() => triggerTouchedDecorationReactions());
     refreshEditorDebug();
   }
   s.addEventListener('touchstart',e=>{
+    if (!editorMode) {
+      e.preventDefault();
+      e.stopPropagation();
+      triggerBoksTouchRebuke();
+      return;
+    }
     e.preventDefault(); e.stopPropagation();
     const t=e.touches[0]; if(!start(t.clientX,t.clientY)) return;
     const mm=e=>{e.preventDefault();move(e.touches[0].clientX,e.touches[0].clientY);};
@@ -1827,6 +2128,11 @@ function setupSpriteDrag() {
     s.addEventListener('touchend',mu,{passive:false});
   },{passive:false});
   s.addEventListener('mousedown',e=>{
+    if (!editorMode) {
+      e.preventDefault();
+      triggerBoksTouchRebuke();
+      return;
+    }
     e.preventDefault(); if(!start(e.clientX,e.clientY)) return;
     const mm=e=>move(e.clientX,e.clientY);
     const mu=e=>{end(e.clientX,e.clientY);document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
@@ -1970,6 +2276,797 @@ function elementPaletteIcon(type) {
   return '<svg viewBox="0 0 48 48" width="38" height="38" aria-hidden="true"><rect x="10" y="12" width="28" height="22" rx="5" fill="#c8a271" stroke="#8c6744" stroke-width="2.2"/><path d="M13 20h22M13 26h22" stroke="#8c6744" stroke-width="2" stroke-linecap="round" opacity="0.65"/></svg>';
 }
 
+function normalizeDecorationLayer(layer = 'object') {
+  const normalized = typeof layer === 'string' ? layer.trim().toLowerCase() : '';
+  return DECORATION_LAYERS.includes(normalized) ? normalized : 'object';
+}
+
+function resolveDecorationAssetId(assetId = '') {
+  const raw = typeof assetId === 'string' ? assetId.trim().toLowerCase() : '';
+  if (!raw) return '';
+  if (raw === 'bridge_h' || raw === 'bridge_v') return 'bridge';
+  if (raw === 'bee' || raw === 'ape' || raw === 'ape2' || raw === 'ambient_bee') return 'bee_hover';
+  return DECORATION_ASSET_DEFS[raw] ? raw : '';
+}
+
+function getDecorationAssetDef(assetId) {
+  const resolvedId = resolveDecorationAssetId(assetId);
+  return DECORATION_ASSET_DEFS[resolvedId] || null;
+}
+
+function getDecorationDefaultOptions(assetId) {
+  const def = getDecorationAssetDef(assetId);
+  return { ...(def?.defaults || {}) };
+}
+
+function getDecorationBrushOptions(assetId) {
+  const resolvedId = resolveDecorationAssetId(assetId);
+  return {
+    ...getDecorationDefaultOptions(resolvedId),
+    ...(decorationBrushSettings[resolvedId] || {})
+  };
+}
+
+function setDecorationBrushOptions(assetId, nextOptions = {}) {
+  const resolvedId = resolveDecorationAssetId(assetId);
+  if (!resolvedId) return;
+  decorationBrushSettings = {
+    ...decorationBrushSettings,
+    [resolvedId]: {
+      ...getDecorationDefaultOptions(resolvedId),
+      ...nextOptions
+    }
+  };
+}
+
+function getDecorationPreviewMarkup(assetId) {
+  return `<span class="cell-decoration-preview">${renderDecorationAssetMarkup({
+    asset: assetId,
+    ...getDecorationBrushOptions(assetId)
+  })}</span>`;
+}
+
+function normalizeDecorationCount(count, fallback = 1) {
+  const numeric = Number(count);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.max(1, Math.min(10, Math.round(numeric)));
+}
+
+function renderDecorationAssetMarkup(assetInput) {
+  const assetId = typeof assetInput === 'string'
+    ? resolveDecorationAssetId(assetInput)
+    : resolveDecorationAssetId(assetInput?.asset);
+  const options = typeof assetInput === 'string'
+    ? getDecorationBrushOptions(assetId)
+    : {
+      ...getDecorationDefaultOptions(assetId),
+      ...(assetInput || {})
+    };
+  switch (assetId) {
+    case 'tree_small': {
+      const foliage = parseColorToHex(options.foliageColor) || '#5dae61';
+      const foliageDark = shiftHexColor(foliage, -24);
+      const foliageLight = shiftHexColor(foliage, 18);
+      const trunk = parseColorToHex(options.trunkColor) || '#8f6136';
+      const trunkDark = shiftHexColor(trunk, -18);
+      return `<svg class="cell-decoration-svg" viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="24" cy="39" rx="12" ry="4" fill="rgba(45,84,31,0.22)"/><rect x="21" y="24" width="6" height="12" rx="2" fill="${trunk}"/><rect x="22" y="24" width="2" height="12" rx="1" fill="${trunkDark}" opacity="0.45"/><circle cx="24" cy="20" r="9" fill="${foliage}"/><circle cx="17" cy="23" r="7" fill="${foliageDark}"/><circle cx="31" cy="23" r="7" fill="${foliageLight}"/></svg>`;
+    }
+    case 'daisy_flower':
+      return '<svg class="cell-decoration-svg" viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="24" cy="39" rx="8.5" ry="2.8" fill="rgba(65,104,49,0.16)"/><path d="M24 23v13" stroke="#5e9b4f" stroke-width="2.8" stroke-linecap="round"/><path d="M23 30c-3.4-3.2-6.1-2.8-7.8-.6 3.6 1.8 6 1.8 7.8.6Z" fill="#77bc62"/><path d="M25 27.8c3.3-2.8 5.8-2.4 7.3-.3-3.1 1.6-5.4 1.5-7.3.3Z" fill="#6faf58"/><g fill="#fff8f3" stroke="#d8d1c8" stroke-width="0.75"><ellipse cx="24" cy="14.8" rx="3" ry="7.8"/><ellipse cx="24" cy="14.8" rx="3" ry="7.8" transform="rotate(45 24 14.8)"/><ellipse cx="24" cy="14.8" rx="3" ry="7.8" transform="rotate(90 24 14.8)"/><ellipse cx="24" cy="14.8" rx="3" ry="7.8" transform="rotate(135 24 14.8)"/></g><circle cx="24" cy="14.8" r="4.1" fill="#f0c441" stroke="#cc9a1b" stroke-width="1.1"/></svg>';
+    case 'bee_hover':
+      return '<svg class="cell-decoration-svg" viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="24" cy="26" rx="11" ry="8" fill="#f2c94c" stroke="#3d2b12" stroke-width="2"/><path d="M18 22h12M18 26h12M18 30h12" stroke="#3d2b12" stroke-width="1.8" stroke-linecap="round"/><circle cx="33" cy="24.5" r="1.7" fill="#3d2b12"/><ellipse cx="18.5" cy="17" rx="6.2" ry="4.1" fill="rgba(202,240,255,0.9)" stroke="rgba(88,143,168,0.9)" stroke-width="1.2"/><ellipse cx="29" cy="14.5" rx="6.2" ry="4.1" fill="rgba(202,240,255,0.9)" stroke="rgba(88,143,168,0.9)" stroke-width="1.2"/></svg>';
+    case 'bridge':
+      return '<svg class="cell-decoration-svg" viewBox="0 0 48 48" aria-hidden="true"><path d="M8 19h32v3H8zm0 10h32v3H8z" fill="#7c5431"/><path d="M10 16h4v18h-4zm8 1h4v16h-4zm8 0h4v16h-4zm8-1h4v18h-4z" fill="#c89157" stroke="#8a6038" stroke-width="0.8"/></svg>';
+    default:
+      return '<svg class="cell-decoration-svg" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="8" fill="#ddd"/></svg>';
+  }
+}
+
+function getGridMetrics() {
+  const wrap = document.getElementById('gridWrap');
+  const grid = document.getElementById('gameGrid');
+  const firstCell = getGridCell(0, 0);
+  if (!wrap || !grid || !firstCell) return null;
+  const wrapRect = wrap.getBoundingClientRect();
+  const gridRect = grid.getBoundingClientRect();
+  const cellRect = firstCell.getBoundingClientRect();
+  return {
+    wrapLeft: gridRect.left - wrapRect.left,
+    wrapTop: gridRect.top - wrapRect.top,
+    width: gridRect.width,
+    height: gridRect.height,
+    cellWidth: cellRect.width,
+    cellHeight: cellRect.height
+  };
+}
+
+function ensureGridDecorationLayer() {
+  const wrap = document.getElementById('gridWrap');
+  if (!wrap) return null;
+  let layer = document.getElementById('gridDecor');
+  if (!layer) {
+    layer = document.createElement('div');
+    layer.id = 'gridDecor';
+    layer.setAttribute('aria-hidden', 'true');
+    wrap.appendChild(layer);
+  }
+  return layer;
+}
+
+function ensureGridDecorationFxLayer() {
+  const wrap = document.getElementById('gridWrap');
+  if (!wrap) return null;
+  let layer = document.getElementById('gridDecorFx');
+  if (!layer) {
+    layer = document.createElement('div');
+    layer.id = 'gridDecorFx';
+    layer.setAttribute('aria-hidden', 'true');
+    wrap.appendChild(layer);
+  }
+  return layer;
+}
+
+function clearDecorationTouchCooldowns() {
+  decorationTouchCooldowns.clear();
+}
+
+function clamp01(value) {
+  return Math.max(0, Math.min(1, Number(value) || 0));
+}
+
+function buildBeeDecorationRuntimeMarkup() {
+  return `
+    <span class="grid-decoration-bee__fallback" aria-hidden="true">
+      ${renderDecorationAssetMarkup('bee_hover')}
+    </span>
+    <span class="grid-decoration-bee__lottie"></span>
+  `;
+}
+
+function getBeeDecorationCount(entry) {
+  return normalizeDecorationCount(entry?.count, 3);
+}
+
+function buildBeeDecorationActorId(entryId, index) {
+  return `${entryId}::${index}`;
+}
+
+function shouldUseLottieForBeeActor(globalIndex) {
+  return globalIndex < DECORATION_BEE_MAX_LOTTIE_ACTORS;
+}
+
+function getBeeDecorationActorSeed(index = 0) {
+  const golden = 0.61803398875;
+  return ((index + 1) * golden) % 1;
+}
+
+function getBeeSwarmSpread(entry, metrics = null) {
+  const count = getBeeDecorationCount(entry);
+  const cellUnitX = metrics?.width ? (metrics.cellWidth / metrics.width) : (1 / COLS);
+  const cellUnitY = metrics?.height ? (metrics.cellHeight / metrics.height) : (1 / ROWS);
+  const spreadFactor = 0.6 + (Math.sqrt(Math.max(1, count)) * 0.42);
+  return {
+    count,
+    radiusX: Math.min(0.34, cellUnitX * spreadFactor),
+    radiusY: Math.min(0.32, cellUnitY * (spreadFactor * 0.92))
+  };
+}
+
+function getBeeFlightBounds(metrics = null) {
+  if (!metrics) {
+    return {
+      minX: 0.06,
+      maxX: 0.94,
+      minY: 0.08,
+      maxY: 0.9
+    };
+  }
+  const marginX = Math.max(0.05, Math.min(0.11, (metrics.cellWidth * 0.45) / Math.max(metrics.width, 1)));
+  const marginY = Math.max(0.06, Math.min(0.12, (metrics.cellHeight * 0.45) / Math.max(metrics.height, 1)));
+  return {
+    minX: marginX,
+    maxX: 1 - marginX,
+    minY: marginY,
+    maxY: 1 - marginY
+  };
+}
+
+function clearHeroBeeNearState() {
+  const hero = document.querySelector('#sprite .boks-hero');
+  if (hero) hero.dataset.beeNear = 'false';
+}
+
+function destroyBeeDecorationActor(actor) {
+  if (!actor) return;
+  actor.animation?.destroy?.();
+  actor.mount?.remove?.();
+}
+
+function stopBeeDecorationLoop() {
+  if (decorationFxState.raf) {
+    window.cancelAnimationFrame(decorationFxState.raf);
+    decorationFxState.raf = 0;
+  }
+}
+
+function pickBeeDecorationTarget(actor, metrics = getGridMetrics()) {
+  if (!actor || !metrics) return;
+  const bounds = getBeeFlightBounds(metrics);
+  actor.startX = Number.isFinite(actor.x) ? actor.x : actor.homeX;
+  actor.startY = Number.isFinite(actor.y) ? actor.y : actor.homeY;
+  actor.targetX = bounds.minX + (Math.random() * (bounds.maxX - bounds.minX));
+  actor.targetY = bounds.minY + (Math.random() * (bounds.maxY - bounds.minY));
+  actor.legStart = window.performance?.now?.() || Date.now();
+  actor.legDuration = 1400 + Math.random() * 2200;
+}
+
+function ensureBeeDecorationActor(entry, index = 0, globalIndex = index) {
+  const layer = ensureGridDecorationFxLayer();
+  if (!layer || !entry?.id) return null;
+  const actorId = buildBeeDecorationActorId(entry.id, index);
+  let actor = decorationFxState.beeActors.get(actorId) || null;
+  const nextHomeX = Number.isFinite(entry.anchorX) ? entry.anchorX : (((entry.x ?? 0) + 0.5) / COLS);
+  const nextHomeY = Number.isFinite(entry.anchorY) ? entry.anchorY : (((entry.y ?? 0) + 0.5) / ROWS);
+  const nextScale = Number.isFinite(entry.scale) ? entry.scale : 1;
+  const swarm = getBeeSwarmSpread(entry, getGridMetrics());
+  const seed = getBeeDecorationActorSeed(index);
+  const orbitAngle = seed * Math.PI * 2;
+  const orbitDistance = swarm.count <= 1
+    ? 0
+    : (0.34 + ((index / Math.max(1, swarm.count - 1)) * 0.72));
+  const orbitRadiusX = swarm.radiusX * orbitDistance;
+  const orbitRadiusY = swarm.radiusY * orbitDistance;
+  const offsetX = Math.cos(orbitAngle) * orbitRadiusX;
+  const offsetY = Math.sin(orbitAngle) * orbitRadiusY;
+  const prefersLottie = shouldUseLottieForBeeActor(globalIndex);
+
+  if (!actor) {
+    const mount = document.createElement('span');
+    mount.className = 'grid-decoration grid-decoration--bee grid-decoration-layer--overlay';
+    mount.innerHTML = buildBeeDecorationRuntimeMarkup();
+    layer.appendChild(mount);
+    actor = {
+      id: actorId,
+      entryId: entry.id,
+      actorIndex: index,
+      globalIndex,
+      mount,
+      animation: null,
+      homeX: nextHomeX,
+      homeY: nextHomeY,
+      scale: nextScale,
+      swarmRadiusX: swarm.radiusX,
+      swarmRadiusY: swarm.radiusY,
+      offsetX,
+      offsetY,
+      x: clamp01(nextHomeX + offsetX),
+      y: clamp01(nextHomeY + offsetY),
+      startX: clamp01(nextHomeX + offsetX),
+      startY: clamp01(nextHomeY + offsetY),
+      targetX: clamp01(nextHomeX + offsetX),
+      targetY: clamp01(nextHomeY + offsetY),
+      legStart: 0,
+      legDuration: 0,
+      bobPhase: Math.random() * Math.PI * 2,
+      width: 0,
+      height: 0,
+      prefersLottie
+    };
+    decorationFxState.beeActors.set(actorId, actor);
+  } else if (
+    Math.abs(actor.homeX - nextHomeX) > 0.0005
+    || Math.abs(actor.homeY - nextHomeY) > 0.0005
+    || Math.abs((actor.swarmRadiusX || 0) - swarm.radiusX) > 0.002
+    || Math.abs((actor.swarmRadiusY || 0) - swarm.radiusY) > 0.002
+    || Math.abs((actor.offsetX || 0) - offsetX) > 0.002
+    || Math.abs((actor.offsetY || 0) - offsetY) > 0.002
+  ) {
+    actor.homeX = nextHomeX;
+    actor.homeY = nextHomeY;
+    actor.swarmRadiusX = swarm.radiusX;
+    actor.swarmRadiusY = swarm.radiusY;
+    actor.offsetX = offsetX;
+    actor.offsetY = offsetY;
+    actor.x = clamp01(nextHomeX + offsetX);
+    actor.y = clamp01(nextHomeY + offsetY);
+    actor.startX = clamp01(nextHomeX + offsetX);
+    actor.startY = clamp01(nextHomeY + offsetY);
+    actor.targetX = clamp01(nextHomeX + offsetX);
+    actor.targetY = clamp01(nextHomeY + offsetY);
+    actor.legStart = 0;
+  } else {
+    actor.homeX = nextHomeX;
+    actor.homeY = nextHomeY;
+    actor.swarmRadiusX = swarm.radiusX;
+    actor.swarmRadiusY = swarm.radiusY;
+    actor.offsetX = offsetX;
+    actor.offsetY = offsetY;
+  }
+
+  actor.entryId = entry.id;
+  actor.actorIndex = index;
+  actor.globalIndex = globalIndex;
+  actor.scale = nextScale;
+  actor.prefersLottie = prefersLottie;
+  actor.mount.dataset.id = actorId;
+  actor.mount.dataset.entryId = entry.id;
+  actor.mount.dataset.asset = entry.asset;
+  actor.mount.dataset.layer = entry.layer;
+  actor.mount.classList.toggle('grid-decoration-bee--lottie', prefersLottie);
+  actor.mount.classList.toggle('grid-decoration-bee--fallback-only', !prefersLottie);
+
+  if (!prefersLottie) {
+    actor.animation?.destroy?.();
+    actor.animation = null;
+    actor.mount.classList.remove('is-lottie-ready');
+  } else if (!actor.animation && window.lottie?.loadAnimation) {
+    try {
+      actor.animation = window.lottie.loadAnimation({
+        container: actor.mount.querySelector('.grid-decoration-bee__lottie'),
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        path: DECORATION_BEE_LOTTIE_SRC
+      });
+      actor.animation.setSpeed?.(DECORATION_BEE_PLAYBACK_SPEED);
+      actor.animation.addEventListener?.('DOMLoaded', () => {
+        actor.animation?.setSpeed?.(DECORATION_BEE_PLAYBACK_SPEED);
+      });
+      actor.mount.classList.add('is-lottie-ready');
+    } catch (_err) {
+      actor.animation = null;
+      actor.mount.classList.remove('is-lottie-ready');
+    }
+  }
+
+  return actor;
+}
+
+function updateBeeDecorationActors(now = window.performance?.now?.() || Date.now()) {
+  const metrics = getGridMetrics();
+  if (!metrics || !decorationFxState.beeActors.size) {
+    clearHeroBeeNearState();
+    return;
+  }
+
+  const hero = document.querySelector('#sprite .boks-hero');
+  const sprite = document.getElementById('sprite');
+  const wrap = document.getElementById('gridWrap');
+  const spriteRect = sprite?.getBoundingClientRect();
+  const wrapRect = wrap?.getBoundingClientRect();
+  let isHeroNearAnyBee = false;
+
+  decorationFxState.beeActors.forEach(actor => {
+    if (!actor?.mount?.isConnected) return;
+    if (actor.prefersLottie && !actor.animation && window.lottie?.loadAnimation) {
+      ensureBeeDecorationActor({
+        id: actor.entryId,
+        asset: 'bee_hover',
+        layer: 'overlay',
+        anchorX: actor.homeX,
+        anchorY: actor.homeY,
+        scale: actor.scale
+      }, actor.actorIndex, actor.globalIndex ?? actor.actorIndex);
+    }
+    if (!actor.legStart) pickBeeDecorationTarget(actor, metrics);
+
+    const elapsed = now - actor.legStart;
+    const rawProgress = actor.legDuration > 0 ? (elapsed / actor.legDuration) : 1;
+    const progress = clamp01(rawProgress);
+    const eased = 0.5 - (Math.cos(Math.PI * progress) * 0.5);
+    actor.x = actor.startX + ((actor.targetX - actor.startX) * eased);
+    actor.y = actor.startY + ((actor.targetY - actor.startY) * eased);
+
+    const width = Math.max(10, Math.round((DECORATION_BEE_BASE_SIZE - Math.min(actor.actorIndex, 4)) * actor.scale));
+    const height = width;
+    const localX = metrics.wrapLeft + (actor.x * metrics.width);
+    const localY = metrics.wrapTop + (actor.y * metrics.height);
+    const bob = Math.sin((now / 260) + actor.bobPhase) * 5;
+    const drift = Math.cos((now / 410) + actor.bobPhase) * 3;
+    const dx = actor.targetX - actor.startX;
+    const dy = actor.targetY - actor.startY;
+    const angle = (Math.atan2(dy, dx) * 180 / Math.PI) || 0;
+    const tilt = Math.sin((now / 520) + actor.bobPhase) * 6;
+
+    actor.mount.style.left = `${localX + drift}px`;
+    actor.mount.style.top = `${localY + bob}px`;
+    actor.mount.style.width = `${width}px`;
+    actor.mount.style.height = `${height}px`;
+    actor.mount.style.transform = `translate(-50%, -50%) rotate(${angle + tilt}deg)`;
+    actor.width = width;
+    actor.height = height;
+    actor.localX = localX + drift;
+    actor.localY = localY + bob;
+
+    if (hero && spriteRect && wrapRect) {
+      const spriteCenterX = (spriteRect.left - wrapRect.left) + (spriteRect.width * 0.5);
+      const spriteCenterY = (spriteRect.top - wrapRect.top) + (spriteRect.height * 0.42);
+      const dxHero = actor.localX - spriteCenterX;
+      const dyHero = actor.localY - spriteCenterY;
+      const isNear = Math.hypot(dxHero, dyHero) <= Math.max(46, spriteRect.width * 0.9);
+      if (isNear) isHeroNearAnyBee = true;
+    }
+
+    if (progress >= 1) {
+      pickBeeDecorationTarget(actor, metrics);
+    }
+  });
+
+  if (hero) {
+    hero.dataset.beeNear = isHeroNearAnyBee ? 'true' : 'false';
+  }
+}
+
+function startBeeDecorationLoop() {
+  if (decorationFxState.raf || !decorationFxState.beeActors.size) return;
+  const step = now => {
+    if (!decorationFxState.beeActors.size) {
+      stopBeeDecorationLoop();
+      clearHeroBeeNearState();
+      return;
+    }
+    decorationFxState.raf = window.requestAnimationFrame(step);
+    updateBeeDecorationActors(now);
+  };
+  decorationFxState.raf = window.requestAnimationFrame(step);
+}
+
+function syncBeeDecorationActors(entries = []) {
+  const nextIds = new Set();
+  entries.forEach(entry => {
+    const count = getBeeDecorationCount(entry);
+    for (let index = 0; index < count; index += 1) {
+      nextIds.add(buildBeeDecorationActorId(entry.id, index));
+    }
+  });
+  decorationFxState.beeActors.forEach((actor, id) => {
+    if (nextIds.has(id)) return;
+    destroyBeeDecorationActor(actor);
+    decorationFxState.beeActors.delete(id);
+  });
+
+  if (!entries.length) {
+    const layer = document.getElementById('gridDecorFx');
+    if (layer) layer.innerHTML = '';
+    clearHeroBeeNearState();
+    stopBeeDecorationLoop();
+    return;
+  }
+
+  let globalBeeIndex = 0;
+  entries.forEach(entry => {
+    const count = getBeeDecorationCount(entry);
+    for (let index = 0; index < count; index += 1) {
+      ensureBeeDecorationActor(entry, index, globalBeeIndex);
+      globalBeeIndex += 1;
+    }
+  });
+
+  updateBeeDecorationActors();
+  startBeeDecorationLoop();
+}
+
+function getDecorationFrame(entry, metrics = getGridMetrics()) {
+  if (!metrics) return null;
+  const scale = Number.isFinite(entry?.scale) ? entry.scale : 1;
+  const anchorX = Number.isFinite(entry?.anchorX)
+    ? entry.anchorX
+    : ((entry?.x ?? 0) + 0.5) / COLS;
+  const anchorY = Number.isFinite(entry?.anchorY)
+    ? entry.anchorY
+    : ((entry?.y ?? 0) + 0.82) / ROWS;
+  const anchorLeft = metrics.wrapLeft + (anchorX * metrics.width);
+  const anchorTop = metrics.wrapTop + (anchorY * metrics.height);
+  if (resolveDecorationAssetId(entry?.asset) === 'bee_hover') {
+    const width = Math.max(12, Math.round(DECORATION_BEE_BASE_SIZE * scale));
+    const height = width;
+    return {
+      left: anchorLeft - (width / 2),
+      top: anchorTop - (height / 2),
+      width,
+      height
+    };
+  }
+  if (resolveDecorationAssetId(entry?.asset) === 'bridge') {
+    const width = metrics.cellWidth * 1.18 * scale;
+    const height = metrics.cellHeight * 0.92 * scale;
+    return {
+      left: anchorLeft - (width / 2),
+      top: anchorTop - (height * 0.72),
+      width,
+      height
+    };
+  }
+  const width = metrics.cellWidth * scale;
+  const height = metrics.cellHeight * scale;
+  return {
+    left: anchorLeft - (width / 2),
+    top: anchorTop - (height * 0.88),
+    width,
+    height
+  };
+}
+
+function getInsetFrame(frame, insetRatioX = 0, insetRatioY = insetRatioX) {
+  if (!frame) return null;
+  const insetX = Math.max(0, frame.width * insetRatioX);
+  const insetY = Math.max(0, frame.height * insetRatioY);
+  const width = Math.max(8, frame.width - (insetX * 2));
+  const height = Math.max(8, frame.height - (insetY * 2));
+  return {
+    left: frame.left + ((frame.width - width) / 2),
+    top: frame.top + ((frame.height - height) / 2),
+    width,
+    height
+  };
+}
+
+function getDecorationTouchFrame(entry, metrics = getGridMetrics()) {
+  const frame = getDecorationFrame(entry, metrics);
+  if (!frame) return null;
+  const def = getDecorationAssetDef(entry?.asset);
+  const hitbox = def?.touchHitbox || {};
+  const scaleX = Number.isFinite(hitbox.scaleX) ? hitbox.scaleX : 1;
+  const scaleY = Number.isFinite(hitbox.scaleY) ? hitbox.scaleY : scaleX;
+  const width = Math.max(8, frame.width * scaleX);
+  const height = Math.max(8, frame.height * scaleY);
+  const offsetX = (Number(hitbox.offsetX) || 0) * frame.width;
+  const offsetY = (Number(hitbox.offsetY) || 0) * frame.height;
+  return {
+    left: frame.left + ((frame.width - width) / 2) + offsetX,
+    top: frame.top + ((frame.height - height) / 2) + offsetY,
+    width,
+    height
+  };
+}
+
+function framesIntersect(a, b) {
+  if (!a || !b) return false;
+  return (
+    a.left < (b.left + b.width)
+    && (a.left + a.width) > b.left
+    && a.top < (b.top + b.height)
+    && (a.top + a.height) > b.top
+  );
+}
+
+function getSpriteTouchFrame() {
+  const cellFrame = cellPos(pos.x, pos.y);
+  if (!cellFrame) return null;
+  const spriteFrame = spriteRectFromCellRect(cellFrame);
+  return getInsetFrame({
+    left: spriteFrame.l,
+    top: spriteFrame.t,
+    width: spriteFrame.w,
+    height: spriteFrame.h
+  }, DECORATION_TOUCH_SPRITE_INSET_RATIO);
+}
+
+function isReactiveDecoration(entry) {
+  const def = getDecorationAssetDef(entry?.asset);
+  return Boolean(def?.touchReactive && !def?.animated);
+}
+
+function isDecorationHostedInCell(entry, cellX, cellY) {
+  if (!Number.isInteger(cellX) || !Number.isInteger(cellY)) return false;
+  return Number.isInteger(entry?.x) && Number.isInteger(entry?.y) && entry.x === cellX && entry.y === cellY;
+}
+
+function isSpriteTouchingDecoration(entry, spriteFrame, metrics = getGridMetrics()) {
+  const decorationFrame = getDecorationTouchFrame(entry, metrics);
+  if (!decorationFrame || !spriteFrame) return false;
+  if (framesIntersect(spriteFrame, decorationFrame)) return true;
+  if (Number.isInteger(entry?.x) && Number.isInteger(entry?.y) && entry.x === pos.x && entry.y === pos.y) {
+    return true;
+  }
+  const spriteCenterX = spriteFrame.left + (spriteFrame.width / 2);
+  const spriteCenterY = spriteFrame.top + (spriteFrame.height / 2);
+  const decorCenterX = decorationFrame.left + (decorationFrame.width / 2);
+  const decorCenterY = decorationFrame.top + (decorationFrame.height / 2);
+  const threshold = Math.max(decorationFrame.width, decorationFrame.height) * 0.44;
+  return Math.hypot(decorCenterX - spriteCenterX, decorCenterY - spriteCenterY) <= threshold;
+}
+
+function pruneDecorationTouchCooldowns(now = (window.performance?.now?.() || Date.now())) {
+  decorationTouchCooldowns.forEach((expiresAt, entryId) => {
+    if (expiresAt <= now) {
+      decorationTouchCooldowns.delete(entryId);
+    }
+  });
+}
+
+function triggerDecorationReaction(entry, now = (window.performance?.now?.() || Date.now())) {
+  if (!isReactiveDecoration(entry)) return false;
+  const entryId = typeof entry?.id === 'string' ? entry.id : '';
+  if (!entryId) return false;
+  pruneDecorationTouchCooldowns(now);
+  if ((decorationTouchCooldowns.get(entryId) || 0) > now) return false;
+  decorationTouchCooldowns.set(entryId, now + DECORATION_TOUCH_REACTION_COOLDOWN_MS);
+  animateDecorationTouch(entry);
+  playDecorationRubberSfx();
+  return true;
+}
+
+function animateDecorationTouch(entry) {
+  const layer = document.getElementById('gridDecor');
+  if (!layer || !entry?.id) return;
+  const item = layer.querySelector(`.grid-decoration[data-id="${entry.id}"]`);
+  if (!item) return;
+  const visual = item.querySelector('.cell-decoration-svg') || item;
+  item.classList.remove('is-reacting');
+  void item.offsetWidth;
+  item.classList.add('is-reacting');
+  item.getAnimations().forEach(animation => animation.cancel());
+  visual.getAnimations().forEach(animation => animation.cancel());
+  visual.animate(
+    [
+      { transform: 'scale(1, 1) rotate(0deg)' },
+      { transform: 'scale(1.07, 0.9) rotate(-1deg)', offset: 0.26 },
+      { transform: 'scale(0.965, 1.045) rotate(0.9deg)', offset: 0.62 },
+      { transform: 'scale(1, 1) rotate(0deg)' }
+    ],
+    {
+      duration: DECORATION_TOUCH_REACTION_DURATION_MS,
+      easing: 'cubic-bezier(.22,.76,.24,1)',
+      fill: 'both'
+    }
+  );
+  window.setTimeout(() => item.classList.remove('is-reacting'), DECORATION_TOUCH_REACTION_DURATION_MS + 40);
+}
+
+function triggerTouchedDecorationReactions() {
+  if (!playerPlaced || !activeLevelDecorations.length) return;
+  const spriteFrame = getSpriteTouchFrame();
+  const metrics = getGridMetrics();
+  if (!spriteFrame || !metrics) return;
+  const now = window.performance?.now?.() || Date.now();
+  pruneDecorationTouchCooldowns(now);
+
+  activeLevelDecorations.forEach(entry => {
+    const touched = isDecorationHostedInCell(entry, pos.x, pos.y)
+      || isSpriteTouchingDecoration(entry, spriteFrame, metrics);
+    if (!touched) return;
+    triggerDecorationReaction(entry, now);
+  });
+}
+
+function bindDecorationTapReactions() {
+  const wrap = document.getElementById('gridWrap');
+  if (!wrap || wrap.dataset.decorationTapBound === 'true') return;
+  wrap.dataset.decorationTapBound = 'true';
+  wrap.addEventListener('pointerdown', e => {
+    if (!(activeLevelDecorations?.length)) return;
+    if (editorMode && (selectedDecorationBrush || selectedElementTool)) return;
+    const hit = getDecorationHitAtPoint(e.clientX, e.clientY);
+    if (!hit || !isReactiveDecoration(hit)) return;
+    if (triggerDecorationReaction(hit, window.performance?.now?.() || Date.now())) {
+      e.preventDefault();
+    }
+  });
+}
+
+function getGridPointerAnchor(clientX, clientY) {
+  const grid = document.getElementById('gameGrid');
+  if (!grid) return null;
+  const rect = grid.getBoundingClientRect();
+  if (!rect.width || !rect.height) return null;
+  const relX = (clientX - rect.left) / rect.width;
+  const relY = (clientY - rect.top) / rect.height;
+  return {
+    anchorX: Math.max(0, Math.min(1, Math.round(relX * 1000) / 1000)),
+    anchorY: Math.max(0, Math.min(1, Math.round(relY * 1000) / 1000))
+  };
+}
+
+function getDecorationHitAtPoint(clientX, clientY) {
+  const wrap = document.getElementById('gridWrap');
+  const metrics = getGridMetrics();
+  if (!wrap || !metrics) return null;
+  const wrapRect = wrap.getBoundingClientRect();
+  const localX = clientX - wrapRect.left;
+  const localY = clientY - wrapRect.top;
+  const zIndexByLayer = { ground: 1, object: 2, overlay: 3 };
+  const sorted = activeLevelDecorations
+    .map((entry, index) => ({ entry, index }))
+    .sort((a, b) => {
+      const zA = zIndexByLayer[a.entry.layer] || 0;
+      const zB = zIndexByLayer[b.entry.layer] || 0;
+      if (zA !== zB) return zA - zB;
+      return a.index - b.index;
+    });
+
+  for (let idx = sorted.length - 1; idx >= 0; idx -= 1) {
+    const entry = sorted[idx].entry;
+    if (resolveDecorationAssetId(entry?.asset) === 'bee_hover') {
+      const actors = [...decorationFxState.beeActors.values()].filter(actor => actor.entryId === entry.id);
+      for (let actorIndex = actors.length - 1; actorIndex >= 0; actorIndex -= 1) {
+        const actor = actors[actorIndex];
+        const actorWidth = Number.isFinite(actor?.width) ? actor.width : DECORATION_BEE_BASE_SIZE;
+        const actorHeight = Number.isFinite(actor?.height) ? actor.height : DECORATION_BEE_BASE_SIZE;
+        const frame = Number.isFinite(actor?.localX) && Number.isFinite(actor?.localY)
+          ? {
+            left: actor.localX - (actorWidth / 2),
+            top: actor.localY - (actorHeight / 2),
+            width: actorWidth,
+            height: actorHeight
+          }
+          : getDecorationFrame(entry, metrics);
+        if (!frame) continue;
+        if (
+          localX >= frame.left
+          && localX <= frame.left + frame.width
+          && localY >= frame.top
+          && localY <= frame.top + frame.height
+        ) {
+          return entry;
+        }
+      }
+      continue;
+    }
+
+    const frame = getDecorationFrame(entry, metrics);
+    if (!frame) continue;
+    if (
+      localX >= frame.left
+      && localX <= frame.left + frame.width
+      && localY >= frame.top
+      && localY <= frame.top + frame.height
+    ) {
+      return entry;
+    }
+  }
+  return null;
+}
+
+function renderGridDecorations() {
+  const layer = ensureGridDecorationLayer();
+  const fxLayer = ensureGridDecorationFxLayer();
+  if (!layer) return;
+  layer.innerHTML = '';
+  if (fxLayer && !activeLevelDecorations.length) {
+    clearDecorationTouchCooldowns();
+    syncBeeDecorationActors([]);
+  }
+  if (!activeLevelDecorations.length) return;
+  const metrics = getGridMetrics();
+  if (!metrics) {
+    syncBeeDecorationActors([]);
+    return;
+  }
+
+  const zIndexByLayer = {
+    ground: 1,
+    object: 2,
+    overlay: 3
+  };
+  const beeEntries = [];
+
+  activeLevelDecorations.forEach(entry => {
+    const def = getDecorationAssetDef(entry.asset);
+    if (!def) return;
+    if (def.animated && resolveDecorationAssetId(entry.asset) === 'bee_hover') {
+      beeEntries.push(entry);
+      return;
+    }
+    const frame = getDecorationFrame(entry, metrics);
+    if (!frame) return;
+    const item = document.createElement('span');
+    item.className = `grid-decoration grid-decoration--${entry.asset} grid-decoration-layer--${entry.layer}`;
+    if (entry.id) item.dataset.id = entry.id;
+    item.dataset.asset = entry.asset;
+    item.dataset.layer = entry.layer;
+    item.style.left = `${frame.left}px`;
+    item.style.top = `${frame.top}px`;
+    item.style.width = `${frame.width}px`;
+    item.style.height = `${frame.height}px`;
+    item.style.zIndex = String(zIndexByLayer[entry.layer] || 1);
+    item.innerHTML = renderDecorationAssetMarkup(entry);
+    layer.appendChild(item);
+  });
+
+  syncBeeDecorationActors(beeEntries);
+}
+
 function normalizeThemeClassName(themeId) {
   return `theme-${String(themeId || CUSTOM_LEVEL_THEME).toLowerCase().replace(/[^a-z0-9_-]+/g, '-')}`;
 }
@@ -1994,6 +3091,15 @@ function parseColorToHex(value) {
   const g = clampColorChannel(Number(rgb[2]));
   const b = clampColorChannel(Number(rgb[3]));
   if (!Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) return null;
+  return `#${[r, g, b].map(channel => channel.toString(16).padStart(2, '0')).join('')}`;
+}
+
+function shiftHexColor(hex, amount = 0) {
+  const normalized = parseColorToHex(hex);
+  if (!normalized) return '#888888';
+  const r = clampColorChannel(parseInt(normalized.slice(1, 3), 16) + amount);
+  const g = clampColorChannel(parseInt(normalized.slice(3, 5), 16) + amount);
+  const b = clampColorChannel(parseInt(normalized.slice(5, 7), 16) + amount);
   return `#${[r, g, b].map(channel => channel.toString(16).padStart(2, '0')).join('')}`;
 }
 
@@ -2335,9 +3441,11 @@ async function applyCurrentStyleToSelectedLevel() {
   }
   renderCustomLevels();
   renderThemeEditorPanel();
-  toast(persistResult.projectFileSaved
-    ? 'Stile applicato e salvato nel progetto'
-    : 'Stile applicato in questa sessione');
+  toast(describePersistResult({
+    projectMessage: 'Stile applicato e salvato nel progetto',
+    browserMessage: 'Stile applicato e salvato nel browser',
+    sessionMessage: 'Stile applicato solo in questa sessione'
+  }, persistResult));
 }
 
 function resolveThemeLevelId(themeId) {
@@ -2605,6 +3713,7 @@ function buildCustomLevelThumbnail(level) {
 }
 
 const levelStorage = window.BOKS_LEVEL_STORAGE({
+  cols: COLS,
   customIcons: CUSTOM_ICONS,
   customLevelTheme: CUSTOM_LEVEL_THEME,
   editorLevelsFileHandleKey: EDITOR_LEVELS_FILE_HANDLE_KEY,
@@ -2619,7 +3728,9 @@ const levelStorage = window.BOKS_LEVEL_STORAGE({
   // Keep campaign levels aligned between main and live by treating the
   // project file as the canonical source in gameplay/editor boot.
   preferProjectLevelsFile: true,
+  rows: ROWS,
   resolveCharacterId,
+  resolveDecorationAssetId,
   slots: SLOTS
 });
 
@@ -2649,6 +3760,10 @@ function normalizeEnabledBlocks(source = {}) {
 
 function normalizeThemeOverrides(source = {}) {
   return levelStorage.normalizeThemeOverrides(source);
+}
+
+function normalizeLevelDecorations(source = []) {
+  return levelStorage.normalizeDecorations(source).filter(entry => !!getDecorationAssetDef(entry.asset));
 }
 
 function normalizeCustomLevel(level) {
@@ -2704,6 +3819,16 @@ async function loadEditorLevelsSource() {
 
 async function persistEditorLevels(levels, { promptIfMissing = false } = {}) {
   return levelStorage.persistEditorLevels(levels, { promptIfMissing });
+}
+
+function describePersistResult({
+  projectMessage = 'Salvato nel progetto',
+  browserMessage = 'Salvato nel browser',
+  sessionMessage = 'Salvato solo in questa sessione'
+} = {}, persistResult = {}) {
+  if (persistResult?.projectFileSaved) return projectMessage;
+  if (persistResult?.browserDraftSaved) return browserMessage;
+  return sessionMessage;
 }
 
 function syncEditorStateAfterLevelsChange(levels, { preferredLevelId = null } = {}) {
@@ -2791,9 +3916,11 @@ async function importEditorLevelsFromText(text) {
   syncEditorStateAfterLevelsChange(normalizedLevels, {
     preferredLevelId: normalizedLevels[0]?.id || null
   });
-  toast(persistResult.projectFileSaved
-    ? `Importati ${normalizedLevels.length} livelli nel progetto`
-    : `Importati ${normalizedLevels.length} livelli solo in questa sessione`);
+  toast(describePersistResult({
+    projectMessage: `Importati ${normalizedLevels.length} livelli nel progetto`,
+    browserMessage: `Importati ${normalizedLevels.length} livelli nel browser`,
+    sessionMessage: `Importati ${normalizedLevels.length} livelli solo in questa sessione`
+  }, persistResult));
   return true;
 }
 
@@ -2816,9 +3943,11 @@ async function resetEditorLevels() {
   syncEditorStateAfterLevelsChange(seeded, {
     preferredLevelId: getCampaignLevelIdForIndex(0)
   });
-  toast(persistResult.projectFileSaved
-    ? 'Livelli originali ripristinati nel progetto'
-    : 'Livelli originali ripristinati solo in questa sessione');
+  toast(describePersistResult({
+    projectMessage: 'Livelli originali ripristinati nel progetto',
+    browserMessage: 'Livelli originali ripristinati nel browser',
+    sessionMessage: 'Livelli originali ripristinati solo in questa sessione'
+  }, persistResult));
 }
 
 // ═══ PROCEDURAL BACKGROUND ═══
@@ -3450,6 +4579,7 @@ function applyTutorialStep(idx = 0) {
   fnUnlockHintActive = false;
   stepStartHintActive = shouldShowAvailableBlockGlow(step);
   selectedElementTool = null;
+  selectedDecorationBrush = null;
   const normalizedStart = normalizePoint(step.start);
   const normalizedGoal = normalizePoint(step.goal);
   playerPlaced = !!normalizedStart;
@@ -3460,6 +4590,7 @@ function applyTutorialStep(idx = 0) {
   animating = false;
   ori = step.startOri || 'right';
   setBlockedCells(step.obstacles || []);
+  activeLevelDecorations = normalizeLevelDecorations(step.decorations || []);
   setAvailableBlocks(step.availableBlocks || ['forward', 'right', 'left']);
   resetPrograms();
   initGrid();
@@ -3506,11 +4637,13 @@ function applyCustomLevel(level, { openEditor = false } = {}) {
   fnUnlockHintActive = false;
   stepStartHintActive = !!normalized.levelHints?.availableBlockGlow;
   selectedElementTool = null;
+  selectedDecorationBrush = null;
   mainSlotEnabled = normalizeSlotArray(normalized.mainSlotEnabled, SLOTS);
   fnSlotEnabled = normalizeSlotArray(normalized.fnSlotEnabled, FSLOTS);
   editorBlockEnabled = normalizeEnabledBlocks(normalized.enabledBlocks);
   refreshEditorValues();
   setBlockedCells(normalized.obstacles || []);
+  activeLevelDecorations = normalizeLevelDecorations(normalized.decorations || []);
   resetPrograms();
   setAvailableBlocks(Object.keys(editorBlockEnabled).filter(dir => editorBlockEnabled[dir]));
   editorMode = !!openEditor;
@@ -3550,6 +4683,7 @@ function collectCurrentEditorLevel() {
     goal: goalPlaced ? { ...GOAL } : null,
     startOri: ori,
     obstacles: parseBlockedCellsToArray(),
+    decorations: normalizeLevelDecorations(activeLevelDecorations),
     mainSlotEnabled: [...mainSlotEnabled],
     fnSlotEnabled: [...fnSlotEnabled],
     enabledBlocks: { ...editorBlockEnabled },
@@ -3673,6 +4807,249 @@ function renderEditorSetupControls(palette) {
   palette.appendChild(card);
 }
 
+function renderTreeBrushControls(card) {
+  if (!card || selectedDecorationBrush !== 'tree_small') return;
+  const treeOptions = getDecorationBrushOptions('tree_small');
+
+  const controls = document.createElement('div');
+  controls.className = 'editor-decor-controls';
+
+  const title = document.createElement('div');
+  title.className = 'editor-setup-title';
+  title.textContent = 'Editor alberello';
+  controls.appendChild(title);
+
+  const scaleWrap = document.createElement('label');
+  scaleWrap.className = 'editor-decor-control';
+  scaleWrap.innerHTML = `<span class="editor-decor-control-label">Scala</span><span class="editor-decor-control-value">${Math.round((treeOptions.scale || 1) * 100)}%</span>`;
+  const scaleInput = document.createElement('input');
+  scaleInput.type = 'range';
+  scaleInput.min = '70';
+  scaleInput.max = '180';
+  scaleInput.step = '5';
+  scaleInput.value = String(Math.round((treeOptions.scale || 1) * 100));
+  scaleInput.addEventListener('input', () => {
+    setDecorationBrushOptions('tree_small', {
+      ...getDecorationBrushOptions('tree_small'),
+      scale: Number(scaleInput.value) / 100
+    });
+    renderElementPalette();
+  });
+  scaleWrap.appendChild(scaleInput);
+  controls.appendChild(scaleWrap);
+
+  const foliageWrap = document.createElement('label');
+  foliageWrap.className = 'editor-decor-control editor-decor-control--color';
+  foliageWrap.innerHTML = '<span class="editor-decor-control-label">Chioma</span>';
+  const foliageInput = document.createElement('input');
+  foliageInput.type = 'color';
+  foliageInput.value = parseColorToHex(treeOptions.foliageColor) || '#5dae61';
+  foliageInput.addEventListener('input', () => {
+    setDecorationBrushOptions('tree_small', {
+      ...getDecorationBrushOptions('tree_small'),
+      foliageColor: foliageInput.value
+    });
+    renderElementPalette();
+  });
+  foliageWrap.appendChild(foliageInput);
+  controls.appendChild(foliageWrap);
+
+  const trunkWrap = document.createElement('label');
+  trunkWrap.className = 'editor-decor-control editor-decor-control--color';
+  trunkWrap.innerHTML = '<span class="editor-decor-control-label">Tronco</span>';
+  const trunkInput = document.createElement('input');
+  trunkInput.type = 'color';
+  trunkInput.value = parseColorToHex(treeOptions.trunkColor) || '#8f6136';
+  trunkInput.addEventListener('input', () => {
+    setDecorationBrushOptions('tree_small', {
+      ...getDecorationBrushOptions('tree_small'),
+      trunkColor: trunkInput.value
+    });
+    renderElementPalette();
+  });
+  trunkWrap.appendChild(trunkInput);
+  controls.appendChild(trunkWrap);
+
+  const note = document.createElement('div');
+  note.className = 'editor-setup-hint';
+  note.innerHTML = 'Dopo aver cambiato scala o colori, tocca la griglia per piazzare l alberello come se fosse un paint sopra la board.';
+  controls.appendChild(note);
+
+  card.appendChild(controls);
+}
+
+function renderBeeBrushControls(card) {
+  if (!card || selectedDecorationBrush !== 'bee_hover') return;
+  const beeOptions = getDecorationBrushOptions('bee_hover');
+  const placedBeeDecorations = activeLevelDecorations.filter(entry => resolveDecorationAssetId(entry.asset) === 'bee_hover');
+
+  const controls = document.createElement('div');
+  controls.className = 'editor-decor-controls';
+
+  const title = document.createElement('div');
+  title.className = 'editor-setup-title';
+  title.textContent = 'Editor api';
+  controls.appendChild(title);
+
+  const scaleWrap = document.createElement('label');
+  scaleWrap.className = 'editor-decor-control';
+  scaleWrap.innerHTML = `<span class="editor-decor-control-label">Scala</span><span class="editor-decor-control-value">${Math.round((beeOptions.scale || 1) * 100)}%</span>`;
+  const scaleInput = document.createElement('input');
+  scaleInput.type = 'range';
+  scaleInput.min = '70';
+  scaleInput.max = '160';
+  scaleInput.step = '5';
+  scaleInput.value = String(Math.round((beeOptions.scale || 1) * 100));
+  scaleInput.addEventListener('input', () => {
+    setDecorationBrushOptions('bee_hover', {
+      ...getDecorationBrushOptions('bee_hover'),
+      scale: Number(scaleInput.value) / 100
+    });
+    renderElementPalette();
+  });
+  scaleWrap.appendChild(scaleInput);
+  controls.appendChild(scaleWrap);
+
+  const countWrap = document.createElement('label');
+  countWrap.className = 'editor-decor-control';
+  countWrap.innerHTML = `<span class="editor-decor-control-label">Numero api</span><span class="editor-decor-control-value">${normalizeDecorationCount(beeOptions.count, 3)}</span>`;
+  const countInput = document.createElement('input');
+  countInput.type = 'range';
+  countInput.min = '1';
+  countInput.max = '10';
+  countInput.step = '1';
+  countInput.value = String(normalizeDecorationCount(beeOptions.count, 3));
+  countInput.addEventListener('input', () => {
+    setDecorationBrushOptions('bee_hover', {
+      ...getDecorationBrushOptions('bee_hover'),
+      count: normalizeDecorationCount(countInput.value, 3)
+    });
+    renderElementPalette();
+  });
+  countWrap.appendChild(countInput);
+  controls.appendChild(countWrap);
+
+  const note = document.createElement('div');
+  note.className = 'editor-setup-hint';
+  note.innerHTML = 'Piazzi uno stormo ancorato al punto cliccato. Per tenere leggero il livello, solo poche api usano Lottie completo e le altre restano istanze leggere.';
+  controls.appendChild(note);
+
+  if (placedBeeDecorations.length) {
+    const list = document.createElement('div');
+    list.className = 'editor-decor-list';
+
+    const listTitle = document.createElement('div');
+    listTitle.className = 'editor-setup-title';
+    listTitle.textContent = 'Stormi presenti';
+    list.appendChild(listTitle);
+
+    placedBeeDecorations.forEach((entry, index) => {
+      const item = document.createElement('div');
+      item.className = 'editor-decor-list-item';
+
+      const copy = document.createElement('div');
+      copy.className = 'editor-decor-list-copy';
+      const label = document.createElement('div');
+      label.className = 'editor-decor-list-label';
+      label.textContent = `Stormo ${index + 1}`;
+      const meta = document.createElement('div');
+      meta.className = 'editor-decor-list-meta';
+      meta.textContent = `${getBeeDecorationCount(entry)} api • origine ${Math.round((entry.anchorX || 0.5) * 100)}% x ${Math.round((entry.anchorY || 0.5) * 100)}%`;
+      copy.appendChild(label);
+      copy.appendChild(meta);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'editor-decor-remove';
+      removeBtn.textContent = 'Rimuovi';
+      removeBtn.addEventListener('click', () => {
+        activeLevelDecorations = normalizeLevelDecorations(
+          activeLevelDecorations.filter(candidate => candidate.id !== entry.id)
+        );
+        applyEditorBoardChanges();
+      });
+
+      item.appendChild(copy);
+      item.appendChild(removeBtn);
+      list.appendChild(item);
+    });
+
+    controls.appendChild(list);
+  }
+
+  card.appendChild(controls);
+}
+
+function renderDecorationPalette(palette) {
+  if (!palette || !editorMode) return;
+
+  const card = document.createElement('div');
+  card.className = 'editor-setup-card editor-decor-card';
+
+  const title = document.createElement('div');
+  title.className = 'editor-setup-title';
+  title.textContent = 'Decorazioni';
+  card.appendChild(title);
+
+  const hint = document.createElement('div');
+  hint.className = 'editor-setup-hint';
+  hint.innerHTML = 'Qui scegli gli elementi decorativi del livello: <strong>alberello</strong>, <strong>margherita</strong>, <strong>stormo di api</strong> con istanze regolabili e <strong>ponte</strong> placeholder.';
+  card.appendChild(hint);
+
+  const summary = document.createElement('div');
+  summary.className = 'editor-decor-summary';
+  summary.textContent = `${activeLevelDecorations.length} elementi decorativi nel livello`;
+  card.appendChild(summary);
+
+  const grid = document.createElement('div');
+  grid.className = 'editor-decor-grid';
+
+  const eraseBtn = document.createElement('button');
+  eraseBtn.type = 'button';
+  eraseBtn.className = 'element-tool decor-tool' + (selectedDecorationBrush === DECORATION_ERASE_TOOL ? ' active' : '');
+  eraseBtn.innerHTML = `
+    <span class="element-tool-icon decor-tool-icon decor-tool-icon--erase">
+      <svg viewBox="0 0 48 48" width="38" height="38" aria-hidden="true">
+        <path d="M12 28 24 12l14 14-12 12H12z" fill="#f6d3b7" stroke="#c48763" stroke-width="2"/>
+        <path d="M8 36h20" stroke="#996c52" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+    </span>
+    <span class="element-tool-label">Gomma</span>
+    <span class="element-tool-status">CLEAR</span>
+    <span class="element-tool-hint">Rimuove la decorazione sotto il punto cliccato</span>
+  `;
+  eraseBtn.addEventListener('click', () => {
+    selectedDecorationBrush = selectedDecorationBrush === DECORATION_ERASE_TOOL ? null : DECORATION_ERASE_TOOL;
+    selectedElementTool = null;
+    renderElementPalette();
+  });
+  grid.appendChild(eraseBtn);
+
+  Object.entries(DECORATION_ASSET_DEFS).forEach(([assetId, def]) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'element-tool decor-tool' + (selectedDecorationBrush === assetId ? ' active' : '');
+    btn.dataset.assetId = assetId;
+    btn.innerHTML = `
+      <span class="element-tool-icon decor-tool-icon">${getDecorationPreviewMarkup(assetId)}</span>
+      <span class="element-tool-label">${def.label}</span>
+      <span class="element-tool-status">${def.layer.toUpperCase()}</span>
+      <span class="element-tool-hint">${def.hint}</span>
+    `;
+    btn.addEventListener('click', () => {
+      selectedDecorationBrush = selectedDecorationBrush === assetId ? null : assetId;
+      selectedElementTool = null;
+      renderElementPalette();
+    });
+    grid.appendChild(btn);
+  });
+
+  renderTreeBrushControls(card);
+  renderBeeBrushControls(card);
+  card.appendChild(grid);
+  palette.appendChild(card);
+}
+
 function renderElementPalette() {
   const panel = document.getElementById('elementPalettePanel');
   const palette = document.getElementById('elementPalette');
@@ -3733,10 +5110,12 @@ function renderElementPalette() {
     `;
     btn.addEventListener('click', () => {
       selectedElementTool = selectedElementTool === tool.key ? null : tool.key;
+      selectedDecorationBrush = null;
       renderElementPalette();
     });
     palette.appendChild(btn);
   });
+  renderDecorationPalette(palette);
   renderEditorSetupControls(palette);
   renderThemeEditorPanel();
 }
@@ -3975,12 +5354,14 @@ function startBlankEditorLevel() {
   playerPlaced = false;
   goalPlaced = false;
   selectedElementTool = null;
+  selectedDecorationBrush = null;
   START = { x: 2, y: 2 };
   GOAL = { x: 5, y: 5 };
   pos = { ...START };
   ori = 'right';
   setCharacterAction('idle');
   setBlockedCells([]);
+  activeLevelDecorations = [];
   resetPrograms();
   mainSlotEnabled = Array(SLOTS).fill(false);
   fnSlotEnabled = Array(FSLOTS).fill(false);
@@ -4050,12 +5431,54 @@ function setupEditorElementPlacement() {
     moveBrick(startX, startY, toX, toY);
   }
 
+  function updateDecorations(nextDecorations) {
+    activeLevelDecorations = normalizeLevelDecorations(nextDecorations);
+    applyEditorBoardChanges();
+  }
+
+  function placeDecorationAtPoint(clientX, clientY, assetId) {
+    const def = getDecorationAssetDef(assetId);
+    if (!def) return false;
+    const anchor = getGridPointerAnchor(clientX, clientY);
+    if (!anchor) return false;
+    const layer = normalizeDecorationLayer(def.layer);
+    const options = getDecorationBrushOptions(assetId);
+    const next = [
+      ...activeLevelDecorations,
+      {
+        id: `decor-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        asset: resolveDecorationAssetId(assetId),
+        layer,
+        ...anchor,
+        ...options
+      }
+    ];
+    updateDecorations(next);
+    return true;
+  }
+
+  function eraseDecorationAtPoint(clientX, clientY) {
+    const hit = getDecorationHitAtPoint(clientX, clientY);
+    if (!hit) return false;
+    updateDecorations(activeLevelDecorations.filter(entry => entry.id !== hit.id));
+    return true;
+  }
+
   grid.addEventListener('click', e => {
     if (!editorMode || running || animating) return;
     if (suppressNextClick) {
       suppressNextClick = false;
       return;
     }
+    if (selectedDecorationBrush) {
+      if (selectedDecorationBrush === DECORATION_ERASE_TOOL) {
+        eraseDecorationAtPoint(e.clientX, e.clientY);
+      } else {
+        placeDecorationAtPoint(e.clientX, e.clientY, selectedDecorationBrush);
+      }
+      return;
+    }
+
     const cell = e.target?.closest('.cell');
     if (!cell) return;
 
@@ -4118,6 +5541,7 @@ function setupEditorElementPlacement() {
   });
 
   grid.addEventListener('touchstart', e => {
+    if (selectedDecorationBrush || (selectedElementTool && selectedElementTool !== 'brick')) return;
     const cell = e.target?.closest('.cell.obstacle-cell');
     if (!cell) return;
     const startX = Number(cell.dataset.cx);
@@ -4145,6 +5569,7 @@ function setupEditorElementPlacement() {
   }, { passive: false });
 
   grid.addEventListener('mousedown', e => {
+    if (selectedDecorationBrush || (selectedElementTool && selectedElementTool !== 'brick')) return;
     const cell = e.target?.closest('.cell.obstacle-cell');
     if (!cell) return;
     const startX = Number(cell.dataset.cx);
@@ -4221,9 +5646,11 @@ async function saveCurrentEditorLevel() {
     applyCustomLevel(newLevel, { openEditor: true });
     renderCustomLevels();
     renderElementPalette();
-    toast(persistResult.projectFileSaved
-      ? 'Livello salvato nel progetto: ora puoi fare commit'
-      : 'Livello salvato solo in questa sessione');
+    toast(describePersistResult({
+      projectMessage: 'Livello salvato nel progetto: ora puoi fare commit',
+      browserMessage: 'Livello salvato nel browser di questo dispositivo',
+      sessionMessage: 'Livello salvato solo in questa sessione'
+    }, persistResult));
     return newLevel;
   }
   const idx = levels.findIndex(entry => entry.id === levelId);
@@ -4257,9 +5684,11 @@ async function saveCurrentEditorLevel() {
   }
   renderCustomLevels();
   renderElementPalette();
-  toast(persistResult.projectFileSaved
-    ? 'Livello salvato nel progetto: ora puoi fare commit'
-    : 'Livello salvato solo in questa sessione');
+  toast(describePersistResult({
+    projectMessage: 'Livello salvato nel progetto: ora puoi fare commit',
+    browserMessage: 'Livello salvato nel browser di questo dispositivo',
+    sessionMessage: 'Livello salvato solo in questa sessione'
+  }, persistResult));
   return savedLevel;
 }
 
@@ -4276,9 +5705,45 @@ async function reorderEditorLevels(draggedLevelId, targetLevelId) {
 
   const persistResult = await persistEditorLevels(reordered, { promptIfMissing: true });
   syncEditorStateAfterLevelsChange(reordered, { preferredLevelId: moved.id });
-  toast(persistResult.projectFileSaved
-    ? `Livello spostato in posizione ${to + 1}`
-    : `Livello spostato in posizione ${to + 1} solo in questa sessione`);
+  toast(describePersistResult({
+    projectMessage: `Livello spostato in posizione ${to + 1}`,
+    browserMessage: `Livello spostato in posizione ${to + 1} nel browser`,
+    sessionMessage: `Livello spostato in posizione ${to + 1} solo in questa sessione`
+  }, persistResult));
+  return true;
+}
+
+async function deleteEditorLevel(levelId) {
+  if (!levelId || levelId === NEW_EDITOR_LEVEL_ID) return false;
+  const levels = readCustomLevels();
+  const target = levels.find(entry => entry.id === levelId);
+  if (!target) {
+    toast('Livello non trovato');
+    return false;
+  }
+  const normalized = normalizeCustomLevel(target);
+  if (normalized.campaignIndex != null || normalized.baseStepIndex != null) {
+    toast('I livelli campagna non si eliminano da qui');
+    return false;
+  }
+  const confirmed = window.confirm(`Eliminare "${normalized.name}"?`);
+  if (!confirmed) return false;
+  const remaining = levels
+    .filter(entry => entry.id !== levelId)
+    .map((entry, index) => normalizeCustomLevel({
+      ...entry,
+      number: index + 1
+    }));
+  const persistResult = await persistEditorLevels(remaining, { promptIfMissing: true });
+  syncEditorStateAfterLevelsChange(remaining, {
+    preferredLevelId: remaining[0]?.id || NEW_EDITOR_LEVEL_ID
+  });
+  renderElementPalette();
+  toast(describePersistResult({
+    projectMessage: `Livello "${normalized.name}" eliminato`,
+    browserMessage: `Livello "${normalized.name}" eliminato nel browser`,
+    sessionMessage: `Livello "${normalized.name}" eliminato solo in questa sessione`
+  }, persistResult));
   return true;
 }
 
@@ -4292,6 +5757,9 @@ function renderCustomLevels() {
   levels.forEach((level, index) => {
     const normalized = normalizeCustomLevel(level);
     const themeId = resolveThemeLevelId(normalized.baseLevel);
+    const deletable = normalized.campaignIndex == null && normalized.baseStepIndex == null;
+    const item = document.createElement('div');
+    item.className = 'editor-level-tile-item';
     const tile = document.createElement('button');
     tile.type = 'button';
     tile.className = 'editor-level-tile ' + normalizeThemeClassName(themeId) + (selectedEditorLevelId === normalized.id ? ' active' : '');
@@ -4340,7 +5808,24 @@ function renderCustomLevels() {
       list.querySelectorAll('.editor-level-tile').forEach(el => el.classList.remove('drop-target', 'dragging'));
       await reorderEditorLevels(draggedId, normalized.id);
     });
-    list.appendChild(tile);
+    item.appendChild(tile);
+
+    if (deletable) {
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.className = 'editor-level-delete';
+      deleteBtn.setAttribute('aria-label', `Elimina ${normalized.name}`);
+      deleteBtn.title = `Elimina ${normalized.name}`;
+      deleteBtn.textContent = '×';
+      deleteBtn.addEventListener('click', async e => {
+        e.preventDefault();
+        e.stopPropagation();
+        await deleteEditorLevel(normalized.id);
+      });
+      item.appendChild(deleteBtn);
+    }
+
+    list.appendChild(item);
   });
 
   const emptyTile = document.createElement('button');

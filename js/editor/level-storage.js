@@ -46,6 +46,77 @@
       };
     }
 
+    function normalizeDecorationLayer(layer) {
+      const normalized = typeof layer === 'string' ? layer.trim().toLowerCase() : '';
+      return ['ground', 'object', 'overlay'].includes(normalized) ? normalized : 'object';
+    }
+
+    function normalizeDecorationScale(scale, fallback = 1) {
+      const numeric = Number(scale);
+      if (!Number.isFinite(numeric)) return fallback;
+      return Math.max(0.5, Math.min(1.8, Math.round(numeric * 100) / 100));
+    }
+
+    function normalizeDecorationCount(count, fallback = 1) {
+      const numeric = Number(count);
+      if (!Number.isFinite(numeric)) return fallback;
+      return Math.max(1, Math.min(10, Math.round(numeric)));
+    }
+
+    function normalizeDecorationColor(value, fallback = '') {
+      const normalized = typeof value === 'string' ? value.trim().slice(0, 16) : '';
+      return normalized || fallback;
+    }
+
+    function normalizeDecorationAnchor(value, fallback = 0.5) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return fallback;
+      return Math.max(0, Math.min(1, Math.round(numeric * 1000) / 1000));
+    }
+
+    function normalizeDecorations(source = []) {
+      if (!Array.isArray(source)) return [];
+      return source.map((entry, index) => {
+        const x = Number.isInteger(entry?.x) ? entry.x : null;
+        const y = Number.isInteger(entry?.y) ? entry.y : null;
+        const rawAsset = typeof entry?.asset === 'string' ? entry.asset.trim().slice(0, 48) : '';
+        const asset = typeof api.resolveDecorationAssetId === 'function'
+          ? api.resolveDecorationAssetId(rawAsset)
+          : rawAsset;
+        if (!asset) return null;
+        const layer = normalizeDecorationLayer(entry?.layer);
+        const fallbackAnchorX = Number.isInteger(x) && Number.isInteger(api.cols)
+          ? ((x + 0.5) / api.cols)
+          : 0.5;
+        const fallbackAnchorY = Number.isInteger(y) && Number.isInteger(api.rows)
+          ? ((y + 0.82) / api.rows)
+          : 0.5;
+        const anchorX = normalizeDecorationAnchor(entry?.anchorX, fallbackAnchorX);
+        const anchorY = normalizeDecorationAnchor(entry?.anchorY, fallbackAnchorY);
+        const resolvedX = Number.isInteger(api.cols)
+          ? Math.max(0, Math.min(api.cols - 1, Math.floor(Math.min(anchorX, 0.9999) * api.cols)))
+          : (x ?? 0);
+        const resolvedY = Number.isInteger(api.rows)
+          ? Math.max(0, Math.min(api.rows - 1, Math.floor(Math.min(anchorY, 0.9999) * api.rows)))
+          : (y ?? 0);
+        return {
+          id: typeof entry?.id === 'string' && entry.id.trim()
+            ? entry.id.trim().slice(0, 80)
+            : `decor-${asset}-${Math.round(anchorX * 1000)}-${Math.round(anchorY * 1000)}-${index}`,
+          x: resolvedX,
+          y: resolvedY,
+          anchorX,
+          anchorY,
+          asset,
+          layer,
+          scale: normalizeDecorationScale(entry?.scale, 1),
+          count: normalizeDecorationCount(entry?.count, asset === 'bee_hover' ? 3 : 1),
+          foliageColor: normalizeDecorationColor(entry?.foliageColor),
+          trunkColor: normalizeDecorationColor(entry?.trunkColor)
+        };
+      }).filter(Boolean);
+    }
+
     function normalizeCharacterId(characterId) {
       if (typeof api.resolveCharacterId === 'function') {
         return api.resolveCharacterId(characterId);
@@ -80,6 +151,7 @@
         goal: normalizePoint(level.goal),
         startOri: level.startOri || 'right',
         obstacles: Array.isArray(level.obstacles) ? level.obstacles : [],
+        decorations: normalizeDecorations(level.decorations || []),
         mainSlotEnabled: normalizeSlotArray(level.mainSlotEnabled, api.slots),
         fnSlotEnabled: normalizeSlotArray(level.fnSlotEnabled, api.fnSlots),
         enabledBlocks: normalizeEnabledBlocks(level.enabledBlocks || {}),
@@ -102,6 +174,7 @@
         fnSlots: normalized.fnSlotEnabled.filter(Boolean).length,
         availableBlocks: Object.keys(normalized.enabledBlocks).filter(dir => normalized.enabledBlocks[dir]),
         obstacles: normalized.obstacles || [],
+        decorations: normalizeDecorations(normalized.decorations || []),
         themeOverrides: normalizeThemeOverrides(normalized.themeOverrides || {}),
         levelHints: normalizeLevelHints(normalized.levelHints || {})
       };
@@ -145,11 +218,16 @@
     function readCustomLevels() {
       if (editorLevelsCache.length) return editorLevelsCache.map(normalizeCustomLevel);
 
+      const draftLevels = readStoredLevels(api.editorLevelsStorageKey);
+
       if (!api.preferProjectLevelsFile) {
-        const draftLevels = readStoredLevels(api.editorLevelsStorageKey);
         if (draftLevels.length) {
           return setActiveLevels(draftLevels);
         }
+      }
+
+      if (api.preferProjectLevelsFile && draftLevels.length && !isProjectSaveSupported()) {
+        return setActiveLevels(draftLevels);
       }
 
       const projectLevels = buildInitialEditorLevels();
@@ -328,16 +406,30 @@
 
     async function persistEditorLevels(levels, { promptIfMissing = false } = {}) {
       writeCustomLevels(levels);
-      if (!isProjectSaveSupported()) return { projectFileSaved: false, localOnly: true };
+      if (!isProjectSaveSupported()) {
+        return {
+          projectFileSaved: false,
+          localOnly: true,
+          browserDraftSaved: true
+        };
+      }
       try {
         const projectFileSaved = await writeProjectLevelsFile(levels, { promptIfMissing });
         if (projectFileSaved) {
           projectLevelsSeed = levels.map(normalizeCustomLevel);
           writeStoredLevels(api.projectLevelsCacheKey, levels);
         }
-        return { projectFileSaved, localOnly: !projectFileSaved };
+        return {
+          projectFileSaved,
+          localOnly: !projectFileSaved,
+          browserDraftSaved: true
+        };
       } catch (_err) {
-        return { projectFileSaved: false, localOnly: true };
+        return {
+          projectFileSaved: false,
+          localOnly: true,
+          browserDraftSaved: true
+        };
       }
     }
 
@@ -349,6 +441,7 @@
       getEditorLevelIdForTutorialStep,
       loadEditorLevelsSource,
       normalizeCustomLevel,
+      normalizeDecorations,
       normalizeEnabledBlocks,
       normalizeThemeOverrides,
       normalizeSlotArray,
