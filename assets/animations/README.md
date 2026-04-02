@@ -6,7 +6,7 @@ Convenzione:
 
 - `characters/<character-id>/manifest.js`
 - `characters/registry.json` per elencare i manifest da caricare
-- `props/<prop-id>/manifest.js`
+- `decor/<decor-id>.json` per clip Lottie decorative leggere
 - eventuali sottocartelle runtime per frame, clip o sheet per stato
 
 Uso previsto:
@@ -14,6 +14,7 @@ Uso previsto:
 - definizione degli stati come `idle:right`, `move:left`, `turn:up`
 - timing, fallback e transizioni
 - mapping tra stato logico e art in `assets/characters/` o `assets/props/`
+- clip decorative ambientali come `bee_swarm_hover.json`, foglie o particellari leggeri
 - gli asset statici non animati devono restare in `assets/characters/` o `assets/props/`, non in `assets/animations/`
 
 ## Supporto Lottie (Bodymovin)

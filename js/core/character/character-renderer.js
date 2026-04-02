@@ -171,6 +171,17 @@
     preloadedCharacterIds.add(characterId);
   }
 
+  function decorateBlinkableEye(wrap) {
+    const svg = wrap?.querySelector?.('svg');
+    if (!svg || svg.dataset.blinkReady === 'true') return;
+    const eyeWhite = svg.querySelector('ellipse');
+    const pupil = svg.querySelector('circle');
+    if (!eyeWhite || !pupil) return;
+    eyeWhite.classList.add('boks-eye-white');
+    pupil.classList.add('boks-eye-pupil');
+    svg.dataset.blinkReady = 'true';
+  }
+
   function buildLottieMarkup(state) {
     const lottieSrc = withBuildQuery(state.lottieSrc);
     const renderer = state.lottieRenderer === 'canvas' ? 'canvas' : 'svg';
@@ -360,6 +371,7 @@
         .then(markup => {
           if (!markup || wrap.dataset.inlineSvgMounted !== 'loading') return;
           wrap.innerHTML = markup;
+          decorateBlinkableEye(wrap);
           wrap.dataset.inlineSvgMounted = 'true';
           wrap.classList.add('is-ready');
           wrap.classList.remove('is-failed');
