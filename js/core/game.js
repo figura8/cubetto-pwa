@@ -6332,6 +6332,7 @@ function showGhost({ width, height, html = '', node = null, x = -9999, y = -9999
   if (Number.isFinite(width)) ghost.style.width = `${width}px`;
   if (Number.isFinite(height)) ghost.style.height = `${height}px`;
   ghost.style.borderRadius = '5px';
+  ghost.style.filter = dg?.pointerType === 'touch' ? 'none' : '';
   if (extraCssText) ghost.style.cssText += `;${extraCssText}`;
   setGhostPosition(x, y);
   return ghost;
@@ -6344,6 +6345,7 @@ function hideGhost() {
   ghost.style.removeProperty('width');
   ghost.style.removeProperty('height');
   ghost.style.removeProperty('border-radius');
+  ghost.style.removeProperty('filter');
   ghost.style.transform = 'translate3d(-9999px, -9999px, 0) translate(-50%, -50%)';
 }
 
@@ -6360,11 +6362,21 @@ function isPointInsideRect(x, y, rect) {
 
 function findDragSlotRectAt(x, y) {
   if (!dg?.slotRects?.length) return null;
-  if (dg.hoverRect && isPointInsideRect(x, y, dg.hoverRect.r)) return dg.hoverRect;
+  if (dg.hoverRect && isPointInsideRect(x, y, dg.hoverRect.hitR || dg.hoverRect.r)) return dg.hoverRect;
   for (const sr of dg.slotRects) {
-    if (isPointInsideRect(x, y, sr.r)) return sr;
+    if (isPointInsideRect(x, y, sr.hitR || sr.r)) return sr;
   }
   return null;
+}
+
+function getExpandedRect(rect, padX = 0, padY = padX) {
+  if (!rect) return null;
+  return {
+    left: rect.left - padX,
+    top: rect.top - padY,
+    right: rect.right + padX,
+    bottom: rect.bottom + padY
+  };
 }
 
 function getDragGhostPoint(x, y) {
@@ -6374,6 +6386,12 @@ function getDragGhostPoint(x, y) {
     x: x + Math.round(size * 0.32),
     y: y - Math.round(size * 0.9)
   };
+}
+
+function getDragSlotHitPadding(pointerType = 'mouse') {
+  return pointerType === 'touch'
+    ? { x: 14, y: 16 }
+    : { x: 8, y: 10 };
 }
 
 function restoreDragVisualState() {
@@ -6457,6 +6475,7 @@ function startDg(cx,cy,src,idx,sz,pointerType='mouse') {
   if(!block) return;
   if (dg.active) finishDragCleanup();
   restoreDragVisualState();
+  const slotHitPadding = getDragSlotHitPadding(pointerType);
   dg = {
     active:true,
     block,
@@ -6470,12 +6489,14 @@ function startDg(cx,cy,src,idx,sz,pointerType='mouse') {
     hover:null,
     hoverRect:null,
     hoverValidKey:null,
+    boardHoverBounds: getExpandedRect(document.getElementById('boardRow')?.getBoundingClientRect(), 28, 40),
     // Cache dei rettangoli degli slot per evitare elementFromPoint nel move loop
     slotRects: Array.from(document.querySelectorAll('.pslot')).map(el => ({
       el,
       zone: el.dataset.zone,
       idx: +el.dataset.slot,
-      r: el.getBoundingClientRect()
+      r: el.getBoundingClientRect(),
+      hitR: getExpandedRect(el.getBoundingClientRect(), slotHitPadding.x, slotHitPadding.y)
     }))
   };
   cancelDragMoveFrame();
@@ -6557,6 +6578,14 @@ function moveDg(cx,cy) {
     const ghostPointNow = getDragGhostPoint(cx, cy);
     setGhostPosition(ghostPointNow.x, ghostPointNow.y);
   }
+  if (dg.pointerType === 'touch') {
+    if (dg.hover) dg.hover.classList.remove('over');
+    dg.hover = null;
+    dg.hoverRect = null;
+    dg.hoverValidKey = null;
+    cancelDragMoveFrame();
+    return;
+  }
   if (dgMoveFrame) return;
   dgMoveFrame = requestAnimationFrame(() => {
     dgMoveFrame = 0;
@@ -6564,6 +6593,14 @@ function moveDg(cx,cy) {
     const x = dgPendingX;
     const y = dgPendingY;
     if (!dg.draggingVisuals) {
+      return;
+    }
+
+    if (dg.boardHoverBounds && !isPointInsideRect(x, y, dg.boardHoverBounds)) {
+      if (dg.hover) dg.hover.classList.remove('over');
+      dg.hover = null;
+      dg.hoverRect = null;
+      dg.hoverValidKey = null;
       return;
     }
 
@@ -6578,7 +6615,7 @@ function moveDg(cx,cy) {
 
     const validHoverKey = getDragHoverValidSlotKeyFromRect(slotRect);
     if (validHoverKey !== dg.hoverValidKey) {
-      if (validHoverKey) playBlockHoverSlotSfx();
+      if (validHoverKey && dg.pointerType !== 'touch') playBlockHoverSlotSfx();
       dg.hoverValidKey = validHoverKey || null;
     }
   });
@@ -6663,15 +6700,8 @@ function endDg(cx,cy) {
   }
   if(dg.hover) dg.hover.classList.remove('over');
   // Usa le coordinate reali del rilascio, non dg.hover (potenzialmente stale dall'ultimo RAF)
-  let slot = null;
-  if (dg.slotRects) {
-    for (const sr of dg.slotRects) {
-      if (releaseX >= sr.r.left && releaseX <= sr.r.right && releaseY >= sr.r.top && releaseY <= sr.r.bottom) {
-        slot = sr.el;
-        break;
-      }
-    }
-  }
+  const releaseSlotRect = findDragSlotRectAt(releaseX, releaseY);
+  let slot = releaseSlotRect?.el || null;
   if(slot) {
     const ti = +slot.dataset.slot;
     const zone = slot.dataset.zone;
