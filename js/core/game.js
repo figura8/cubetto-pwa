@@ -5552,26 +5552,20 @@ function setupEditorElementPlacement() {
     if (!editorMode || running || animating || !isBlockedCell(startX, startY)) return false;
     const sourceCell = getGridCell(startX, startY);
     const size = sourceCell?.getBoundingClientRect().width || 48;
-    const ghost = document.getElementById('ghost');
-    ghost.innerHTML = elementPaletteIcon('brick');
-    ghost.style.cssText = `display:block;width:${size}px;height:${size}px;left:${clientX}px;top:${clientY}px;`;
+    showGhost({ width: size, height: size, html: elementPaletteIcon('brick'), x: clientX, y: clientY });
     if (sourceCell) sourceCell.style.opacity = '0.25';
     return true;
   }
 
   function moveBrickGhost(clientX, clientY) {
-    const ghost = document.getElementById('ghost');
-    ghost.style.left = clientX + 'px';
-    ghost.style.top = clientY + 'px';
-    ghost.style.display = 'none';
+    setGhostPosition(clientX, clientY);
     const under = document.elementFromPoint(clientX, clientY);
-    ghost.style.display = 'block';
     document.querySelectorAll('.cell.hi').forEach(c => c.classList.remove('hi'));
     under?.closest('.cell')?.classList.add('hi');
   }
 
   function endBrickDrag(startX, startY, clientX, clientY, moved) {
-    document.getElementById('ghost').style.display = 'none';
+    hideGhost();
     document.querySelectorAll('.cell.hi').forEach(c => c.classList.remove('hi'));
     getGridCell(startX, startY)?.style.removeProperty('opacity');
     if (!moved) return;
@@ -6316,18 +6310,129 @@ function drawTrack(svg, slotH, gapH, totalH, W, mainActive, fnActive) {
 }
 
 // ═══ DRAG ═══
+const DRAG_START_THRESHOLD_PX = 6;
+const TAP_CANCEL_THRESHOLD_PX = 20;
 let dg = {active:false, block:null, src:null, si:null, hover:null, hoverValidKey:null};
+let dgMoveFrame = 0;
+let dgPendingX = 0;
+let dgPendingY = 0;
+
+function setGhostPosition(x, y) {
+  const ghost = document.getElementById('ghost');
+  if (!ghost) return;
+  ghost.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0) translate(-50%, -50%)`;
+}
+
+function showGhost({ width, height, html = '', node = null, x = -9999, y = -9999, extraCssText = '' } = {}) {
+  const ghost = document.getElementById('ghost');
+  if (!ghost) return null;
+  ghost.innerHTML = html || '';
+  if (node) ghost.appendChild(node);
+  ghost.style.display = 'block';
+  if (Number.isFinite(width)) ghost.style.width = `${width}px`;
+  if (Number.isFinite(height)) ghost.style.height = `${height}px`;
+  ghost.style.borderRadius = '5px';
+  if (extraCssText) ghost.style.cssText += `;${extraCssText}`;
+  setGhostPosition(x, y);
+  return ghost;
+}
+
+function hideGhost() {
+  const ghost = document.getElementById('ghost');
+  if (!ghost) return;
+  ghost.style.display = 'none';
+  ghost.style.removeProperty('width');
+  ghost.style.removeProperty('height');
+  ghost.style.removeProperty('border-radius');
+  ghost.style.transform = 'translate3d(-9999px, -9999px, 0) translate(-50%, -50%)';
+}
+
+function cancelDragMoveFrame() {
+  if (!dgMoveFrame) return;
+  cancelAnimationFrame(dgMoveFrame);
+  dgMoveFrame = 0;
+}
+
+function isPointInsideRect(x, y, rect) {
+  if (!rect) return false;
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
+
+function findDragSlotRectAt(x, y) {
+  if (!dg?.slotRects?.length) return null;
+  if (dg.hoverRect && isPointInsideRect(x, y, dg.hoverRect.r)) return dg.hoverRect;
+  for (const sr of dg.slotRects) {
+    if (isPointInsideRect(x, y, sr.r)) return sr;
+  }
+  return null;
+}
+
+function getDragGhostPoint(x, y) {
+  if (dg?.pointerType !== 'touch') return { x, y };
+  const size = Number.isFinite(dg?.sz) ? dg.sz : 52;
+  return {
+    x: x + Math.round(size * 0.32),
+    y: y - Math.round(size * 0.9)
+  };
+}
+
+function restoreDragVisualState() {
+  // Rimuovi la classe drag-source-hidden da tutti gli elementi
+  document.querySelectorAll('.ablock.drag-source-hidden, .pblock.drag-source-hidden').forEach(el => {
+    el.classList.remove('drag-source-hidden');
+  });
+  // Rimuovi l'opacità inline da tutti gli elementi blocchi e container
+  document.querySelectorAll('.ablock, .pblock, .sinner').forEach(el => {
+    el.style.removeProperty('opacity');
+  });
+  // Reset any CSS custom properties that might affect opacity
+  document.querySelectorAll('.ablock, .pblock').forEach(el => {
+    el.style.removeProperty('--opacity');
+  });
+  // Forza un reflow per assicurarsi che le modifiche CSS siano applicate
+  if (document.body) {
+    void document.body.offsetWidth;
+  }
+}
 
 function bindDrag(el, src, idx, sz) {
   el.addEventListener('touchstart',e=>{
     if(running) return; e.preventDefault(); e.stopPropagation();
-    startDg(e.touches[0].clientX,e.touches[0].clientY,src,idx,sz);
+    const startTouch = e.touches[0];
+    if (!startTouch) return;
+    const touchId = startTouch.identifier;
+    startDg(startTouch.clientX,startTouch.clientY,src,idx,sz,'touch');
+    const mm = ev => {
+      const activeTouch = Array.from(ev.touches || []).find(t => t.identifier === touchId);
+      if (!activeTouch) return;
+      ev.preventDefault();
+      moveDg(activeTouch.clientX, activeTouch.clientY);
+    };
+    const mu = ev => {
+      const changedTouch = Array.from(ev.changedTouches || []).find(t => t.identifier === touchId);
+      if (!changedTouch) return;
+      ev.preventDefault();
+      endDg(changedTouch.clientX, changedTouch.clientY);
+      document.removeEventListener('touchmove', mm);
+      document.removeEventListener('touchend', mu);
+      document.removeEventListener('touchcancel', mc);
+    };
+    const mc = ev => {
+      const changedTouch = Array.from(ev.changedTouches || []).find(t => t.identifier === touchId);
+      if (!changedTouch) return;
+      ev.preventDefault();
+      finishDragCleanup();
+      document.removeEventListener('touchmove', mm);
+      document.removeEventListener('touchend', mu);
+      document.removeEventListener('touchcancel', mc);
+    };
+    document.addEventListener('touchmove', mm, { passive: false });
+    document.addEventListener('touchend', mu, { passive: false });
+    document.addEventListener('touchcancel', mc, { passive: false });
   },{passive:false});
-  el.addEventListener('touchmove', e=>{e.preventDefault();moveDg(e.touches[0].clientX,e.touches[0].clientY);},{passive:false});
-  el.addEventListener('touchend',  e=>{e.preventDefault();endDg(e.changedTouches[0].clientX,e.changedTouches[0].clientY);},{passive:false});
   el.addEventListener('mousedown',e=>{
     if(running) return; e.preventDefault();
-    startDg(e.clientX,e.clientY,src,idx,sz);
+    startDg(e.clientX,e.clientY,src,idx,sz,'mouse');
     const mm=e=>moveDg(e.clientX,e.clientY);
     const mu=e=>{endDg(e.clientX,e.clientY);document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
     document.addEventListener('mousemove',mm);
@@ -6335,33 +6440,74 @@ function bindDrag(el, src, idx, sz) {
   });
 }
 
-function startDg(cx,cy,src,idx,sz) {
+function activateDragVisuals() {
+  if (!dg.active || dg.draggingVisuals) return;
+  dg.draggingVisuals = true;
+  const ghostPoint = getDragGhostPoint(dgPendingX, dgPendingY);
+  showGhost({ width: dg.sz, height: dg.sz, node: mkB(dg.block, dg.sz, dg.sz), x: ghostPoint.x, y: ghostPoint.y });
+  if (dg.src !== 'avail') {
+    const zone = dg.src === 'fn' ? 'fn' : 'main';
+    const s = document.querySelector(`.pslot[data-zone="${zone}"][data-slot="${dg.si}"] .sinner`);
+    if (s) s.style.opacity = '0.55';
+  }
+}
+
+function startDg(cx,cy,src,idx,sz,pointerType='mouse') {
   const block = src==='avail' ? avail[idx] : src==='fn' ? fnProg[idx] : prog[idx];
   if(!block) return;
-  dg = {active:true, block, src, si:idx, hover:null, hoverValidKey:null};
+  if (dg.active) finishDragCleanup();
+  restoreDragVisualState();
+  dg = {
+    active:true,
+    block,
+    src,
+    si:idx,
+    sz,
+    pointerType,
+    startX:cx,
+    startY:cy,
+    draggingVisuals:false,
+    hover:null,
+    hoverRect:null,
+    hoverValidKey:null,
+    // Cache dei rettangoli degli slot per evitare elementFromPoint nel move loop
+    slotRects: Array.from(document.querySelectorAll('.pslot')).map(el => ({
+      el,
+      zone: el.dataset.zone,
+      idx: +el.dataset.slot,
+      r: el.getBoundingClientRect()
+    }))
+  };
+  cancelDragMoveFrame();
+  dgPendingX = cx;
+  dgPendingY = cy;
   playBlockDragStartSfx();
   if(src==='avail') refreshAvailableBlockGlowState({ suspendForActiveDrag: true });
-  const g = document.getElementById('ghost');
-  g.innerHTML=''; g.appendChild(mkB(block,sz,sz));
-  g.style.cssText=`display:block;width:${sz}px;height:${sz}px;left:${cx}px;top:${cy}px;border-radius:5px;`;
-  if(src==='avail') {
-    document.querySelectorAll('.ablock').forEach(el=>{
-      if(+el.dataset.ai===idx) {
-        el.style.opacity='0';
-        el.classList.add('drag-source-hidden');
-      }
-    });
-  } else {
-    const zone = src==='fn' ? 'fn' : 'main';
-    const s=document.querySelector(`.pslot[data-zone="${zone}"][data-slot="${idx}"] .sinner`);
-    if(s) s.style.opacity='0.3';
-  }
+  hideGhost();
 }
 
 function getDragHoverValidSlotKey(slot) {
   if (!slot || !dg.active) return '';
   const ti = +slot.dataset.slot;
   const zone = slot.dataset.zone;
+  if (zone === 'main') {
+    if (!mainSlotEnabled[ti]) return '';
+    if (dg.src === 'prog' && dg.si === ti) return '';
+    return `main:${ti}`;
+  }
+  if (zone === 'fn') {
+    if (!fnSlotEnabled[ti]) return '';
+    if (dg.block?.dir === 'function') return '';
+    if (dg.src === 'fn' && dg.si === ti) return '';
+    return `fn:${ti}`;
+  }
+  return '';
+}
+
+function getDragHoverValidSlotKeyFromRect(slotRect) {
+  if (!slotRect || !dg.active) return '';
+  const ti = slotRect.idx;
+  const zone = slotRect.zone;
   if (zone === 'main') {
     if (!mainSlotEnabled[ti]) return '';
     if (dg.src === 'prog' && dg.si === ti) return '';
@@ -6399,73 +6545,200 @@ function triggerSlotCaptureEffect(zone, idx) {
 
 function moveDg(cx,cy) {
   if(!dg.active) return;
-  const g = document.getElementById('ghost');
-  g.style.left=cx+'px'; g.style.top=cy+'px';
-  g.style.display='none';
-  const u=document.elementFromPoint(cx,cy);
-  g.style.display='block';
-  const slot=u?.closest('.pslot');
-  const validHoverKey = getDragHoverValidSlotKey(slot);
-  if(dg.hover&&dg.hover!==slot) dg.hover.classList.remove('over');
-  if(slot){slot.classList.add('over');dg.hover=slot;} else dg.hover=null;
-  if (validHoverKey && validHoverKey !== dg.hoverValidKey) playBlockHoverSlotSfx();
-  dg.hoverValidKey = validHoverKey || null;
+  dgPendingX = cx;
+  dgPendingY = cy;
+  const dxNow = cx - (dg.startX ?? cx);
+  const dyNow = cy - (dg.startY ?? cy);
+  const crossedDragThreshold = ((dxNow * dxNow) + (dyNow * dyNow)) >= (DRAG_START_THRESHOLD_PX * DRAG_START_THRESHOLD_PX);
+  if (!dg.draggingVisuals && crossedDragThreshold) {
+    activateDragVisuals();
+  }
+  if (dg.draggingVisuals) {
+    const ghostPointNow = getDragGhostPoint(cx, cy);
+    setGhostPosition(ghostPointNow.x, ghostPointNow.y);
+  }
+  if (dgMoveFrame) return;
+  dgMoveFrame = requestAnimationFrame(() => {
+    dgMoveFrame = 0;
+    if (!dg.active) return;
+    const x = dgPendingX;
+    const y = dgPendingY;
+    if (!dg.draggingVisuals) {
+      return;
+    }
+
+    const slotRect = findDragSlotRectAt(x, y);
+    const slot = slotRect?.el || null;
+    if (slot !== dg.hover) {
+      if (dg.hover) dg.hover.classList.remove('over');
+      if (slot) slot.classList.add('over');
+      dg.hover = slot;
+    }
+    dg.hoverRect = slotRect || null;
+
+    const validHoverKey = getDragHoverValidSlotKeyFromRect(slotRect);
+    if (validHoverKey !== dg.hoverValidKey) {
+      if (validHoverKey) playBlockHoverSlotSfx();
+      dg.hoverValidKey = validHoverKey || null;
+    }
+  });
+}
+
+function getSlotArrayForZone(zone) {
+  return zone === 'fn' ? fnProg : prog;
+}
+
+function getSlotEnabledForZone(zone, idx) {
+  return zone === 'fn' ? fnSlotEnabled[idx] : mainSlotEnabled[idx];
+}
+
+function getBlockSizeForBoardSlot() {
+  const { bsiz } = getBoardSizes();
+  const wellSize = Math.max(28, Math.round(bsiz * 0.96));
+  return Math.max(30, Math.round(wellSize * 1.06));
+}
+
+function updateBoardSlot(zone, idx) {
+  const slot = document.querySelector(`.pslot[data-zone="${zone}"][data-slot="${idx}"]`);
+  if (!slot) return false;
+  const enabled = getSlotEnabledForZone(zone, idx);
+  const arr = getSlotArrayForZone(zone);
+  const inner = slot.querySelector('.sinner');
+  if (!inner) return false;
+  inner.style.opacity = '1';
+  slot.classList.toggle('locked', !enabled);
+  slot.classList.toggle('filled', !!(enabled && arr[idx]));
+  inner.innerHTML = '';
+  if (!enabled || !arr[idx]) return true;
+  const blockSize = getBlockSizeForBoardSlot();
+  const be = mkB(arr[idx], blockSize, blockSize, 'pblock');
+  be.dataset.si = idx;
+  be.dataset.zone = zone;
+  bindDrag(be, zone === 'fn' ? 'fn' : 'prog', idx, blockSize);
+  inner.appendChild(be);
+  return true;
+}
+
+function updateDraggedBoardState(dirtySlots = []) {
+  let boardPatched = true;
+  dirtySlots.forEach(({ zone, idx }) => {
+    if (typeof idx !== 'number' || !zone) return;
+    boardPatched = updateBoardSlot(zone, idx) && boardPatched;
+  });
+  if (!boardPatched) {
+    renderBoard();
+    renderFn();
+  } else {
+    alignAvailBlocksToSlots();
+    queueFirstLevelOnboardingSync();
+  }
+}
+
+function finishDragCleanup() {
+  cancelDragMoveFrame();
+  hideGhost();
+  if (dg.hover) dg.hover.classList.remove('over');
+  restoreDragVisualState();
+  dg = {active:false, block:null, src:null, si:null, hover:null, hoverRect:null, hoverValidKey:null, draggingVisuals:false};
+  refreshAvailableBlockGlowState();
+  refreshEditorDebug();
 }
 
 function endDg(cx,cy) {
   if(!dg.active) return;
+  const releaseX = Number.isFinite(cx) ? cx : dgPendingX;
+  const releaseY = Number.isFinite(cy) ? cy : dgPendingY;
+  const dx = releaseX - (dg.startX ?? releaseX);
+  const dy = releaseY - (dg.startY ?? releaseY);
+  const dragDistanceSq = (dx * dx) + (dy * dy);
+  const tapCancelThresholdSq = TAP_CANCEL_THRESHOLD_PX * TAP_CANCEL_THRESHOLD_PX;
   const hadPlacedProgramBlocks = hasAnyPlacedProgramBlock();
   let didDropSuccessfully = false;
-  document.getElementById('ghost').style.display='none';
+  const dirtySlots = [];
+  cancelDragMoveFrame();
+  hideGhost();
+  if (!dg.draggingVisuals || dragDistanceSq < tapCancelThresholdSq) {
+    finishDragCleanup();
+    return;
+  }
   if(dg.hover) dg.hover.classList.remove('over');
-  document.querySelectorAll('.ablock,.pblock').forEach(e=>{
-    e.style.opacity='1';
-    e.classList.remove('drag-source-hidden');
-  });
-  document.querySelectorAll('.sinner').forEach(e=>e.style.opacity='1');
-  const u=document.elementFromPoint(cx,cy);
-  const slot=u?.closest('.pslot');
+  // Usa le coordinate reali del rilascio, non dg.hover (potenzialmente stale dall'ultimo RAF)
+  let slot = null;
+  if (dg.slotRects) {
+    for (const sr of dg.slotRects) {
+      if (releaseX >= sr.r.left && releaseX <= sr.r.right && releaseY >= sr.r.top && releaseY <= sr.r.bottom) {
+        slot = sr.el;
+        break;
+      }
+    }
+  }
   if(slot) {
     const ti = +slot.dataset.slot;
     const zone = slot.dataset.zone;
     if(zone === 'main' && !mainSlotEnabled[ti]) {
-      dg.active=false;
-      renderAvail(); renderBoard(); renderFn();
+      finishDragCleanup();
       return;
     }
     if(zone === 'fn' && !fnSlotEnabled[ti]) {
-      dg.active=false;
-      renderAvail(); renderBoard(); renderFn();
+      finishDragCleanup();
       return;
     }
     if(zone === 'fn') {
       // blocchi function non possono stare nella fn zone
-      if(dg.block.dir === 'function') { dg.active=false; renderAvail(); renderBoard(); renderFn(); return; }
-      if(dg.src==='avail') { fnProg[ti]={id:`${dg.block.dir}${idN++}`,...POOL[dg.block.dir]}; didDropSuccessfully = true; }
-      else if(dg.src==='fn'&&dg.si!==ti){ const tmp=fnProg[ti];fnProg[ti]=dg.block;fnProg[dg.si]=tmp; didDropSuccessfully = true; }
-      else if(dg.src==='prog'){ fnProg[ti]={...dg.block}; prog[dg.si]=null; didDropSuccessfully = true; }
+      if(dg.block.dir === 'function') { finishDragCleanup(); return; }
+      if(dg.src==='avail') {
+        fnProg[ti]={id:`${dg.block.dir}${idN++}`,...POOL[dg.block.dir]};
+        dirtySlots.push({ zone:'fn', idx:ti });
+        didDropSuccessfully = true;
+      }
+      else if(dg.src==='fn'&&dg.si!==ti){
+        const tmp=fnProg[ti];fnProg[ti]=dg.block;fnProg[dg.si]=tmp;
+        dirtySlots.push({ zone:'fn', idx:ti }, { zone:'fn', idx:dg.si });
+        didDropSuccessfully = true;
+      }
+      else if(dg.src==='prog'){
+        fnProg[ti]={...dg.block}; prog[dg.si]=null;
+        dirtySlots.push({ zone:'fn', idx:ti }, { zone:'main', idx:dg.si });
+        didDropSuccessfully = true;
+      }
     } else {
-      if(dg.src==='avail') { prog[ti]={id:`${dg.block.dir}${idN++}`,...POOL[dg.block.dir]}; didDropSuccessfully = true; }
-      else if(dg.src==='prog'&&dg.si!==ti){ const tmp=prog[ti];prog[ti]=dg.block;prog[dg.si]=tmp; didDropSuccessfully = true; }
-      else if(dg.src==='fn'){ prog[ti]={...dg.block}; fnProg[dg.si]=null; didDropSuccessfully = true; }
+      if(dg.src==='avail') {
+        prog[ti]={id:`${dg.block.dir}${idN++}`,...POOL[dg.block.dir]};
+        dirtySlots.push({ zone:'main', idx:ti });
+        didDropSuccessfully = true;
+      }
+      else if(dg.src==='prog'&&dg.si!==ti){
+        const tmp=prog[ti];prog[ti]=dg.block;prog[dg.si]=tmp;
+        dirtySlots.push({ zone:'main', idx:ti }, { zone:'main', idx:dg.si });
+        didDropSuccessfully = true;
+      }
+      else if(dg.src==='fn'){
+        prog[ti]={...dg.block}; fnProg[dg.si]=null;
+        dirtySlots.push({ zone:'main', idx:ti }, { zone:'fn', idx:dg.si });
+        didDropSuccessfully = true;
+      }
     }
     if (!hadPlacedProgramBlocks && zone === 'main' && prog[ti] && firstLevelOnboardingStage === 'drag') {
       advanceFirstLevelOnboardingToPlay();
     }
   } else {
-    if(dg.src==='prog') prog[dg.si]=null;
-    else if(dg.src==='fn') fnProg[dg.si]=null;
+    if(dg.src==='prog') {
+      prog[dg.si]=null;
+      dirtySlots.push({ zone:'main', idx:dg.si });
+    }
+    else if(dg.src==='fn') {
+      fnProg[dg.si]=null;
+      dirtySlots.push({ zone:'fn', idx:dg.si });
+    }
   }
   if (isFunctionTutorialStep() && !fnUnlockHintActive) {
     const firstFnForwardPlaced = fnProg.some(b => (b?.dir || b?.direction) === 'forward');
     if (firstFnForwardPlaced) fnUnlockHintActive = true;
   }
   if (didDropSuccessfully) playBlockDropSuccessSfx();
-  dg.active=false;
-  refreshAvailableBlockGlowState();
-  renderAvail(); renderBoard(); renderFn();
+  finishDragCleanup();
+  updateDraggedBoardState(dirtySlots);
   if (didDropSuccessfully && slot) triggerSlotCaptureEffect(slot.dataset.zone, +slot.dataset.slot);
-  refreshEditorDebug();
 }
 
 // ═══ GAME LOGIC ═══
