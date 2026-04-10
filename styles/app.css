@@ -1588,9 +1588,11 @@
     @keyframes pb { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
 
     #ghost {
-      position: fixed; z-index: 9999;
+      position: fixed; left: 0; top: 0; z-index: 9999;
       pointer-events: none;
-      transform: translate(-50%, -50%) scale(1.0);
+      transform: translate3d(-9999px, -9999px, 0) translate(-50%, -50%);
+      will-change: transform;
+      transition: none !important;
       opacity: .9; display: none; border-radius: 5px;
       filter: drop-shadow(0 6px 12px rgba(0,0,0,0.25));
     }
