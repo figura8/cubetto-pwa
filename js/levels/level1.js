@@ -411,6 +411,18 @@
     cx.restore();
   }
 
+  function drawBackgroundBase() {
+    const prepared = prepareBackgroundCanvas();
+    if (!prepared) return;
+    const { cx, size: S } = prepared;
+
+    const bg = cx.createLinearGradient(0, 0, 0, S);
+    bg.addColorStop(0, '#f3ecdd');
+    bg.addColorStop(1, '#e8dfcc');
+    cx.fillStyle = bg;
+    cx.fillRect(0, 0, S, S);
+  }
+
   function decorateLevel1(cell, x, y) {
     if ((x + y) % 2 === 0) cell.classList.add('decor-grass');
     if ((x * 3 + y * 2) % 7 === 0) {
@@ -430,6 +442,7 @@
   }
 
   function decorateThomas() {}
+  function decorateBase() {}
 
   window.goalSVGLevel1 = goalSVGLevel1;
   window.BOKS_GOAL_CHARACTER = {
@@ -442,6 +455,52 @@
   window.drawBackgroundLevel1 = drawBackgroundLevel1;
 
   window.BOKS_LEVELS = window.BOKS_LEVELS || {};
+
+  window.BOKS_LEVELS['level-base'] = {
+    id: 'level-base',
+    characterId: 'boks_green',
+    name: 'Base',
+    themeSelectable: true,
+    themeLabel: 'Base',
+    themeHint: 'Griglia semplice e neutra',
+    thumbnailPalette: {
+      scene: '#ede7d7',
+      cellA: '#f7f1e5',
+      cellB: '#efe6d4',
+      cellStroke: '#d2c9b4',
+      obstacleFill: '#d6c0a0',
+      obstacleStroke: '#9d7b51',
+      goalFill: '#5bc85a',
+      goalStroke: '#3a8a39',
+      startFill: '#fff8ee',
+      startStroke: '#5aa24e'
+    },
+    sceneVars: {
+      '--scene-body-bg': 'radial-gradient(140% 95% at 50% 0%, #f3ecdd 0%, #ece3d1 48%, #e8dfcc 100%)',
+      '--bg-base': '#e8dfcc',
+      '--panel-bg': '#ede7d7',
+      '--panel-edge': '#d2c9b4',
+      '--scene-grid-wrap-bg': '#ede7d7',
+      '--grid-bg': '#d2c9b4',
+      '--cell-bg': '#f7f1e5',
+      '--cell-edge': 'rgba(156, 139, 109, 0.48)',
+      '--cell-hi-bg': 'rgba(253, 181, 21, 0.22)',
+      '--cell-hi-edge': '#fdb515',
+      '--cell-hi-ring': 'rgba(253, 181, 21, 0.3)',
+      '--grid-wrap-radius': '16px',
+      '--grid-radius': '14px',
+      '--cell-radius': '8px',
+      '--obstacle-pattern-radius': '5px',
+      '--obstacle-bg-top': 'rgba(214,192,160,0.96)',
+      '--obstacle-bg-bottom': 'rgba(190,164,126,0.96)',
+      '--obstacle-edge': 'rgba(133,104,67,0.74)',
+      '--obstacle-pattern': 'rgba(125,95,57,0.32)'
+    },
+    decorateCell: decorateBase,
+    renderGoal: goalSVGLevel1,
+    renderSprite: renderCharacter,
+    renderBackground: drawBackgroundBase
+  };
 
   window.BOKS_LEVELS.level1 = {
     id: 'level1',

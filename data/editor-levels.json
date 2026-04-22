@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exportedAt": "2026-04-02T13:50:43.188Z",
+  "exportedAt": "2026-04-22T15:54:43.659Z",
   "levels": [
     {
       "id": "level1-step-1",
@@ -1039,6 +1039,50 @@
         "--cell-hi-edge": "#89e1b8",
         "--obstacle-bg-bottom": "#da9234"
       },
+      "levelHints": {
+        "availableBlockGlow": false
+      }
+    },
+    {
+      "id": "custom-1776873283645",
+      "number": 14,
+      "baseStepIndex": null,
+      "campaignIndex": null,
+      "name": "Livello 14",
+      "icon": "leaf",
+      "baseLevel": "level-base",
+      "characterId": "boks_green",
+      "start": {
+        "x": 4,
+        "y": 3
+      },
+      "goal": null,
+      "startOri": "right",
+      "obstacles": [],
+      "decorations": [],
+      "mainSlotEnabled": [
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "fnSlotEnabled": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "enabledBlocks": {
+        "forward": true,
+        "left": false,
+        "right": false,
+        "function": false
+      },
+      "themeOverrides": {},
       "levelHints": {
         "availableBlockGlow": false
       }

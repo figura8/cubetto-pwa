@@ -3614,6 +3614,25 @@ function setCurrentEditorCharacterId(characterId) {
 
 function buildThemePreviewSVG(themeId) {
   const resolvedId = resolveThemeLevelId(themeId);
+  if (resolvedId === 'level-base') {
+    return `<svg viewBox="0 0 48 48" width="54" height="54" aria-hidden="true">
+      <rect x="0" y="0" width="48" height="48" fill="#ede7d7"/>
+      <rect x="6" y="6" width="36" height="36" rx="5" fill="#d2c9b4"/>
+      <g stroke="#d2c9b4" stroke-width="1">
+        <rect x="9" y="9" width="8" height="8" rx="1.8" fill="#f7f1e5"/>
+        <rect x="19" y="9" width="8" height="8" rx="1.8" fill="#f7f1e5"/>
+        <rect x="29" y="9" width="8" height="8" rx="1.8" fill="#f7f1e5"/>
+        <rect x="9" y="19" width="8" height="8" rx="1.8" fill="#f7f1e5"/>
+        <rect x="19" y="19" width="8" height="8" rx="1.8" fill="#f7f1e5"/>
+        <rect x="29" y="19" width="8" height="8" rx="1.8" fill="#f7f1e5"/>
+        <rect x="9" y="29" width="8" height="8" rx="1.8" fill="#f7f1e5"/>
+        <rect x="19" y="29" width="8" height="8" rx="1.8" fill="#f7f1e5"/>
+        <rect x="29" y="29" width="8" height="8" rx="1.8" fill="#f7f1e5"/>
+      </g>
+      <circle cx="33" cy="33" r="3" fill="#5bc85a" stroke="#3a8a39" stroke-width="1"/>
+      <rect x="11" y="11" width="5" height="5" rx="1" fill="#fdb515" opacity="0.55"/>
+    </svg>`;
+  }
   if (resolvedId === 'level-city') {
     return `<svg viewBox="0 0 48 48" width="54" height="54" aria-hidden="true">
       <defs>
@@ -4185,7 +4204,7 @@ function updateAnimationDebugBadge(extra = '') {
 function updateRunAvailability() {
   const btn = document.getElementById('runBtn');
   if (!btn) return;
-  const locked = !!(editorMode && (!playerPlaced || !goalPlaced));
+  const locked = !!(editorMode && !playerPlaced);
   btn.classList.toggle('editor-run-locked', locked);
   btn.disabled = locked;
   btn.setAttribute('aria-disabled', locked ? 'true' : 'false');
@@ -5248,6 +5267,16 @@ function renderElementPalette() {
   ];
 
   palette.innerHTML = '';
+
+  function removeEditorGoal() {
+    if (!goalPlaced) return;
+    goalPlaced = false;
+    selectedElementTool = null;
+    applyEditorBoardChanges();
+    renderBoard();
+    renderCustomLevels();
+  }
+
   tools.forEach(tool => {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -5268,6 +5297,15 @@ function renderElementPalette() {
       renderElementPalette();
     });
     palette.appendChild(btn);
+
+    if (tool.key === 'goal' && goalPlaced) {
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'element-tool-action element-tool-action--danger';
+      removeBtn.textContent = 'Rimuovi goal';
+      removeBtn.addEventListener('click', removeEditorGoal);
+      palette.appendChild(removeBtn);
+    }
   });
   renderDecorationPalette(palette);
   renderEditorSetupControls(palette);
@@ -6863,7 +6901,7 @@ async function moveChar(dir) {
 }
 async function run() {
   if(!gameStarted || running || animating) return;
-  if (!playerPlaced || !goalPlaced) return;
+  if (!playerPlaced) return;
   if (firstLevelOnboardingStage === 'play') completeFirstLevelOnboarding();
   const runStartState = editorMode ? { pos: { ...pos }, ori } : null;
   const runStartPrograms = editorMode ? {
@@ -6935,6 +6973,22 @@ async function run() {
   document.querySelectorAll('.pslot[data-zone="fn"]').forEach(s=>s.classList.remove('fn-active','fn-done'));
   btn.classList.remove('running'); btn.innerHTML = PLAY_ICON_SVG; running=false;
   if (!editorMode) resetPrograms();
+
+  if (!goalPlaced) {
+    if (editorMode && runStartPrograms) {
+      prog = runStartPrograms.prog.map(block => block ? { ...block } : null);
+      fnProg = runStartPrograms.fnProg.map(block => block ? { ...block } : null);
+      renderBoard();
+      renderFn();
+    }
+    if (!editorMode) {
+      resetPlayerToStepStart();
+      renderBoard();
+      renderFn();
+    }
+    syncSprite();
+    return;
+  }
 
   if(won) {
     if (!currentCustomLevel && currentLevel === 'level1') {

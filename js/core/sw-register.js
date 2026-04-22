@@ -5,8 +5,7 @@
       navigator.serviceWorker.getRegistrations()
         .then(regs => Promise.all(regs.map(reg => reg.unregister())))
         .catch(() => {});
-      return;
-    }
+    } else {
 
     let lastUpdateCheckAt = 0;
     function maybeUpdateRegistration(registration, minIntervalMs = 5 * 60 * 1000) {
@@ -61,4 +60,5 @@
       }
       });
     });
+    }
   }

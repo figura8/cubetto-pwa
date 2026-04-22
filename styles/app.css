@@ -2568,6 +2568,17 @@
       border-color: #c79f51;
       background: linear-gradient(180deg, #f7ebc7 0%, #eed99f 100%);
     }
+    .editor-level-tile.theme-level-base {
+      border-color: rgba(184, 170, 142, 0.95);
+      background: linear-gradient(180deg, #f7f1e5 0%, #e9decb 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.78), 0 2px 0 rgba(176, 161, 132, 0.56);
+      color: #6f6047;
+    }
+    .editor-level-tile.theme-level-base.active {
+      border-color: #b59f73;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.78), 0 0 0 3px rgba(181,159,115,0.2), 0 2px 0 rgba(181,159,115,0.55);
+      color: #58492f;
+    }
     .editor-level-tile.theme-level-city {
       border-color: rgba(122, 157, 190, 0.95);
       background: linear-gradient(180deg, #d9e6f3 0%, #bdd3e6 100%);
@@ -2683,6 +2694,29 @@
       color: #8a775b;
       font-size: 0.72rem;
       line-height: 1.25;
+    }
+    .element-tool-action {
+      width: 100%;
+      min-height: 36px;
+      border: 2px solid rgba(210, 201, 180, 0.95);
+      border-radius: 999px;
+      background: linear-gradient(180deg, #fffaf0 0%, #eadfcb 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.72), 0 2px 0 #cdc2ab;
+      color: #6b5a43;
+      font-family: 'Fredoka', system-ui, sans-serif;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .element-tool-action--danger {
+      border-color: rgba(190, 118, 96, 0.72);
+      background: linear-gradient(180deg, #fff4ed 0%, #f0d9cc 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.72), 0 2px 0 rgba(190, 118, 96, 0.36);
+      color: #8a4c39;
+    }
+    .element-tool-action:active {
+      transform: translateY(1px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.72), 0 1px 0 #cdc2ab;
     }
     .editor-setup-card {
       border: 2px solid rgba(210, 201, 180, 0.95);
