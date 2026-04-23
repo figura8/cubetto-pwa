@@ -1519,6 +1519,13 @@ const clip = dir =>
   dir==='left'    ? 'polygon(50% 0,100% 32%,100% 100%,0 100%,0 32%)' :
                     'polygon(0 0,100% 0,100% 68%,50% 100%,0 68%)';
 
+const BLOCK_ICON_PATHS = {
+  forward: 'assets/ui/elements/icon_forward.svg',
+  left: 'assets/ui/elements/icon_turn_left.svg',
+  right: 'assets/ui/elements/icon_turn_right.svg',
+  function: 'assets/ui/elements/icon_function.svg'
+};
+
 // ═══ BUILD BLOCK ═══
 function mkB(block, w, h, cls='') {
   const el = document.createElement('div');
@@ -1527,42 +1534,14 @@ function mkB(block, w, h, cls='') {
   el.dataset.bid = block.id;
   const dir = el.dataset.dir;
   el.style.cssText = `width:${w}px;height:${h}px;flex-shrink:0;display:flex;align-items:center;justify-content:center;`;
-
-  const c  = block.color;
-  const dk = block.dark  || '#666';
-  const lt = block.light || '#fff';
-
-  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
-  svg.setAttribute('viewBox','0 0 40 32');
-  svg.setAttribute('width', w); svg.setAttribute('height', h);
-
-  const isThomasTheme = document.body?.classList.contains('theme-thomas');
-  const blockShape = isThomasTheme
-    ? `M4,4 L36,4 L36,28 L4,28 Z`
-    : `M4,8 Q4,4 8,4 L32,4 Q36,4 36,8 L36,24 Q36,28 32,28 L8,28 Q4,28 4,24 Z`;
-
-  // ombra
-  const shadow = document.createElementNS('http://www.w3.org/2000/svg','path');
-  shadow.setAttribute('d', blockShape);
-  shadow.setAttribute('fill', dk);
-  shadow.setAttribute('transform','translate(0,3)');
-  svg.appendChild(shadow);
-
-  // corpo
-  const body = document.createElementNS('http://www.w3.org/2000/svg','path');
-  body.setAttribute('d', blockShape);
-  body.setAttribute('fill', c);
-  svg.appendChild(body);
-
-  // highlight
-  const hi = document.createElementNS('http://www.w3.org/2000/svg','path');
-  hi.setAttribute('d', blockShape);
-  hi.setAttribute('fill', lt);
-  hi.setAttribute('opacity','0.35');
-  hi.setAttribute('clip-path','inset(0 0 55% 0)');
-  svg.appendChild(hi);
-
-  el.appendChild(svg);
+  const icon = document.createElement('img');
+  icon.className = 'block-art';
+  icon.src = BLOCK_ICON_PATHS[dir] || BLOCK_ICON_PATHS.forward;
+  icon.alt = '';
+  icon.draggable = false;
+  icon.width = w;
+  icon.height = h;
+  el.appendChild(icon);
 
   if (cls.includes('ablock')) {
     const fx = document.createElement('span');

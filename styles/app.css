@@ -996,12 +996,21 @@
       filter: none !important;
     }
     .ablock.drag-source-hidden > svg,
+    .ablock.drag-source-hidden > img,
     .ablock.drag-source-hidden .available-block-vfx__glow,
     .ablock.drag-source-hidden .available-block-vfx__spark,
     .ablock.drag-source-hidden .available-block-vfx::before {
       animation: none !important;
       opacity: 0 !important;
       filter: none !important;
+    }
+    .ablock .block-art,
+    .pblock .block-art {
+      width: 100%;
+      height: 100%;
+      display: block;
+      pointer-events: none;
+      user-select: none;
     }
     .ablock .available-block-vfx {
       position: absolute;
@@ -1072,7 +1081,8 @@
       z-index: 2;
       isolation: isolate;
     }
-    .ablock.tutorial-focus > svg {
+    .ablock.tutorial-focus > svg,
+    .ablock.tutorial-focus > img {
       position: relative;
       z-index: 1;
       filter: drop-shadow(0 4px 0 rgba(58, 138, 57, 0.32)) drop-shadow(0 9px 12px rgba(56, 106, 36, 0.2));
@@ -1105,7 +1115,8 @@
       position: relative;
       z-index: 3;
     }
-    .ablock.empty-play-block-hint svg {
+    .ablock.empty-play-block-hint svg,
+    .ablock.empty-play-block-hint img {
       animation: emptyPlayBlockPop 0.54s ease-out;
     }
     .ablock.empty-play-block-hint::after {
