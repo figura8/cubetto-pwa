@@ -501,7 +501,10 @@ const DECOR_CLASSES = [
   'decor-city-road',
   'decor-city-light',
   'decor-space-dust',
-  'decor-space-crater'
+  'decor-space-crater',
+  'decor-greek-glyph',
+  'decor-greek-crystal',
+  'decor-greek-gleam'
 ];
 let tutorialStepIndex = 0;
 let blockedCells = new Set();
@@ -3648,6 +3651,31 @@ function buildThemePreviewSVG(themeId) {
       <circle cx="41" cy="31" r="1" fill="#c8b5ff"/>
       <circle cx="8" cy="34" r="1.1" fill="#c4f7ff"/>
       <ellipse cx="18" cy="33" rx="9" ry="3.4" fill="none" stroke="#a794ff" stroke-width="1.4" opacity="0.52"/>
+    </svg>`;
+  }
+  if (resolvedId === 'level-zelda-greco') {
+    return `<svg viewBox="0 0 48 48" width="54" height="54" aria-hidden="true">
+      <defs>
+        <linearGradient id="themeGreekSky" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#0f7a86"/>
+          <stop offset="58%" stop-color="#126f7b"/>
+          <stop offset="100%" stop-color="#c08e5f"/>
+        </linearGradient>
+        <linearGradient id="themeGreekStone" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#f3e0b2"/>
+          <stop offset="100%" stop-color="#b59667"/>
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="48" height="48" fill="url(#themeGreekSky)"/>
+      <path d="M3 34h30v7H3z" fill="url(#themeGreekStone)"/>
+      <path d="M4 32h28l-2 2H6z" fill="#7b5e3e" opacity="0.55"/>
+      <path d="M5 39h26" stroke="#7b5e3e" stroke-width="1.4" stroke-dasharray="3 2" opacity="0.7"/>
+      <path d="M34 14h10l2 5-2 5H33l-1-5z" fill="#6b5640" opacity="0.86"/>
+      <path d="M35 13h8l2 4-1.7 4H34l-1-4z" fill="#d7bf8f"/>
+      <path d="M37 10h4l1 3h-6z" fill="#85d6d7"/>
+      <path d="M13 41l2.8-6 2.8 6-2.8 4z" fill="#bb67ff" opacity="0.88"/>
+      <circle cx="22" cy="24" r="5" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.72)" stroke-width="1.1"/>
+      <circle cx="22" cy="24" r="2.1" fill="#ffd95a"/>
     </svg>`;
   }
   if (resolvedId === 'level-thomas') {

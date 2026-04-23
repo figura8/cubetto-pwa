@@ -86,6 +86,12 @@
     });
   }
 
+  function goalSVGZeldaGreco() {
+    return renderGoalCharacterBadge({
+      shadow: 'rgba(255, 220, 136, 0.34)'
+    });
+  }
+
   function renderCharacter(state) {
     const resolvedState = typeof state === 'string'
       ? { direction: state, action: 'idle' }
@@ -382,6 +388,179 @@
     cx.restore();
   }
 
+  function drawBackgroundZeldaGreco() {
+    const prepared = prepareBackgroundCanvas();
+    if (!prepared) return;
+    const { cx, size: S } = prepared;
+
+    const bg = cx.createLinearGradient(0, 0, S, S);
+    bg.addColorStop(0, '#0f7a86');
+    bg.addColorStop(0.54, '#116f7b');
+    bg.addColorStop(1, '#c29262');
+    cx.fillStyle = bg;
+    cx.fillRect(0, 0, S, S);
+
+    cx.save();
+    const hazeA = cx.createRadialGradient(S * 0.22, S * 0.18, S * 0.04, S * 0.22, S * 0.18, S * 0.38);
+    hazeA.addColorStop(0, 'rgba(125, 243, 255, 0.2)');
+    hazeA.addColorStop(1, 'rgba(125, 243, 255, 0)');
+    cx.fillStyle = hazeA;
+    cx.fillRect(0, 0, S, S);
+    const hazeB = cx.createRadialGradient(S * 0.82, S * 0.68, S * 0.05, S * 0.82, S * 0.68, S * 0.44);
+    hazeB.addColorStop(0, 'rgba(255, 224, 164, 0.22)');
+    hazeB.addColorStop(1, 'rgba(255, 224, 164, 0)');
+    cx.fillStyle = hazeB;
+    cx.fillRect(0, 0, S, S);
+    cx.restore();
+
+    function drawCloud(x, y, scale, alpha) {
+      cx.save();
+      cx.globalAlpha = alpha;
+      cx.fillStyle = '#dbeff0';
+      cx.beginPath();
+      cx.ellipse(x, y, S * 0.06 * scale, S * 0.028 * scale, 0, 0, Math.PI * 2);
+      cx.ellipse(x + S * 0.04 * scale, y - S * 0.008 * scale, S * 0.048 * scale, S * 0.024 * scale, 0, 0, Math.PI * 2);
+      cx.ellipse(x - S * 0.038 * scale, y + S * 0.004 * scale, S * 0.04 * scale, S * 0.02 * scale, 0, 0, Math.PI * 2);
+      cx.fill();
+      cx.restore();
+    }
+
+    function drawIsland(x, y, scale, variant = 0) {
+      const w = S * 0.18 * scale;
+      const h = S * 0.06 * scale;
+      const rock = '#5f4a38';
+      const rockShade = '#493729';
+      const grass = variant === 1 ? '#d3be7d' : '#d8c987';
+      const moss = variant === 1 ? '#8ba55d' : '#9db56b';
+
+      cx.save();
+      cx.translate(x, y);
+
+      cx.fillStyle = grass;
+      cx.beginPath();
+      cx.moveTo(-w * 0.54, -h * 0.24);
+      cx.quadraticCurveTo(-w * 0.12, -h * 0.5, w * 0.4, -h * 0.28);
+      cx.quadraticCurveTo(w * 0.56, -h * 0.22, w * 0.52, -h * 0.06);
+      cx.lineTo(-w * 0.5, -h * 0.02);
+      cx.closePath();
+      cx.fill();
+
+      cx.fillStyle = moss;
+      cx.fillRect(-w * 0.45, -h * 0.08, w * 0.76, h * 0.12);
+
+      cx.fillStyle = rock;
+      cx.beginPath();
+      cx.moveTo(-w * 0.5, 0);
+      cx.lineTo(w * 0.5, 0);
+      cx.lineTo(w * 0.3, h * 1.75);
+      cx.lineTo(-w * 0.18, h * 2.35);
+      cx.lineTo(-w * 0.54, h * 1.28);
+      cx.closePath();
+      cx.fill();
+
+      cx.fillStyle = rockShade;
+      cx.beginPath();
+      cx.moveTo(-w * 0.08, 0);
+      cx.lineTo(w * 0.5, 0);
+      cx.lineTo(w * 0.3, h * 1.75);
+      cx.lineTo(w * 0.03, h * 1.22);
+      cx.closePath();
+      cx.fill();
+
+      cx.strokeStyle = 'rgba(255, 248, 217, 0.22)';
+      cx.lineWidth = Math.max(1, S * 0.0045 * scale);
+      cx.beginPath();
+      cx.moveTo(-w * 0.28, h * 0.5);
+      cx.lineTo(-w * 0.08, h * 0.85);
+      cx.lineTo(w * 0.08, h * 0.48);
+      cx.stroke();
+
+      if (variant === 0) {
+        cx.fillStyle = '#c694ff';
+        cx.beginPath();
+        cx.moveTo(-w * 0.1, -h * 0.36);
+        cx.lineTo(-w * 0.02, -h * 0.74);
+        cx.lineTo(w * 0.02, -h * 0.34);
+        cx.lineTo(-w * 0.02, -h * 0.14);
+        cx.closePath();
+        cx.fill();
+      } else {
+        cx.strokeStyle = '#8e6f44';
+        cx.lineWidth = Math.max(1.2, S * 0.006 * scale);
+        cx.lineCap = 'round';
+        cx.beginPath();
+        cx.moveTo(-w * 0.18, -h * 0.14);
+        cx.lineTo(-w * 0.18, -h * 0.7);
+        cx.moveTo(-w * 0.04, -h * 0.12);
+        cx.lineTo(-w * 0.04, -h * 0.62);
+        cx.stroke();
+      }
+
+      cx.restore();
+    }
+
+    drawIsland(S * 0.18, S * 0.2, 0.92, 0);
+    drawIsland(S * 0.81, S * 0.22, 0.82, 1);
+    drawIsland(S * 0.66, S * 0.1, 0.48, 0);
+
+    drawCloud(S * 0.14, S * 0.14, 1.05, 0.42);
+    drawCloud(S * 0.84, S * 0.82, 1.2, 0.36);
+    drawCloud(S * 0.19, S * 0.86, 0.8, 0.3);
+
+    cx.save();
+    for (let i = 0; i < 26; i++) {
+      const x = (((i + 4) * 127) % 997) / 997 * S;
+      const y = (((i + 7) * 233) % 991) / 991 * S;
+      const r = Math.max(1.1, S * 0.0045);
+      cx.fillStyle = i % 3 === 0 ? 'rgba(255, 244, 198, 0.8)' : 'rgba(190, 245, 255, 0.7)';
+      cx.beginPath();
+      cx.arc(x, y, r, 0, Math.PI * 2);
+      cx.fill();
+      if (i % 5 === 0) {
+        cx.strokeStyle = 'rgba(255,255,255,0.72)';
+        cx.lineWidth = Math.max(0.8, S * 0.0028);
+        cx.beginPath();
+        cx.moveTo(x - r * 1.8, y);
+        cx.lineTo(x + r * 1.8, y);
+        cx.moveTo(x, y - r * 1.8);
+        cx.lineTo(x, y + r * 1.8);
+        cx.stroke();
+      }
+    }
+    cx.restore();
+
+    cx.save();
+    const ribbon = cx.createLinearGradient(S * 0.72, S * 0.38, S * 0.9, S * 0.85);
+    ribbon.addColorStop(0, 'rgba(255, 220, 110, 0)');
+    ribbon.addColorStop(0.28, 'rgba(255, 220, 110, 0.55)');
+    ribbon.addColorStop(0.56, 'rgba(126, 250, 255, 0.62)');
+    ribbon.addColorStop(1, 'rgba(210, 118, 255, 0)');
+    cx.strokeStyle = ribbon;
+    cx.lineWidth = Math.max(5, S * 0.024);
+    cx.lineCap = 'round';
+    cx.beginPath();
+    cx.moveTo(S * 0.76, S * 0.46);
+    cx.bezierCurveTo(S * 0.9, S * 0.54, S * 0.92, S * 0.7, S * 0.78, S * 0.82);
+    cx.stroke();
+    cx.restore();
+
+    cx.save();
+    const gridSize = S / 6;
+    cx.strokeStyle = 'rgba(227, 243, 238, 0.13)';
+    cx.lineWidth = 1;
+    for (let i = 1; i < 6; i++) {
+      cx.beginPath();
+      cx.moveTo(i * gridSize, 0);
+      cx.lineTo(i * gridSize, S);
+      cx.stroke();
+      cx.beginPath();
+      cx.moveTo(0, i * gridSize);
+      cx.lineTo(S, i * gridSize);
+      cx.stroke();
+    }
+    cx.restore();
+  }
+
   function drawBackgroundThomas() {
     const prepared = prepareBackgroundCanvas();
     if (!prepared) return;
@@ -439,6 +618,12 @@
   function decorateUniverse(cell, x, y) {
     if ((x * 2 + y * 3) % 4 === 0) cell.classList.add('decor-space-dust');
     if ((x * 7 + y * 5) % 9 === 0) cell.classList.add('decor-space-crater');
+  }
+
+  function decorateZeldaGreco(cell, x, y) {
+    if ((x + y * 2) % 4 === 0) cell.classList.add('decor-greek-glyph');
+    if ((x * 5 + y * 3) % 7 === 0) cell.classList.add('decor-greek-crystal');
+    if ((x * 7 + y * 4) % 11 === 0) cell.classList.add('decor-greek-gleam');
   }
 
   function decorateThomas() {}
@@ -638,6 +823,52 @@
     renderGoal: goalSVGUniverse,
     renderSprite: renderCharacter,
     renderBackground: drawBackgroundUniverse
+  };
+
+  window.BOKS_LEVELS['level-zelda-greco'] = {
+    id: 'level-zelda-greco',
+    characterId: 'boks_green',
+    name: 'Zelda Greco',
+    themeSelectable: true,
+    themeLabel: 'Zelda Greco',
+    themeHint: 'Rovine sospese, cristalli e cielo teal-oro',
+    thumbnailPalette: {
+      scene: '#116f7b',
+      cellA: '#dbc88f',
+      cellB: '#cdb378',
+      cellStroke: '#8f724c',
+      obstacleFill: '#76604a',
+      obstacleStroke: '#4b3929',
+      goalFill: '#ffe48b',
+      goalStroke: '#b98235',
+      startFill: '#f9f6ef',
+      startStroke: '#497b74'
+    },
+    sceneVars: {
+      '--scene-body-bg': 'linear-gradient(135deg, #0b7583 0%, #106f7b 52%, #c18f5f 100%)',
+      '--bg-base': '#106f7b',
+      '--panel-bg': '#f2e2b8',
+      '--panel-edge': '#b89560',
+      '--scene-grid-wrap-bg': '#d8c485',
+      '--grid-bg': '#b6935d',
+      '--cell-bg': '#dcc993',
+      '--cell-edge': 'rgba(131, 105, 67, 0.6)',
+      '--cell-hi-bg': 'rgba(255, 241, 177, 0.92)',
+      '--cell-hi-edge': '#dfb552',
+      '--cell-hi-ring': 'rgba(223,181,82,0.44)',
+      '--grid-wrap-radius': '18px',
+      '--grid-radius': '18px',
+      '--cell-radius': '8px',
+      '--obstacle-pattern-radius': '4px',
+      '--obstacle-bg-top': 'rgba(124,101,76,0.96)',
+      '--obstacle-bg-bottom': 'rgba(90,70,51,0.98)',
+      '--obstacle-edge': 'rgba(71,53,37,0.9)',
+      '--obstacle-pattern': 'rgba(239,217,174,0.36)'
+    },
+    decorateCell: decorateZeldaGreco,
+    renderGoal: goalSVGZeldaGreco,
+    renderSprite: renderCharacter,
+    renderBackground: drawBackgroundZeldaGreco
   };
 
   window.BOKS_LEVELS['level-thomas'] = {
