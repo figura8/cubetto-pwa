@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exportedAt": "2026-04-22T15:54:43.659Z",
+  "exportedAt": "2026-05-08T15:18:19.625Z",
   "levels": [
     {
       "id": "level1-step-1",
@@ -149,7 +149,7 @@
       "name": "Livello 2",
       "icon": "leaf",
       "baseLevel": "level1",
-      "characterId": "boks_green",
+      "characterId": "boks_red",
       "start": {
         "x": 1,
         "y": 3
@@ -264,7 +264,7 @@
       "name": "Livello 3",
       "icon": "turtle",
       "baseLevel": "level1",
-      "characterId": "boks_green",
+      "characterId": "boks_yellow",
       "start": {
         "x": 1,
         "y": 3
@@ -398,7 +398,7 @@
       "name": "Livello 4",
       "icon": "sun",
       "baseLevel": "level1",
-      "characterId": "boks_green",
+      "characterId": "boks_blu",
       "start": {
         "x": 4,
         "y": 3
@@ -530,8 +530,8 @@
       "campaignIndex": 4,
       "name": "Livello 5",
       "icon": "moon",
-      "baseLevel": "level-city",
-      "characterId": "boks_red",
+      "baseLevel": "level1",
+      "characterId": "boks_green",
       "start": {
         "x": 1,
         "y": 4
@@ -547,7 +547,190 @@
           "y": 3
         }
       ],
-      "decorations": [],
+      "decorations": [
+        {
+          "id": "decor-1778252901065-b1866",
+          "x": 1,
+          "y": 1,
+          "anchorX": 0.267,
+          "anchorY": 0.239,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778252901491-cvu7c",
+          "x": 2,
+          "y": 1,
+          "anchorX": 0.466,
+          "anchorY": 0.243,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778252902003-w4bjt",
+          "x": 4,
+          "y": 1,
+          "anchorX": 0.668,
+          "anchorY": 0.232,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778252902741-1f83d",
+          "x": 5,
+          "y": 1,
+          "anchorX": 0.846,
+          "anchorY": 0.258,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778252903818-lqtoz",
+          "x": 0,
+          "y": 1,
+          "anchorX": 0.122,
+          "anchorY": 0.221,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778252904575-34wwc",
+          "x": 0,
+          "y": 2,
+          "anchorX": 0.131,
+          "anchorY": 0.408,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778252905851-f82bs",
+          "x": 2,
+          "y": 2,
+          "anchorX": 0.471,
+          "anchorY": 0.361,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778252906574-bw9qe",
+          "x": 3,
+          "y": 2,
+          "anchorX": 0.653,
+          "anchorY": 0.375,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778252907101-obtxd",
+          "x": 5,
+          "y": 2,
+          "anchorX": 0.909,
+          "anchorY": 0.403,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778252907843-dxen4",
+          "x": 1,
+          "y": 2,
+          "anchorX": 0.26,
+          "anchorY": 0.351,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778252909212-o45y0",
+          "x": 0,
+          "y": 5,
+          "anchorX": 0.113,
+          "anchorY": 0.877,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778252909575-ru7en",
+          "x": 2,
+          "y": 5,
+          "anchorX": 0.339,
+          "anchorY": 0.908,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778252909834-nn53x",
+          "x": 3,
+          "y": 5,
+          "anchorX": 0.587,
+          "anchorY": 0.905,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778252910058-q7udq",
+          "x": 4,
+          "y": 5,
+          "anchorX": 0.819,
+          "anchorY": 0.881,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        }
+      ],
       "mainSlotEnabled": [
         true,
         true,
@@ -582,7 +765,7 @@
       "campaignIndex": 5,
       "name": "Livello 6",
       "icon": "leaf",
-      "baseLevel": "level-city",
+      "baseLevel": "level1",
       "characterId": "boks_red",
       "start": {
         "x": 1,
@@ -594,7 +777,99 @@
       },
       "startOri": "right",
       "obstacles": [],
-      "decorations": [],
+      "decorations": [
+        {
+          "id": "decor-1778253018630-8p3xd",
+          "x": 1,
+          "y": 4,
+          "anchorX": 0.223,
+          "anchorY": 0.747,
+          "asset": "tree_small",
+          "layer": "object",
+          "scale": 1,
+          "count": 1,
+          "foliageColor": "#5dae61",
+          "trunkColor": "#8f6136"
+        },
+        {
+          "id": "decor-1778253022314-qeg6i",
+          "x": 5,
+          "y": 0,
+          "anchorX": 0.889,
+          "anchorY": 0.059,
+          "asset": "tree_small",
+          "layer": "object",
+          "scale": 1,
+          "count": 1,
+          "foliageColor": "#5dae61",
+          "trunkColor": "#8f6136"
+        },
+        {
+          "id": "decor-1778253023057-a6n38",
+          "x": 4,
+          "y": 1,
+          "anchorX": 0.681,
+          "anchorY": 0.302,
+          "asset": "tree_small",
+          "layer": "object",
+          "scale": 1,
+          "count": 1,
+          "foliageColor": "#5dae61",
+          "trunkColor": "#8f6136"
+        },
+        {
+          "id": "decor-1778253023634-2jjzn",
+          "x": 3,
+          "y": 2,
+          "anchorX": 0.503,
+          "anchorY": 0.386,
+          "asset": "tree_small",
+          "layer": "object",
+          "scale": 1,
+          "count": 1,
+          "foliageColor": "#5dae61",
+          "trunkColor": "#8f6136"
+        },
+        {
+          "id": "decor-1778253024265-6in59",
+          "x": 1,
+          "y": 1,
+          "anchorX": 0.188,
+          "anchorY": 0.326,
+          "asset": "tree_small",
+          "layer": "object",
+          "scale": 1,
+          "count": 1,
+          "foliageColor": "#5dae61",
+          "trunkColor": "#8f6136"
+        },
+        {
+          "id": "decor-1778253026148-o2n4k",
+          "x": 4,
+          "y": 5,
+          "anchorX": 0.751,
+          "anchorY": 0.903,
+          "asset": "tree_small",
+          "layer": "object",
+          "scale": 1,
+          "count": 1,
+          "foliageColor": "#5dae61",
+          "trunkColor": "#8f6136"
+        },
+        {
+          "id": "decor-1778253031044-wuk6z",
+          "x": 3,
+          "y": 4,
+          "anchorX": 0.598,
+          "anchorY": 0.706,
+          "asset": "bee_hover",
+          "layer": "overlay",
+          "scale": 1,
+          "count": 3,
+          "foliageColor": "",
+          "trunkColor": ""
+        }
+      ],
       "mainSlotEnabled": [
         true,
         true,
@@ -629,8 +904,8 @@
       "campaignIndex": 6,
       "name": "Livello 7",
       "icon": "leaf",
-      "baseLevel": "level-city",
-      "characterId": "boks_red",
+      "baseLevel": "level1",
+      "characterId": "boks_yellow",
       "start": {
         "x": 1,
         "y": 4
@@ -646,10 +921,76 @@
           "y": 3
         }
       ],
-      "decorations": [],
+      "decorations": [
+        {
+          "id": "decor-1778253075770-d0mqx",
+          "x": 3,
+          "y": 1,
+          "anchorX": 0.534,
+          "anchorY": 0.291,
+          "asset": "bee_hover",
+          "layer": "overlay",
+          "scale": 1,
+          "count": 3,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778253076174-4o444",
+          "x": 4,
+          "y": 2,
+          "anchorX": 0.804,
+          "anchorY": 0.397,
+          "asset": "bee_hover",
+          "layer": "overlay",
+          "scale": 1,
+          "count": 3,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778253076616-28vnq",
+          "x": 4,
+          "y": 3,
+          "anchorX": 0.817,
+          "anchorY": 0.625,
+          "asset": "bee_hover",
+          "layer": "overlay",
+          "scale": 1,
+          "count": 3,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778253077705-9n3a8",
+          "x": 1,
+          "y": 0,
+          "anchorX": 0.288,
+          "anchorY": 0.166,
+          "asset": "bee_hover",
+          "layer": "overlay",
+          "scale": 1,
+          "count": 3,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778253083626-49bs9",
+          "x": 5,
+          "y": 1,
+          "anchorX": 0.881,
+          "anchorY": 0.239,
+          "asset": "tree_small",
+          "layer": "object",
+          "scale": 1,
+          "count": 1,
+          "foliageColor": "#5dae61",
+          "trunkColor": "#8f6136"
+        }
+      ],
       "mainSlotEnabled": [
-        true,
-        true,
+        false,
+        false,
         false,
         false,
         false,
@@ -658,16 +999,16 @@
         false
       ],
       "fnSlotEnabled": [
-        true,
-        true,
+        false,
+        false,
         false,
         false
       ],
       "enabledBlocks": {
-        "forward": true,
+        "forward": false,
         "left": false,
-        "right": true,
-        "function": true
+        "right": false,
+        "function": false
       },
       "themeOverrides": {},
       "levelHints": {
@@ -681,8 +1022,8 @@
       "campaignIndex": 7,
       "name": "Livello 8",
       "icon": "star",
-      "baseLevel": "level-city",
-      "characterId": "boks_red",
+      "baseLevel": "level1",
+      "characterId": "boks_blu",
       "start": {
         "x": 4,
         "y": 4
@@ -698,7 +1039,112 @@
           "y": 3
         }
       ],
-      "decorations": [],
+      "decorations": [
+        {
+          "id": "decor-1778253117184-38v8a",
+          "x": 0,
+          "y": 0,
+          "anchorX": 0.113,
+          "anchorY": 0.096,
+          "asset": "bridge",
+          "layer": "overlay",
+          "scale": 1,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778253119719-tinbl",
+          "x": 2,
+          "y": 1,
+          "anchorX": 0.365,
+          "anchorY": 0.272,
+          "asset": "bridge",
+          "layer": "overlay",
+          "scale": 1,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778253121136-k7nws",
+          "x": 3,
+          "y": 2,
+          "anchorX": 0.611,
+          "anchorY": 0.394,
+          "asset": "bridge",
+          "layer": "overlay",
+          "scale": 1,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778253122884-3menr",
+          "x": 5,
+          "y": 3,
+          "anchorX": 0.883,
+          "anchorY": 0.535,
+          "asset": "bridge",
+          "layer": "overlay",
+          "scale": 1,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778253127239-eugf1",
+          "x": 0,
+          "y": 2,
+          "anchorX": 0.087,
+          "anchorY": 0.414,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778253128066-wpvu8",
+          "x": 1,
+          "y": 3,
+          "anchorX": 0.328,
+          "anchorY": 0.546,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778253128904-y1lqr",
+          "x": 3,
+          "y": 4,
+          "anchorX": 0.565,
+          "anchorY": 0.701,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1778253129656-wlsk4",
+          "x": 5,
+          "y": 5,
+          "anchorX": 0.881,
+          "anchorY": 0.91,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        }
+      ],
       "mainSlotEnabled": [
         true,
         true,
@@ -733,8 +1179,8 @@
       "campaignIndex": 8,
       "name": "Livello 9",
       "icon": "turtle",
-      "baseLevel": "level-universe",
-      "characterId": "boks_yellow",
+      "baseLevel": "level1",
+      "characterId": "boks_green",
       "start": {
         "x": 1,
         "y": 4
@@ -777,14 +1223,7 @@
         "right": true,
         "function": true
       },
-      "themeOverrides": {
-        "--scene-grid-wrap-bg": "#c0becb",
-        "--cell-bg": "#605d83",
-        "--cell-hi-bg": "#777e88",
-        "--obstacle-bg-top": "#d1d1d1",
-        "--obstacle-bg-bottom": "#b49e50",
-        "--obstacle-edge": "#c5bfd4"
-      },
+      "themeOverrides": {},
       "levelHints": {
         "availableBlockGlow": false
       }
@@ -796,8 +1235,8 @@
       "campaignIndex": 9,
       "name": "Livello 10",
       "icon": "sun",
-      "baseLevel": "level-universe",
-      "characterId": "boks_yellow",
+      "baseLevel": "level1",
+      "characterId": "boks_red",
       "start": {
         "x": 1,
         "y": 4
@@ -840,14 +1279,7 @@
         "right": true,
         "function": true
       },
-      "themeOverrides": {
-        "--scene-grid-wrap-bg": "#c0becb",
-        "--cell-bg": "#605d83",
-        "--cell-hi-bg": "#777e88",
-        "--obstacle-bg-top": "#d1d1d1",
-        "--obstacle-bg-bottom": "#b49e50",
-        "--obstacle-edge": "#c5bfd4"
-      },
+      "themeOverrides": {},
       "levelHints": {
         "availableBlockGlow": false
       }
@@ -859,7 +1291,7 @@
       "campaignIndex": 10,
       "name": "Livello 11",
       "icon": "moon",
-      "baseLevel": "level-universe",
+      "baseLevel": "level1",
       "characterId": "boks_yellow",
       "start": {
         "x": 4,
@@ -903,14 +1335,7 @@
         "right": true,
         "function": true
       },
-      "themeOverrides": {
-        "--scene-grid-wrap-bg": "#c0becb",
-        "--cell-bg": "#605d83",
-        "--cell-hi-bg": "#777e88",
-        "--obstacle-bg-top": "#d1d1d1",
-        "--obstacle-bg-bottom": "#b49e50",
-        "--obstacle-edge": "#c5bfd4"
-      },
+      "themeOverrides": {},
       "levelHints": {
         "availableBlockGlow": false
       }
@@ -922,8 +1347,8 @@
       "campaignIndex": 11,
       "name": "Livello 12",
       "icon": "flower",
-      "baseLevel": "level-universe",
-      "characterId": "boks_yellow",
+      "baseLevel": "level1",
+      "characterId": "boks_blu",
       "start": {
         "x": 4,
         "y": 4
@@ -966,14 +1391,7 @@
         "right": true,
         "function": true
       },
-      "themeOverrides": {
-        "--scene-grid-wrap-bg": "#c0becb",
-        "--cell-bg": "#605d83",
-        "--cell-hi-bg": "#777e88",
-        "--obstacle-bg-top": "#d1d1d1",
-        "--obstacle-bg-bottom": "#b49e50",
-        "--obstacle-edge": "#c5bfd4"
-      },
+      "themeOverrides": {},
       "levelHints": {
         "availableBlockGlow": false
       }
@@ -985,8 +1403,8 @@
       "campaignIndex": 12,
       "name": "Livello 13",
       "icon": "leaf",
-      "baseLevel": "level-thomas",
-      "characterId": "boks_blu",
+      "baseLevel": "level1",
+      "characterId": "boks_green",
       "start": {
         "x": 1,
         "y": 4
@@ -1050,7 +1468,7 @@
       "campaignIndex": null,
       "name": "Livello 14",
       "icon": "leaf",
-      "baseLevel": "level-base",
+      "baseLevel": "level1",
       "characterId": "boks_green",
       "start": {
         "x": 4,

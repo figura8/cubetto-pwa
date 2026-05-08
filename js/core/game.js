@@ -384,7 +384,7 @@ async function popGoalBubble() {
   await sleep(GOAL_BUBBLE_POP_DURATION_MS);
 }
 let ori = 'right';
-const MOVE_MS = 650, TURN_MS = 520, STEP_MS = 180;
+const MOVE_MS = 1050, TURN_MS = 1050, STEP_MS = 180;
 const POOL = {
   forward:  {dir:'forward',  color:'#5BC85A', dark:'#3a8a39', light:'#8de88c'},
   left:     {dir:'left',     color:'#F5C842', dark:'#b8920a', light:'#ffe87a'},
@@ -395,6 +395,7 @@ const CUSTOM_LEVELS_STORAGE_KEY = 'boks-custom-levels';
 const EDITOR_LEVELS_STORAGE_KEY = 'boks-editor-levels-v1';
 const PROJECT_LEVELS_CACHE_KEY = 'boks-project-levels-cache-v1';
 const STYLE_PRESETS_STORAGE_KEY = 'boks-style-presets-v1';
+const TABLET_LAYOUT_STORAGE_KEY = 'boks-tablet-layout-enabled';
 const EDITOR_LEVELS_FILE_PATH = './data/editor-levels.json';
 const EDITOR_LEVELS_FILE_PICKER_SUGGESTED_NAME = 'editor-levels.json';
 const FILE_HANDLE_DB_NAME = 'boks-file-handles';
@@ -413,7 +414,7 @@ const DECORATION_TOUCH_REACTION_COOLDOWN_MS = 760;
 const DECORATION_TOUCH_SPRITE_INSET_RATIO = 0.04;
 const CUSTOM_ICONS = ['leaf', 'star', 'turtle', 'sun', 'moon', 'flower'];
   const DEFAULT_CHARACTER_ID = 'boks_green';
-const LOCKED_THEME_SCENE_VAR_KEYS = ['--scene-body-bg', '--bg-base'];
+const LOCKED_THEME_SCENE_VAR_KEYS = ['--scene-body-bg', '--bg-base', '--panel-bg', '--panel-edge'];
 const EDITOR_THEME_COLOR_CONTROLS = [
   { key: '--panel-bg', label: 'Pannelli' },
   { key: '--panel-edge', label: 'Bordo pannelli' },
@@ -650,6 +651,7 @@ const AUDIO_PATHS = Object.freeze({
       stepMove: 'assets/audio/sfx/gameplay/step_move.mp3',
       errorAction: 'assets/audio/sfx/gameplay/error_action.mp3',
       boksAnnoyed: 'assets/audio/sfx/gameplay/boks_annoyed.ogg',
+      welcome: 'assets/audio/sfx/gameplay/wellcome.mp3',
       decorRubberTap: [
         'assets/audio/sfx/gameplay/decor_rubber_tap_01.ogg',
         'assets/audio/sfx/gameplay/decor_rubber_tap_02.ogg'
@@ -660,8 +662,80 @@ const AUDIO_PATHS = Object.freeze({
     }
   }
 });
-const PLAY_ICON_SVG = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><use href="#icon-play-boks"></use></svg>';
-const PAUSE_ICON_SVG = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><use href="#icon-pause-boks"></use></svg>';
+const RUN_PROGRESS_LED_COUNT = 8;
+let runButtonPressedTimer = null;
+let activeRunLedSlotOrder = [];
+let startGameButtonPressedTimer = null;
+let startGameGateAnimating = false;
+function buildRunLedDots(count = RUN_PROGRESS_LED_COUNT) {
+  return Array.from({ length: count }, (_, idx) =>
+    `<span class="run-step-dot" data-run-led="${idx}" aria-hidden="true"></span>`
+  ).join('');
+}
+function renderRunButtonHud() {
+  const btn = document.getElementById('runBtn');
+  if (!btn) return;
+  btn.innerHTML = `
+    <span class="run-btn-shell" aria-hidden="true">
+      <span class="run-btn-progress">${buildRunLedDots()}</span>
+    </span>
+  `;
+  clearRunProgressIndicators();
+}
+function setRunButtonRunningState(isRunning) {
+  document.getElementById('runBtn')?.classList.toggle('running', Boolean(isRunning));
+}
+function pulseRunButtonPressedState(durationMs = 150) {
+  const btn = document.getElementById('runBtn');
+  if (!btn) return;
+  btn.classList.add('is-pressed');
+  if (runButtonPressedTimer) clearTimeout(runButtonPressedTimer);
+  runButtonPressedTimer = setTimeout(() => {
+    btn.classList.remove('is-pressed');
+    runButtonPressedTimer = null;
+  }, durationMs);
+}
+function setRunButtonPressedState(isPressed) {
+  const btn = document.getElementById('runBtn');
+  if (!btn) return;
+  if (runButtonPressedTimer) {
+    clearTimeout(runButtonPressedTimer);
+    runButtonPressedTimer = null;
+  }
+  btn.classList.toggle('is-pressed', Boolean(isPressed));
+}
+function syncRunProgressAvailability() {
+  clearRunProgressIndicators();
+}
+function clearRunProgressIndicators() {
+  document.querySelectorAll('#runBtn .run-step-dot')
+    .forEach(dot => dot.classList.remove('is-active', 'is-done'));
+}
+function updateRunProgressIndicator(zone = 'main', activeSlot = -1) {
+  if (zone !== 'main') return;
+  const dots = Array.from(document.querySelectorAll('#runBtn .run-step-dot'));
+  if (!dots.length) return;
+  const activeLedIndex = activeRunLedSlotOrder.indexOf(activeSlot);
+  dots.forEach((dot, ledIndex) => {
+    dot.classList.toggle('is-done', activeLedIndex >= 0 && ledIndex < activeLedIndex);
+    dot.classList.toggle('is-active', ledIndex === activeLedIndex);
+  });
+}
+function pulseStartGameButtonPressedState(durationMs = 160) {
+  const btn = document.getElementById('startGameBtn');
+  if (!btn) return;
+  btn.classList.add('is-pressed');
+  if (startGameButtonPressedTimer) clearTimeout(startGameButtonPressedTimer);
+  startGameButtonPressedTimer = setTimeout(() => {
+    btn.classList.remove('is-pressed');
+    startGameButtonPressedTimer = null;
+  }, durationMs);
+}
+function resetStartGameButtonVisualState() {
+  const btn = document.getElementById('startGameBtn');
+  if (!btn) return;
+  btn.classList.remove('is-popping', 'is-pressed');
+}
 const audioPlayers = new Map();
 const FX = () => {
   if (!fxAc) fxAc = new (window.AudioContext || window.webkitAudioContext)();
@@ -901,6 +975,9 @@ function playGoalBubbleBounceSfx() {
 }
 function playBubblePopSfx() {
   playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.bubblePop, 0.26);
+}
+function playWelcomeSfx() {
+  playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.welcome, 0.34);
 }
 function playLevelCompleteSfx() {
   playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.levelComplete, 0.5);
@@ -1169,13 +1246,39 @@ function updateOrientationGuard() {
   const mobileLike = window.matchMedia
     ? window.matchMedia('(pointer: coarse)').matches || Math.max(window.innerWidth, window.innerHeight) <= 1366
     : true;
-  document.body.classList.toggle('landscape-block', !portrait && mobileLike);
+  const tabletLayout = document.body.classList.contains('tablet-layout');
+  document.body.classList.toggle('landscape-block', !tabletLayout && !portrait && mobileLike);
+}
+function setTabletLayout(enabled, { persist = true, announce = true } = {}) {
+  document.body.classList.toggle('tablet-layout', Boolean(enabled));
+  if (persist) {
+    try {
+      localStorage.setItem(TABLET_LAYOUT_STORAGE_KEY, enabled ? '1' : '0');
+    } catch (_) {}
+  }
+  updateOrientationGuard();
+  requestAppFullscreen();
+  scheduleSceneRefresh({ syncOnboarding: true, label: enabled ? 'tablet-layout-on' : 'tablet-layout-off' });
+  if (announce) toast(enabled ? 'Layout tablet attivo' : 'Layout portrait attivo');
+}
+function toggleTabletLayout() {
+  setTabletLayout(!document.body.classList.contains('tablet-layout'));
+}
+function applyTabletLayoutPreference() {
+  try {
+    setTabletLayout(localStorage.getItem(TABLET_LAYOUT_STORAGE_KEY) === '1', { persist: false, announce: false });
+  } catch (_) {
+    setTabletLayout(false, { persist: false, announce: false });
+  }
 }
 async function requestAppFullscreen() {
   // Evita lo snap automatico a schermo intero al primo click.
   // Se in futuro vuoi reintrodurlo, legalo a un'azione esplicita dell'utente.
-  // blocca orientamento portrait su Android
   try {
+    if (document.body.classList.contains('tablet-layout')) {
+      screen.orientation?.unlock?.();
+      return;
+    }
     if (screen.orientation?.lock) await screen.orientation.lock('portrait');
   } catch (_) {}
 }
@@ -1599,14 +1702,25 @@ function sizeGrid() {
   const grid  = document.getElementById('gameGrid');
   const app   = document.getElementById('app');
   const bot   = document.getElementById('bottom');
+  const header = document.getElementById('header');
+  const runBtn = document.getElementById('runBtn');
   const desktopLike = window.matchMedia ? window.matchMedia('(pointer: fine)').matches : false;
+  const tabletLayout = document.body.classList.contains('tablet-layout') && !document.body.classList.contains('editor-mode');
 
   // Measure what bottom actually needs
   const appH  = app.clientHeight;
   const botH  = bot.offsetHeight;
   const availH = appH - botH - 6 - 6 - 6; // gaps + padding
   const availW = wrap.clientWidth;
-  const sq = Math.max(120, Math.floor(desktopLike ? availW : Math.min(availH, availW)));
+  let sq;
+  if (tabletLayout) {
+    const headerH = header?.offsetHeight || 0;
+    const runH = runBtn?.offsetHeight || 0;
+    const verticalRoom = appH - headerH - runH - 72;
+    sq = Math.max(220, Math.floor(Math.min(availW, verticalRoom)));
+  } else {
+    sq = Math.max(120, Math.floor(desktopLike ? availW : Math.min(availH, availW)));
+  }
 
   grid.style.width  = sq + 'px';
   grid.style.height = sq + 'px';
@@ -3676,6 +3790,16 @@ function buildThemePreviewSVG(themeId) {
       <path d="M13 41l2.8-6 2.8 6-2.8 4z" fill="#bb67ff" opacity="0.88"/>
       <circle cx="22" cy="24" r="5" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.72)" stroke-width="1.1"/>
       <circle cx="22" cy="24" r="2.1" fill="#ffd95a"/>
+    </svg>`;
+  }
+  if (resolvedId === 'level-manuale01') {
+    return `<svg viewBox="0 0 48 48" width="54" height="54" aria-hidden="true">
+      <rect x="0" y="0" width="48" height="48" fill="#d8c082"/>
+      <rect x="5" y="5" width="38" height="38" rx="6" fill="#d8c082" stroke="#876947" stroke-width="1.4"/>
+      <path d="M8 17h32" stroke="#7b5e3e" stroke-width="1.3" opacity="0.45"/>
+      <path d="M8 30h32" stroke="#7b5e3e" stroke-width="1.3" opacity="0.45"/>
+      <path d="M17 8v32" stroke="#7b5e3e" stroke-width="1.3" opacity="0.45"/>
+      <path d="M30 8v32" stroke="#7b5e3e" stroke-width="1.3" opacity="0.45"/>
     </svg>`;
   }
   if (resolvedId === 'level-thomas') {
@@ -6196,6 +6320,7 @@ function renderBoard() {
 
   g.appendChild(slotsWrap);
   alignAvailBlocksToSlots();
+  syncRunProgressAvailability();
   queueFirstLevelOnboardingSync();
 
   // Traccia completa: riga1 → connettore → riga2
@@ -6712,6 +6837,7 @@ function updateDraggedBoardState(dirtySlots = []) {
     renderFn();
   } else {
     alignAvailBlocksToSlots();
+    syncRunProgressAvailability();
     queueFirstLevelOnboardingSync();
   }
 }
@@ -6823,11 +6949,13 @@ function hlSlot(i, zone='main') {
     for(let j = 0; j < i; j++)
       document.querySelector(`.pslot[data-zone="main"][data-slot="${j}"]`)?.classList.add('done');
     document.querySelector(`.pslot[data-zone="main"][data-slot="${i}"]`)?.classList.add('active');
+    updateRunProgressIndicator('main', i);
   } else {
     document.querySelectorAll('.pslot[data-zone="fn"]').forEach(s => s.classList.remove('fn-active','fn-done'));
     for(let j = 0; j < i; j++)
       document.querySelector(`.pslot[data-zone="fn"][data-slot="${j}"]`)?.classList.add('fn-done');
     document.querySelector(`.pslot[data-zone="fn"][data-slot="${i}"]`)?.classList.add('fn-active');
+    updateRunProgressIndicator('fn', i);
   }
   // no SVG track to redraw
 }
@@ -6933,10 +7061,12 @@ async function run() {
     triggerEmptyRunHint();
     return;
   }
+  activeRunLedSlotOrder = activeMainIndexes.filter(i => i <= last);
+  setRunButtonPressedState(true);
   running=true;
   playRunPressSfx();
-  const btn=document.getElementById('runBtn');
-  btn.innerHTML = PAUSE_ICON_SVG;
+  setRunButtonRunningState(true);
+  clearRunProgressIndicators();
   toast(''); await sleep(200);
   let won = false;
 
@@ -6963,6 +7093,7 @@ async function run() {
             }
           }
           document.querySelectorAll('.pslot[data-zone="fn"]').forEach(s=>s.classList.remove('fn-active','fn-done'));
+          updateRunProgressIndicator('fn', -1);
           if(won) break;
         }
       } else {
@@ -6978,7 +7109,11 @@ async function run() {
 
   document.querySelectorAll('.pslot[data-zone="main"]').forEach(s=>s.classList.remove('active','done'));
   document.querySelectorAll('.pslot[data-zone="fn"]').forEach(s=>s.classList.remove('fn-active','fn-done'));
-  btn.classList.remove('running'); btn.innerHTML = PLAY_ICON_SVG; running=false;
+  clearRunProgressIndicators();
+  activeRunLedSlotOrder = [];
+  setRunButtonPressedState(false);
+  setRunButtonRunningState(false);
+  running=false;
   if (!editorMode) resetPrograms();
 
   if (!goalPlaced) {
@@ -7098,6 +7233,7 @@ void init();
 
 function showStartGate() {
   document.body.classList.add('prestart');
+  resetStartGameButtonVisualState();
   document.getElementById('startGate')?.classList.add('show');
   queueFirstLevelOnboardingSync();
 }
@@ -7141,8 +7277,21 @@ function openAppFromGate({ openEditor = false, onOpen = null } = {}) {
     startFpsProbe(shouldOpenEditor ? 'editor-open' : 'game-open');
   }, gateFadeMs + backgroundHoldMs);
 }
-function startGameFromGate() {
+async function startGameFromGate() {
+  if (startGameGateAnimating) return;
+  startGameGateAnimating = true;
+  const btn = document.getElementById('startGameBtn');
+  if (btn) btn.disabled = true;
+  pulseStartGameButtonPressedState();
+  btn?.classList.add('is-popping');
+  playWelcomeSfx();
+  playBubblePopSfx();
+  await sleep(720);
   openAppFromGate({ openEditor: false });
+  window.setTimeout(() => {
+    startGameGateAnimating = false;
+    if (btn) btn.disabled = false;
+  }, 0);
 }
 async function startEditorFromGate() {
   if (!LEVEL_EDITOR_ENABLED) return;
@@ -7343,6 +7492,11 @@ document.addEventListener('keydown', e => {
     toggleEditorFromCurrentLevel();
     return;
   }
+  if (key === 't') {
+    e.preventDefault();
+    toggleTabletLayout();
+    return;
+  }
   if (key === 'l') {
     toggleDebugBadge();
     return;
@@ -7361,6 +7515,7 @@ document.addEventListener('keydown', e => {
   }
 });
 
+renderRunButtonHud();
 updateQuickEditorButton();
 updateStyleEditorButtons();
 syncSettingsPanelUi();
@@ -7392,6 +7547,8 @@ function refreshSceneAfterAppResume() {
   renderGridDecorations();
   scheduleSceneRefresh({ label: 'resume' });
 }
+
+applyTabletLayoutPreference();
 
 // ri-entra in fullscreen se l'utente torna sull'app (es. dopo notifica)
 document.addEventListener('visibilitychange', () => {

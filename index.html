@@ -64,15 +64,36 @@
   </div>
 </div>
 <div id="startGate" aria-label="Menu iniziale">
-  <div class="start-title">
-    <span style="color:#3F9A62;">B</span><span style="color:#FF3B3B;">Ö</span><span style="color:#FFD31A;">K</span><span style="color:#2B8FD4;">S</span>
+  <div class="start-hero">
+    <div class="start-title">
+      <span style="color:#3F9A62;">B</span><span style="color:#FF3B3B;">Ö</span><span style="color:#FFD31A;">K</span><span style="color:#2B8FD4;">S</span>
+    </div>
+    <button id="startGameBtn" type="button" aria-label="Entra nel gioco">
+      <span class="start-goal-trigger__visual" aria-hidden="true">
+        <span class="goal-bubble">
+          <span class="goal-light">
+            <span class="goal-light__bloom"></span>
+            <span class="goal-light__rays"></span>
+            <span class="goal-light__core"></span>
+            <span class="goal-light__speck goal-light__speck--a"></span>
+            <span class="goal-light__speck goal-light__speck--b"></span>
+            <span class="goal-light__speck goal-light__speck--c"></span>
+            <span class="goal-light__speck goal-light__speck--d"></span>
+          </span>
+          <span class="goal-bubble__glow"></span>
+          <span class="goal-bubble__burst goal-bubble__burst--ring"></span>
+          <span class="goal-bubble__burst goal-bubble__burst--a"></span>
+          <span class="goal-bubble__burst goal-bubble__burst--b"></span>
+          <span class="goal-bubble__burst goal-bubble__burst--c"></span>
+          <span class="goal-bubble__burst goal-bubble__burst--d"></span>
+          <span class="goal-bubble__shell">
+            <span class="goal-bubble__flower"></span>
+          </span>
+        </span>
+      </span>
+    </button>
   </div>
   <div class="start-actions">
-    <button id="startGameBtn" type="button" aria-label="Play">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <use href="#icon-play-boks"></use>
-      </svg>
-    </button>
     <button id="startEditorBtn" type="button">Level Editor</button>
     <button id="openSpritePreviewBtn" type="button" aria-label="Apri il tool di anteprima sprite sheet">Sprite Sheet Tool</button>
     <button id="openVfxToolBtn" type="button" aria-label="Apri il tool VFX">VFX Tool</button>

@@ -128,6 +128,19 @@
     return { cx, size };
   }
 
+  const backgroundImageCache = new Map();
+
+  function getBackgroundImage(src) {
+    if (!src) return null;
+    if (!backgroundImageCache.has(src)) {
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = src;
+      backgroundImageCache.set(src, img);
+    }
+    return backgroundImageCache.get(src) || null;
+  }
+
   function drawBackgroundLevel1() {
     const prepared = prepareBackgroundCanvas();
     if (!prepared) return;
@@ -392,6 +405,7 @@
     const prepared = prepareBackgroundCanvas();
     if (!prepared) return;
     const { cx, size: S } = prepared;
+    const gridTexture = getBackgroundImage('assets/ui/grids/grid_01.png');
 
     const bg = cx.createLinearGradient(0, 0, S, S);
     bg.addColorStop(0, '#0f7a86');
@@ -530,6 +544,20 @@
     cx.restore();
 
     cx.save();
+    if (gridTexture?.complete && gridTexture.naturalWidth > 0) {
+      cx.globalAlpha = 0.96;
+      cx.drawImage(gridTexture, 0, 0, S, S);
+      cx.fillStyle = 'rgba(255, 236, 186, 0.08)';
+      cx.fillRect(0, 0, S, S);
+    } else if (gridTexture && !gridTexture._boksBound) {
+      gridTexture.addEventListener('load', () => {
+        window.drawBackgroundZeldaGreco?.();
+      }, { once: true });
+      gridTexture._boksBound = true;
+    }
+    cx.restore();
+
+    cx.save();
     const ribbon = cx.createLinearGradient(S * 0.72, S * 0.38, S * 0.9, S * 0.85);
     ribbon.addColorStop(0, 'rgba(255, 220, 110, 0)');
     ribbon.addColorStop(0.28, 'rgba(255, 220, 110, 0.55)');
@@ -557,6 +585,29 @@
       cx.moveTo(0, i * gridSize);
       cx.lineTo(S, i * gridSize);
       cx.stroke();
+    }
+    cx.restore();
+  }
+
+  function drawBackgroundManuale01() {
+    const prepared = prepareBackgroundCanvas();
+    if (!prepared) return;
+    const { cx, size: S } = prepared;
+    const gridTexture = getBackgroundImage('assets/ui/grids/grid_01.png');
+    cx.clearRect(0, 0, S, S);
+
+    cx.save();
+    if (gridTexture?.complete && gridTexture.naturalWidth > 0) {
+      cx.globalAlpha = 1;
+      cx.drawImage(gridTexture, 0, 0, S, S);
+    } else if (gridTexture && !gridTexture._boksBound) {
+      gridTexture.addEventListener('load', () => {
+        window.drawBackgroundManuale01?.();
+      }, { once: true });
+      gridTexture._boksBound = true;
+    } else {
+      cx.fillStyle = '#d8c082';
+      cx.fillRect(0, 0, S, S);
     }
     cx.restore();
   }
@@ -638,6 +689,8 @@
   };
   window.renderCharacterLevel1 = renderCharacter;
   window.drawBackgroundLevel1 = drawBackgroundLevel1;
+  window.drawBackgroundZeldaGreco = drawBackgroundZeldaGreco;
+  window.drawBackgroundManuale01 = drawBackgroundManuale01;
 
   window.BOKS_LEVELS = window.BOKS_LEVELS || {};
 
@@ -684,7 +737,7 @@
     decorateCell: decorateBase,
     renderGoal: goalSVGLevel1,
     renderSprite: renderCharacter,
-    renderBackground: drawBackgroundBase
+    renderBackground: drawBackgroundLevel1
   };
 
   window.BOKS_LEVELS.level1 = {
@@ -776,7 +829,7 @@
     decorateCell: decorateCity,
     renderGoal: goalSVGCity,
     renderSprite: renderCharacter,
-    renderBackground: drawBackgroundCity
+    renderBackground: drawBackgroundLevel1
   };
 
   window.BOKS_LEVELS['level-universe'] = {
@@ -822,7 +875,7 @@
     decorateCell: decorateUniverse,
     renderGoal: goalSVGUniverse,
     renderSprite: renderCharacter,
-    renderBackground: drawBackgroundUniverse
+    renderBackground: drawBackgroundLevel1
   };
 
   window.BOKS_LEVELS['level-zelda-greco'] = {
@@ -868,7 +921,53 @@
     decorateCell: decorateZeldaGreco,
     renderGoal: goalSVGZeldaGreco,
     renderSprite: renderCharacter,
-    renderBackground: drawBackgroundZeldaGreco
+    renderBackground: drawBackgroundLevel1
+  };
+
+  window.BOKS_LEVELS['level-manuale01'] = {
+    id: 'level-manuale01',
+    characterId: 'boks_green',
+    name: 'Manuale01',
+    themeSelectable: true,
+    themeLabel: 'Manuale01',
+    themeHint: 'Usa la griglia custom grid_01.png',
+    thumbnailPalette: {
+      scene: '#3c7b80',
+      cellA: '#ddc788',
+      cellB: '#d3b877',
+      cellStroke: '#8a6d4b',
+      obstacleFill: '#7b624a',
+      obstacleStroke: '#4f3c2d',
+      goalFill: '#ffe095',
+      goalStroke: '#bf8b3e',
+      startFill: '#faf6ee',
+      startStroke: '#45756f'
+    },
+    sceneVars: {
+      '--scene-body-bg': 'linear-gradient(180deg, #f0e1b8 0%, #e1cb92 100%)',
+      '--bg-base': '#e1cb92',
+      '--panel-bg': '#f1dfb0',
+      '--panel-edge': '#b08b59',
+      '--scene-grid-wrap-bg': '#d9c281',
+      '--grid-bg': 'transparent',
+      '--cell-bg': 'transparent',
+      '--cell-edge': 'transparent',
+      '--cell-hi-bg': 'rgba(255, 241, 183, 0.9)',
+      '--cell-hi-edge': '#d9b257',
+      '--cell-hi-ring': 'rgba(217,178,87,0.42)',
+      '--grid-wrap-radius': '18px',
+      '--grid-radius': '18px',
+      '--cell-radius': '8px',
+      '--obstacle-pattern-radius': '4px',
+      '--obstacle-bg-top': 'rgba(128,104,79,0.96)',
+      '--obstacle-bg-bottom': 'rgba(93,73,54,0.98)',
+      '--obstacle-edge': 'rgba(73,55,39,0.9)',
+      '--obstacle-pattern': 'rgba(240,220,180,0.28)'
+    },
+    decorateCell: decorateBase,
+    renderGoal: goalSVGZeldaGreco,
+    renderSprite: renderCharacter,
+    renderBackground: drawBackgroundLevel1
   };
 
   window.BOKS_LEVELS['level-thomas'] = {
@@ -914,6 +1013,6 @@
     decorateCell: decorateThomas,
     renderGoal: goalSVGLevel1,
     renderSprite: renderCharacter,
-    renderBackground: drawBackgroundThomas
+    renderBackground: drawBackgroundLevel1
   };
 })();
