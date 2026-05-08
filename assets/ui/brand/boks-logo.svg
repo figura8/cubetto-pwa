@@ -1,15 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 130" role="img" aria-label="BOKS">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 130" role="img" aria-label="BOKS">
   <defs>
+    <style>
+      @font-face {
+        font-family: "BoksLogoLilita";
+        src: url("../../fonts/LilitaOne-Regular.ttf") format("truetype");
+        font-weight: 400;
+        font-style: normal;
+      }
+      .letter {
+        font-family: "BoksLogoLilita", "Arial Black", sans-serif;
+        font-size: 116px;
+        font-weight: 400;
+        dominant-baseline: middle;
+        text-anchor: middle;
+      }
+    </style>
     <filter id="soft-shadow" x="-10%" y="-15%" width="120%" height="130%">
-      <feDropShadow dx="0" dy="5" stdDeviation="2.6" flood-color="#5f4e34" flood-opacity="0.16"/>
+      <feDropShadow dx="0" dy="5" stdDeviation="2.3" flood-color="#5f4e34" flood-opacity="0.16"/>
     </filter>
   </defs>
   <g filter="url(#soft-shadow)">
-    <path fill="#3F9A62" d="M26 8h45c27 0 42 12 42 33 0 12-6 21-17 26 15 5 24 16 24 31 0 25-17 39-48 39H26V8Zm31 24v26h14c8 0 13-5 13-13s-5-13-14-13H57Zm0 50v31h17c10 0 16-6 16-16s-6-15-17-15H57Z"/>
-    <path fill="#FF3B3B" fill-rule="evenodd" d="M178 6c39 0 65 26 65 62s-26 62-65 62-65-26-65-62 26-62 65-62Zm0 29c-20 0-34 14-34 33s14 33 34 33 34-14 34-33-14-33-34-33Z"/>
-    <circle cx="160" cy="10" r="10" fill="#FF3B3B"/>
-    <circle cx="196" cy="10" r="10" fill="#FF3B3B"/>
-    <path fill="#FFD31A" d="M251 8h32v48l41-48h39l-48 55 51 67h-40l-35-48-8 9v39h-32V8Z"/>
-    <path fill="#2B8FD4" d="M353 9c22 0 39 7 52 20l-19 22c-10-9-22-14-35-14-11 0-18 4-18 11 0 8 9 11 27 16 27 8 45 18 45 45 0 26-21 43-55 43-26 0-47-9-61-24l19-22c12 11 27 18 43 18 13 0 21-5 21-13 0-9-9-12-27-17-26-8-44-18-44-44 0-25 20-41 52-41Z" transform="translate(0 -12)"/>
+    <text class="letter" x="54" y="69" fill="#3F9A62">B</text>
+    <text class="letter" x="158" y="69" fill="#FF3B3B">&#214;</text>
+    <text class="letter" x="266" y="69" fill="#FFD31A">K</text>
+    <text class="letter" x="372" y="69" fill="#2B8FD4">S</text>
   </g>
 </svg>
