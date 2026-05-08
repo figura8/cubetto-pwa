@@ -100,6 +100,11 @@
   animation: boksPupilBlink 5.8s infinite ease-in-out;
 }
 
+body.low-end-device .boks-eye-white,
+body.low-end-device .boks-eye-pupil {
+  animation: none;
+}
+
 .boks-hero[data-bee-near="true"] .boks-eye-white {
   animation-duration: 1.8s;
 }

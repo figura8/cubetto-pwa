@@ -4270,3 +4270,36 @@
       filter: none;
     }
 
+    body.low-end-device #startGate.show.hiding {
+      filter: none;
+    }
+
+    body.low-end-device #customLevelsPanel,
+    body.low-end-device #levelThemePanel,
+    body.low-end-device #elementPalettePanel,
+    body.low-end-device #settingsModal,
+    body.low-end-device .settings-card,
+    body.low-end-device .ending-message,
+    body.low-end-device .ending-return-btn {
+      backdrop-filter: none !important;
+    }
+
+    body.low-end-device .goal-light__bloom,
+    body.low-end-device .goal-light__rays::before,
+    body.low-end-device .goal-light__rays::after,
+    body.low-end-device .goal-bubble__glow,
+    body.low-end-device .ablock .available-block-vfx__glow,
+    body.low-end-device .ablock .available-block-vfx__spark::before,
+    body.low-end-device .ablock .available-block-vfx__spark::after {
+      filter: none !important;
+    }
+
+    body.low-end-device .ablock.tutorial-focus .available-block-vfx__glow,
+    body.low-end-device #blocksRow.available-block-guided .ablock.tutorial-focus .available-block-vfx__glow,
+    body.low-end-device .ablock.tutorial-focus .available-block-vfx__spark,
+    body.low-end-device #blocksRow.available-block-guided .ablock.tutorial-focus .available-block-vfx__spark,
+    body.low-end-device .ablock.tutorial-focus .available-block-vfx::before,
+    body.low-end-device #blocksRow.available-block-guided .ablock.tutorial-focus .available-block-vfx::before {
+      animation: none !important;
+    }
+

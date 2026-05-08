@@ -5,9 +5,11 @@ let START = {x:2,y:2};
 const gridCellEls = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
 const coarsePointer = window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : true;
 const runtimePerf = window.BOKS_RUNTIME_CONFIG?.perf || null;
+const LOW_END_DEVICE = window.BOKS_RUNTIME_CONFIG?.lowEndDevice === true;
 let appSceneVisible = document.visibilityState !== 'hidden';
 
 function getCanvasDprCap() {
+  if (LOW_END_DEVICE) return 1.15;
   return coarsePointer ? 1.6 : 2;
 }
 
@@ -431,7 +433,7 @@ const EDITOR_THEME_COLOR_KEYS = new Set(EDITOR_THEME_COLOR_CONTROLS.map(control 
 const DECORATION_BEE_LOTTIE_SRC = 'assets/animations/decor/bee_swarm_hover.json';
 const DECORATION_BEE_BASE_SIZE = 16;
 const DECORATION_BEE_PLAYBACK_SPEED = 2;
-const DECORATION_BEE_MAX_LOTTIE_ACTORS = 2;
+const DECORATION_BEE_MAX_LOTTIE_ACTORS = LOW_END_DEVICE ? 0 : 2;
 const DECORATION_LAYERS = ['ground', 'object', 'overlay'];
 const DECORATION_ERASE_TOOL = '__decor_erase__';
 const DECORATION_ASSET_DEFS = {
@@ -2580,7 +2582,8 @@ function buildBeeDecorationRuntimeMarkup() {
 }
 
 function getBeeDecorationCount(entry) {
-  return normalizeDecorationCount(entry?.count, 3);
+  const count = normalizeDecorationCount(entry?.count, 3);
+  return LOW_END_DEVICE ? Math.min(count, 1) : count;
 }
 
 function buildBeeDecorationActorId(entryId, index) {
@@ -2588,7 +2591,7 @@ function buildBeeDecorationActorId(entryId, index) {
 }
 
 function shouldUseLottieForBeeActor(globalIndex) {
-  return globalIndex < DECORATION_BEE_MAX_LOTTIE_ACTORS;
+  return !LOW_END_DEVICE && globalIndex < DECORATION_BEE_MAX_LOTTIE_ACTORS;
 }
 
 function getBeeDecorationActorSeed(index = 0) {

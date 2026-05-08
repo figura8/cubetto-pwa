@@ -5,9 +5,20 @@
   const editorEnabled = body?.dataset.editorEnabled !== 'false';
   const debugToolsEnabled = body?.dataset.debugToolsEnabled !== 'false';
   const buildBadgeEnabled = body?.dataset.buildBadgeEnabled !== 'false';
+  const lightweightCharacterModeSetting = body?.dataset.lightweightCharacterMode || 'auto';
   const perfNow = () => window.performance?.now?.() || Date.now();
   const perfEntries = [];
   const perfMarks = new Map();
+
+  function detectLowEndDevice() {
+    const memory = Number(navigator.deviceMemory || 0);
+    const cores = Number(navigator.hardwareConcurrency || 0);
+    const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? true;
+    const smallScreen = Math.min(window.screen?.width || window.innerWidth || 0, window.screen?.height || window.innerHeight || 0) <= 760;
+    const lowMemory = memory > 0 && memory <= 4;
+    const lowCpu = cores > 0 && cores <= 6;
+    return coarsePointer && (lowMemory || lowCpu || smallScreen);
+  }
 
   function recordPerf(name, durationMs, detail = {}) {
     const entry = {
@@ -32,13 +43,17 @@
     return recordPerf(name, perfNow() - startedAt, detail);
   }
 
+  const lowEndDevice = lightweightCharacterModeSetting === 'true'
+    || (lightweightCharacterModeSetting !== 'false' && detectLowEndDevice());
+
   window.BOKS_RUNTIME_CONFIG = {
     releaseChannel: body?.dataset.releaseChannel || 'main',
     build,
     editorEnabled,
     debugToolsEnabled,
     buildBadgeEnabled,
-    lightweightCharacterMode: body?.dataset.lightweightCharacterMode !== 'false',
+    lowEndDevice,
+    lightweightCharacterMode: lowEndDevice,
     perf: {
       entries: perfEntries,
       markStart: markPerfStart,
@@ -53,6 +68,7 @@
   body?.classList.toggle('debug-tools-disabled', !debugToolsEnabled);
   body?.classList.toggle('build-badge-enabled', buildBadgeEnabled);
   body?.classList.toggle('build-badge-disabled', !buildBadgeEnabled);
+  body?.classList.toggle('low-end-device', lowEndDevice);
 
   function formatBuildStamp(value) {
     const match = /^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/.exec(value);

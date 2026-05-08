@@ -16,6 +16,8 @@ $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 
 $content = Get-Content -Raw $indexPath
 $updated = [regex]::Replace($content, 'data-build=\"[^\"]+\"', "data-build=""$stamp""", 1)
+$updated = [regex]::Replace($updated, '(styles/(?:app|character)\.css\?v=)[^"]+', "`${1}$stamp")
+$updated = [regex]::Replace($updated, '(js/core/app-loader\.js\?v=)[^"]+', "`${1}$stamp")
 
 if ($updated -eq $content) {
   throw "Impossibile trovare data-build in $indexPath"
