@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exportedAt": "2026-05-08T15:18:19.625Z",
+  "exportedAt": "2026-05-08T21:55:20.317Z",
   "levels": [
     {
       "id": "level1-step-1",
@@ -989,8 +989,8 @@
         }
       ],
       "mainSlotEnabled": [
-        false,
-        false,
+        true,
+        true,
         false,
         false,
         false,
@@ -999,16 +999,16 @@
         false
       ],
       "fnSlotEnabled": [
-        false,
-        false,
+        true,
+        true,
         false,
         false
       ],
       "enabledBlocks": {
-        "forward": false,
-        "left": false,
-        "right": false,
-        "function": false
+        "forward": true,
+        "left": true,
+        "right": true,
+        "function": true
       },
       "themeOverrides": {},
       "levelHints": {
