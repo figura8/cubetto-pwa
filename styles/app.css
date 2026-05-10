@@ -214,6 +214,12 @@
         radial-gradient(130% 90% at 50% 0%, rgba(255, 250, 235, 0.82) 0%, rgba(238, 246, 232, 0.78) 54%, rgba(232, 238, 226, 0.9) 100%);
       background-size: 24px 24px, 24px 24px, 100% 100%;
     }
+    body:not(.tablet-layout) {
+      background-image:
+        linear-gradient(rgba(205, 211, 202, 0.34) 1px, transparent 1px),
+        var(--scene-body-bg);
+      background-size: 100% 24px, 100% 100%;
+    }
     body.tablet-layout:not(.editor-mode) #app {
       width: min(1040px, calc(var(--app-vw) - 32px));
       max-width: none;
@@ -423,7 +429,7 @@
       width: min(72vw, 360px);
     }
     .boks-logo--header {
-      width: clamp(86px, 24vw, 124px);
+      width: clamp(60px, 17vw, 86px);
     }
     .boks-logo--settings {
       width: 112px;

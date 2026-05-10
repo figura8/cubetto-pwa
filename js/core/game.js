@@ -724,6 +724,7 @@ function resetStartGameButtonVisualState() {
   const btn = document.getElementById('startGameBtn');
   if (!btn) return;
   btn.classList.remove('is-popping', 'is-pressed');
+  document.getElementById('startBoksBtn')?.classList.remove('is-popping', 'is-pressed');
 }
 
 const audioManager = window.BOKS_AUDIO_MANAGER.create({
@@ -1222,7 +1223,7 @@ function ensureEndingCinematicRoot() {
     <div class="ending-cinematic__message" aria-hidden="true">
       <span class="ending-cinematic__thanks">Thank you for playing</span>
       <span class="ending-cinematic__brand">
-        <img class="boks-logo boks-logo--ending" src="assets/ui/brand/boks-logo.svg" alt="BÖKS">
+        <img class="boks-logo boks-logo--ending" src="assets/ui/brand/boks-logo.svg" alt="Bï¿½KS">
       </span>
     </div>
     ${sparks}
@@ -7304,7 +7305,10 @@ function returnToMainMenu() {
   closeSettingsPanel();
   closeSaveLevelModal();
   if (editorMode) exitEditorMode();
-  if (sandboxMode) setSandboxMode(false);
+  if (sandboxMode) {
+    setSandboxMode(false);
+    applyCampaignLevel(progressState.currentCampaignStep || 0);
+  }
   setEditorStylePanelOpen(false);
   gameStarted = false;
   stopLevelOneIntro();
