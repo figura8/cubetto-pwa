@@ -585,6 +585,8 @@ let boksTouchRebukeCooldownUntil = 0;
 let boksTouchRebukeTimer = null;
 let boksGoalBubbleImpactActive = false;
 let boksGoalBubbleEyeReopenTimer = null;
+let boksObstacleStruggleActive = false;
+let boksObstacleStruggleTimer = null;
 let goalTapAnnoyanceUntil = 0;
 let goalTapAnnoyanceCooldownUntil = 0;
 let goalTapAnnoyanceTimer = null;
@@ -1497,6 +1499,12 @@ function clearBoksGoalBubbleEyeReopenTimer() {
   boksGoalBubbleEyeReopenTimer = null;
 }
 
+function clearBoksObstacleStruggleTimer() {
+  if (!boksObstacleStruggleTimer) return;
+  clearTimeout(boksObstacleStruggleTimer);
+  boksObstacleStruggleTimer = null;
+}
+
 function getGoalCellEl() {
   return document.querySelector('.goal-cell');
 }
@@ -1573,9 +1581,16 @@ function applyBoksGoalBubbleImpactState() {
   hero.dataset.goalBubbleImpact = boksGoalBubbleImpactActive ? 'true' : 'false';
 }
 
+function applyBoksObstacleStruggleState() {
+  const hero = getBoksHeroEl();
+  if (!hero) return;
+  hero.dataset.obstacleStruggle = boksObstacleStruggleActive ? 'true' : 'false';
+}
+
 function applyBoksReactionStates() {
   applyBoksTouchRebukeState();
   applyBoksGoalBubbleImpactState();
+  applyBoksObstacleStruggleState();
 }
 
 function clearBoksTouchRebukeState() {
@@ -1590,6 +1605,13 @@ function clearBoksGoalBubbleImpactState() {
   clearBoksGoalBubbleEyeReopenTimer();
   const hero = getBoksHeroEl();
   if (hero) hero.dataset.goalBubbleImpact = 'false';
+}
+
+function clearBoksObstacleStruggleState() {
+  boksObstacleStruggleActive = false;
+  clearBoksObstacleStruggleTimer();
+  const hero = getBoksHeroEl();
+  if (hero) hero.dataset.obstacleStruggle = 'false';
 }
 
 function triggerBoksTouchRebuke() {
@@ -1613,6 +1635,17 @@ function triggerBoksGoalBubbleImpact() {
   if (!playerPlaced) return false;
   boksGoalBubbleImpactActive = true;
   applyBoksGoalBubbleImpactState();
+  return true;
+}
+
+function triggerBoksObstacleStruggle() {
+  if (!playerPlaced) return false;
+  boksObstacleStruggleActive = true;
+  applyBoksObstacleStruggleState();
+  clearBoksObstacleStruggleTimer();
+  boksObstacleStruggleTimer = setTimeout(() => {
+    clearBoksObstacleStruggleState();
+  }, 340);
   return true;
 }
 
@@ -1656,6 +1689,7 @@ function resetSpritePresentation() {
   setCharacterAction('idle');
   clearBoksTouchRebukeState();
   clearBoksGoalBubbleImpactState();
+  clearBoksObstacleStruggleState();
   if (sprite) {
     clearSpriteSwapTimer(sprite);
     window.BOKS_CHARACTER_RENDERER?.destroyIn?.(sprite);
@@ -1687,6 +1721,7 @@ function syncSprite(overrides = null) {
     clearDecorationTouchCooldowns();
     clearBoksTouchRebukeState();
     clearBoksGoalBubbleImpactState();
+    clearBoksObstacleStruggleState();
     clearSpriteSwapTimer(s);
     window.BOKS_CHARACTER_RENDERER?.destroyIn?.(s);
     delete s.dataset.heroRenderToken;
@@ -1730,6 +1765,7 @@ function syncSprite(overrides = null) {
     clearDecorationTouchCooldowns();
     clearBoksTouchRebukeState();
     clearBoksGoalBubbleImpactState();
+    clearBoksObstacleStruggleState();
     clearSpriteSwapTimer(s);
     window.BOKS_CHARACTER_RENDERER?.destroyIn?.(s);
     delete s.dataset.heroRenderToken;
@@ -6976,16 +7012,18 @@ async function moveChar(dir) {
   const activeCharacterId = resolveRuntimeCharacterId(getActiveCharacterId());
   const containerDriven = isContainerDrivenCharacter(activeCharacterId);
   if(dir==='forward') {
-    playStepSfx();
     const p={...pos};
     if(ori==='up')        p.y=Math.max(0,p.y-1);
     else if(ori==='down') p.y=Math.min(ROWS-1,p.y+1);
     else if(ori==='left') p.x=Math.max(0,p.x-1);
     else                   p.x=Math.min(COLS-1,p.x+1);
     if (isBlockedCell(p.x, p.y)) {
+      triggerBoksObstacleStruggle();
+      audioManager.playEffortSfx();
       await sleep(120);
       return;
     }
+    playStepSfx();
     if (!containerDriven) {
       setCharacterAction('move');
       syncSprite();

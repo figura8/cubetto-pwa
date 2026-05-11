@@ -117,19 +117,27 @@ body.low-end-device .boks-eye-pupil {
   animation: boksTouchRebuke 0.56s cubic-bezier(.22,1,.36,1);
 }
 
+#sprite .boks-hero[data-obstacle-struggle="true"] {
+  animation: boksObstacleStruggle 0.34s cubic-bezier(.22,1,.36,1);
+}
+
 #sprite .boks-hero[data-touch-rebuke="true"] .boks-eye-white,
 #sprite .boks-hero[data-touch-rebuke="true"] .boks-eye-pupil,
+#sprite .boks-hero[data-obstacle-struggle="true"] .boks-eye-white,
+#sprite .boks-hero[data-obstacle-struggle="true"] .boks-eye-pupil,
 #sprite .boks-hero[data-goal-bubble-impact="true"] .boks-eye-white,
 #sprite .boks-hero[data-goal-bubble-impact="true"] .boks-eye-pupil {
   animation: none;
 }
 
 #sprite .boks-hero[data-touch-rebuke="true"] .boks-eye-white,
+#sprite .boks-hero[data-obstacle-struggle="true"] .boks-eye-white,
 #sprite .boks-hero[data-goal-bubble-impact="true"] .boks-eye-white {
   transform: scaleY(0.08) translateY(4%);
 }
 
 #sprite .boks-hero[data-touch-rebuke="true"] .boks-eye-pupil,
+#sprite .boks-hero[data-obstacle-struggle="true"] .boks-eye-pupil,
 #sprite .boks-hero[data-goal-bubble-impact="true"] .boks-eye-pupil {
   transform: scaleY(0.08);
   opacity: 0;
@@ -170,6 +178,30 @@ body.low-end-device .boks-eye-pupil {
   }
   78% {
     transform: translate3d(2%, 0, 0) rotate(3deg) scale(1);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes boksObstacleStruggle {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+  16% {
+    transform: translate3d(-2.4%, 0, 0) rotate(-3deg) scale(0.992, 1.01);
+  }
+  32% {
+    transform: translate3d(2.8%, -0.6%, 0) rotate(2.6deg) scale(1.006, 0.994);
+  }
+  48% {
+    transform: translate3d(-2.2%, 0, 0) rotate(-2.2deg) scale(0.994, 1.008);
+  }
+  66% {
+    transform: translate3d(2.2%, -0.4%, 0) rotate(1.8deg) scale(1.004, 0.996);
+  }
+  84% {
+    transform: translate3d(-1.4%, 0, 0) rotate(-1.2deg) scale(0.998, 1.002);
   }
   100% {
     transform: translate3d(0, 0, 0) rotate(0deg) scale(1);

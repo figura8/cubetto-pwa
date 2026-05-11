@@ -19,6 +19,7 @@
       },
       gameplay: {
         stepMove: 'assets/audio/sfx/gameplay/step_move_02.mp3',
+        effort: 'assets/audio/sfx/gameplay/effort.mp3',
         errorAction: 'assets/audio/sfx/gameplay/error_action.mp3',
         boksAnnoyed: 'assets/audio/sfx/gameplay/boks_annoyed.ogg',
         welcome: 'assets/audio/sfx/gameplay/wellcome.mp3',
@@ -342,6 +343,7 @@
       playBlockHoverSlotSfx: () => playUiAudioSfx(AUDIO_PATHS.sfx.ui.slotHover, 0.22),
       playBlockDropSuccessSfx: () => playUiAudioSfx(AUDIO_PATHS.sfx.ui.blockDropSuccess, 0.48),
       playStepSfx: () => playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.stepMove, 0.16, { mode: 'restart' }),
+      playEffortSfx: () => playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.effort, 0.24, { mode: 'restart' }),
       playErrorSfx: () => playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.errorAction, 0.3),
       playBoksAnnoyedSfx: () => playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.boksAnnoyed, 0.34),
       playDecorationRubberSfx: () => {
