@@ -26,7 +26,8 @@
           'assets/audio/sfx/gameplay/decor_rubber_tap_01.ogg',
           'assets/audio/sfx/gameplay/decor_rubber_tap_02.ogg'
         ],
-        rotationPosition: 'assets/audio/sfx/gameplay/rotation_position_02.mp3',
+        rotationPositionSandbox: 'assets/audio/sfx/gameplay/rotation_position.mp3',
+        rotationPositionNormal: 'assets/audio/sfx/gameplay/rotation_position_02.mp3',
         goalBubbleBounce: 'assets/audio/sfx/gameplay/goal_bubble_bounce.ogg',
         bubblePop: 'assets/audio/sfx/gameplay/bubble_pop_main.ogg',
         levelComplete: 'assets/audio/sfx/gameplay/level_complete_main.mp3'
@@ -319,31 +320,8 @@
       if (playAttempt?.catch) playAttempt.catch(() => {});
     }
 
-    function playTurnSfx(dir = 'right') {
-      if (!soundEffectsEnabled) return;
-      try {
-        const c = FX();
-        const t = c.currentTime;
-        const o = c.createOscillator();
-        const g = c.createGain();
-        o.type = 'square';
-        if (dir === 'left') {
-          o.frequency.setValueAtTime(470, t);
-          o.frequency.exponentialRampToValueAtTime(320, t + 0.08);
-        } else {
-          o.frequency.setValueAtTime(320, t);
-          o.frequency.exponentialRampToValueAtTime(470, t + 0.08);
-        }
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(0.036, t + 0.01);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.095);
-        o.connect(g);
-        g.connect(c.destination);
-        o.start(t);
-        o.stop(t + 0.1);
-      } catch (_err) {
-        // ignore oscillator failures
-      }
+    function playTurnSfx(_dir = 'right') {
+      playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.rotationPositionNormal, 0.28, { mode: 'restart' });
     }
 
     return {
@@ -371,7 +349,8 @@
         const path = variants[Math.floor(Math.random() * variants.length)] || variants[0];
         playUiAudioSfx(path, 0.26);
       },
-      playRotationPositionSfx: () => playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.rotationPosition, 0.28),
+      playSandboxRotationPositionSfx: () => playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.rotationPositionSandbox, 0.28),
+      playNormalRotationPositionSfx: () => playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.rotationPositionNormal, 0.28, { mode: 'restart' }),
       playGoalBubbleBounceSfx: () => playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.goalBubbleBounce, 0.28),
       playBubblePopSfx: () => playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.bubblePop, 0.26),
       playWelcomeSfx: () => playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.welcome, 0.34),

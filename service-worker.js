@@ -31,6 +31,7 @@ const PRECACHE_URLS = [
   './assets/audio/music/level_01_intro_main.ogg',
   './assets/audio/sfx/gameplay/step_move_02.mp3',
   './assets/audio/sfx/gameplay/error_action.mp3',
+  './assets/audio/sfx/gameplay/rotation_position.mp3',
   './assets/audio/sfx/gameplay/rotation_position_02.mp3',
   './assets/audio/sfx/gameplay/bubble_pop_main.ogg',
   './assets/audio/sfx/gameplay/goal_bubble_bounce.ogg',

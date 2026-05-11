@@ -2105,7 +2105,7 @@ function rotateSpriteClockwise() {
   ori = order[(order.indexOf(ori) + 1) % order.length];
   START = { ...pos };
   syncSprite();
-  audioManager.playRotationPositionSfx();
+  audioManager.playSandboxRotationPositionSfx();
 }
 
 function setupGoalDrag() {
@@ -5629,6 +5629,7 @@ function renderSandboxToolbar() {
   const toolbar = document.getElementById('sandboxToolbar');
   if (!toolbar) return;
   const tools = [
+    { key: 'brick', label: 'Mattone', markup: elementPaletteIcon('brick'), type: 'element' },
     { key: 'tree_small', label: 'Albero', markup: getDecorationPreviewMarkup('tree_small') },
     { key: 'daisy_flower', label: 'Fiore', markup: getDecorationPreviewMarkup('daisy_flower') },
     { key: 'bee_hover', label: 'Api', markup: getDecorationPreviewMarkup('bee_hover') },
@@ -5636,7 +5637,7 @@ function renderSandboxToolbar() {
     { key: '__clear_sandbox__', label: 'Pulisci', markup: customIconSVG('sun') }
   ];
   toolbar.innerHTML = tools.map(tool => (
-    `<button class="sandbox-tool${selectedDecorationBrush === tool.key ? ' active' : ''}" type="button" data-sandbox-tool="${tool.key}" aria-label="${tool.label}">${tool.markup}</button>`
+    `<button class="sandbox-tool${(tool.type === 'element' ? selectedElementTool === tool.key : selectedDecorationBrush === tool.key) ? ' active' : ''}" type="button" data-sandbox-tool="${tool.key}" data-sandbox-tool-type="${tool.type || 'decoration'}" aria-label="${tool.label}">${tool.markup}</button>`
   )).join('');
 }
 
@@ -5648,15 +5649,22 @@ function bindSandboxToolbar() {
     const btn = e.target?.closest?.('[data-sandbox-tool]');
     if (!btn || !sandboxMode) return;
     const tool = btn.dataset.sandboxTool;
+    const toolType = btn.dataset.sandboxToolType || 'decoration';
     if (tool === '__clear_sandbox__') {
       activeLevelDecorations = [];
       selectedDecorationBrush = null;
+      selectedElementTool = null;
       applyEditorBoardChanges();
       renderSandboxToolbar();
       return;
     }
-    selectedDecorationBrush = selectedDecorationBrush === tool ? null : tool;
-    selectedElementTool = null;
+    if (toolType === 'element') {
+      selectedElementTool = selectedElementTool === tool ? null : tool;
+      selectedDecorationBrush = null;
+    } else {
+      selectedDecorationBrush = selectedDecorationBrush === tool ? null : tool;
+      selectedElementTool = null;
+    }
     renderSandboxToolbar();
   });
 }
