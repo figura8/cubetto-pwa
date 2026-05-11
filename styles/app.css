@@ -14,6 +14,11 @@
       --run-btn-led-on: #d4f77c;
       --run-btn-led-active: #d4f77c;
       --scene-body-bg: radial-gradient(140% 90% at 50% 0%, #d6f2ff 0%, #dff2cf 45%, #bfdc9d 100%);
+      --notebook-page-bg:
+        linear-gradient(rgba(205, 211, 202, 0.34) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(205, 211, 202, 0.34) 1px, transparent 1px),
+        radial-gradient(130% 90% at 50% 0%, rgba(255, 250, 235, 0.82) 0%, rgba(238, 246, 232, 0.78) 54%, rgba(232, 238, 226, 0.9) 100%);
+      --notebook-page-bg-size: 24px 24px, 24px 24px, 100% 100%;
       --scene-grid-wrap-bg: #d7efba;
       --bg-base: #e8dfcc;
       --panel-bg: #ede7d7;
@@ -208,17 +213,13 @@
 
     body.tablet-layout {
       background-color: #f7f7f1;
-      background-image:
-        linear-gradient(rgba(205, 211, 202, 0.34) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(205, 211, 202, 0.34) 1px, transparent 1px),
-        radial-gradient(130% 90% at 50% 0%, rgba(255, 250, 235, 0.82) 0%, rgba(238, 246, 232, 0.78) 54%, rgba(232, 238, 226, 0.9) 100%);
-      background-size: 24px 24px, 24px 24px, 100% 100%;
+      background-image: var(--notebook-page-bg);
+      background-size: var(--notebook-page-bg-size);
     }
     body:not(.tablet-layout) {
-      background-image:
-        linear-gradient(rgba(205, 211, 202, 0.34) 1px, transparent 1px),
-        var(--scene-body-bg);
-      background-size: 100% 24px, 100% 100%;
+      background-color: #f7f7f1;
+      background-image: var(--notebook-page-bg);
+      background-size: var(--notebook-page-bg-size);
     }
     body.tablet-layout:not(.editor-mode) #app {
       width: min(1040px, calc(var(--app-vw) - 32px));
@@ -2361,8 +2362,9 @@
       justify-content: center;
       gap: 18px;
       padding: 24px;
-      background:
-        radial-gradient(120% 95% at 50% 0%, #fbf5e8 0%, #efe5cf 56%, #e4d8c3 100%);
+      background: var(--notebook-page-bg);
+      background-color: #f7f7f1;
+      background-size: var(--notebook-page-bg-size);
       opacity: 0;
       transform: scale(1);
       filter: blur(0px) saturate(1);
@@ -3388,7 +3390,7 @@
       inset: 8%;
       opacity: 0.24;
       background:
-        radial-gradient(circle, rgba(212, 255, 230, 0.78) 0%, rgba(127, 224, 180, 0.42) 28%, rgba(98, 191, 232, 0.24) 56%, rgba(98, 191, 232, 0) 76%);
+        radial-gradient(circle, rgba(212, 255, 230, 0.78) 0%, rgba(127, 224, 180, 0.42) 30%, rgba(177, 236, 202, 0.18) 58%, rgba(177, 236, 202, 0) 76%);
       filter: blur(4px);
     }
     #startBoksBtn .goal-light__core {
@@ -3399,7 +3401,7 @@
         radial-gradient(circle, rgba(255,255,255,0.96) 0%, rgba(199,255,224,0.82) 38%, rgba(81,199,151,0.5) 68%, rgba(81,199,151,0) 100%);
       box-shadow:
         0 0 9px rgba(165, 245, 204, 0.6),
-        0 0 16px rgba(43, 143, 212, 0.24);
+        0 0 16px rgba(109, 213, 139, 0.2);
     }
     #startBoksBtn .goal-light__speck {
       opacity: 0.24;
@@ -3431,7 +3433,7 @@
       height: 88%;
       opacity: 0.58;
       background:
-        radial-gradient(circle, rgba(196,255,222,0.86) 0%, rgba(77, 199, 145, 0.32) 35%, rgba(43, 143, 212, 0.18) 60%, rgba(43, 143, 212, 0) 76%);
+        radial-gradient(circle, rgba(196,255,222,0.86) 0%, rgba(77, 199, 145, 0.32) 35%, rgba(154, 229, 184, 0.16) 60%, rgba(154, 229, 184, 0) 76%);
       filter: blur(1.5px);
     }
     #startBoksBtn .goal-bubble__shell {
@@ -3439,14 +3441,13 @@
       height: 88%;
       overflow: hidden;
       background:
-        radial-gradient(circle at 30% 24%, rgba(255,255,255,0.98) 0 8%, rgba(255,255,255,0) 11%),
-        radial-gradient(circle at 71% 72%, rgba(92, 194, 230, 0.5) 0 17%, rgba(92, 194, 230, 0) 20%),
-        radial-gradient(circle at 50% 54%, rgba(232, 255, 225, 0.54) 0 48%, rgba(164, 238, 210, 0.24) 64%, rgba(255,255,255,0.08) 79%, rgba(255,255,255,0) 85%);
+        radial-gradient(circle at 24% 20%, rgba(255,255,255,0.98) 0 8%, rgba(255,255,255,0) 11%),
+        radial-gradient(circle at 44% 60%, rgba(232, 255, 225, 0.52) 0 46%, rgba(164, 238, 210, 0.26) 62%, rgba(255,255,255,0.08) 77%, rgba(255,255,255,0) 84%);
       border: 1px solid rgba(235,255,245,0.86);
       box-shadow:
         inset 0 1px 4px rgba(255,255,255,0.58),
         0 0 12px rgba(112, 224, 178, 0.26),
-        0 0 26px rgba(43, 143, 212, 0.12);
+        0 0 26px rgba(109, 213, 139, 0.1);
     }
     #startGameBtn .goal-bubble__flower {
       width: 50%;
