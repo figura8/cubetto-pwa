@@ -580,6 +580,11 @@ let activeWinFeedbackAt = 0;
 let scheduledWinFeedbackTimer = null;
 let endingCinematicPromise = null;
 let settingsPanel = null;
+let tutorialEngine = null;
+let tutorialStageActive = false;
+let tutorialBoksDoubleClickUnlocked = false;
+let tutorialInitialOrientation = 'right';
+let tutorialWaitingFor = null;
 let boksTouchRebukeUntil = 0;
 let boksTouchRebukeCooldownUntil = 0;
 let boksTouchRebukeTimer = null;
@@ -1756,6 +1761,7 @@ function syncSprite(overrides = null) {
   if (renderToken && s.dataset.heroRenderToken === renderToken && s.innerHTML) {
     window.BOKS_CHARACTER_RENDERER?.mountIn?.(s);
     applyBoksReactionStates();
+    s.classList.toggle('tutorial-boks-locked', tutorialStageActive && !tutorialBoksDoubleClickUnlocked);
     if (!animating) requestAnimationFrame(() => triggerTouchedDecorationReactions());
     updateAnimationDebugBadge();
     return;
@@ -1776,6 +1782,7 @@ function syncSprite(overrides = null) {
   const preservePlayback = renderInfo?.resolved?.state?.restartPlayback !== true;
   applySpriteMarkup(s, markup, renderToken, { animate: true, preservePlayback });
   applyBoksReactionStates();
+  s.classList.toggle('tutorial-boks-locked', tutorialStageActive && !tutorialBoksDoubleClickUnlocked);
   if (!animating) requestAnimationFrame(() => triggerTouchedDecorationReactions());
   updateAnimationDebugBadge();
   requestAnimationFrame(() => updateAnimationDebugBadge());
@@ -1962,6 +1969,7 @@ function setupSpriteDrag() {
   let sandboxDragStartBox = null;
   let sandboxDragPointerOffset = null;
   function start(cx,cy) {
+    if (tutorialStageActive) return false;
     if(!(editorMode || sandboxMode)||running||animating||!playerPlaced) return false;
     if (sandboxMode) {
       const wrap = document.getElementById('gridWrap');
@@ -2070,6 +2078,12 @@ function setupSpriteDrag() {
   let suppressNextStart = false;
 
   s.addEventListener('touchstart',e=>{
+    if (tutorialStageActive && playerPlaced && !tutorialBoksDoubleClickUnlocked) {
+      e.preventDefault();
+      e.stopPropagation();
+      triggerTutorialBoksNudge();
+      return;
+    }
     if (!editorMode && !sandboxMode) {
       e.preventDefault();
       e.stopPropagation();
@@ -2081,7 +2095,7 @@ function setupSpriteDrag() {
       const now = Date.now();
       if (now - lastTapAt < 350) {
         lastTapAt = 0;
-        rotateSpriteClockwise();
+        if (!tutorialStageActive || tutorialBoksDoubleClickUnlocked) rotateSpriteClockwise();
         return;
       }
       lastTapAt = now;
@@ -2108,6 +2122,11 @@ function setupSpriteDrag() {
     s.addEventListener('touchcancel',mu,{passive:false});
   },{passive:false});
   s.addEventListener('mousedown',e=>{
+    if (tutorialStageActive && playerPlaced && !tutorialBoksDoubleClickUnlocked) {
+      e.preventDefault();
+      triggerTutorialBoksNudge();
+      return;
+    }
     if (!editorMode && !sandboxMode) {
       e.preventDefault();
       triggerBoksTouchRebuke();
@@ -2126,6 +2145,10 @@ function setupSpriteDrag() {
     e.preventDefault();
     e.stopPropagation();
     suppressNextStart = false;
+    if (tutorialStageActive && !tutorialBoksDoubleClickUnlocked) {
+      triggerTutorialBoksNudge();
+      return;
+    }
     rotateSpriteClockwise();
   });
   s.addEventListener('mousedown', e => {
@@ -2142,6 +2165,7 @@ function rotateSpriteClockwise() {
   START = { ...pos };
   syncSprite();
   audioManager.playSandboxRotationPositionSfx();
+  notifyTutorialBoksTurned();
 }
 
 function setupGoalDrag() {
@@ -5661,6 +5685,130 @@ function startSandboxLevel() {
   updateRunAvailability();
 }
 
+function startTutorialStage() {
+  tutorialStageActive = true;
+  tutorialBoksDoubleClickUnlocked = false;
+  tutorialInitialOrientation = 'right';
+  tutorialWaitingFor = null;
+  document.body?.classList.add('tutorial-stage');
+  document.body?.classList.remove('tutorial-boks-visible', 'tutorial-forward-visible');
+  setSandboxMode(true);
+  selectedEditorLevelId = NEW_EDITOR_LEVEL_ID;
+  currentCustomLevel = null;
+  pendingNewLevelThemeOverrides = {};
+  currentLevel = resolveThemeLevelId(CUSTOM_LEVEL_THEME);
+  tutorialSceneLevelId = currentLevel;
+  pendingNewLevelCharacterId = resolveCharacterId(getLevel()?.characterId);
+  pendingNewLevelHints = {};
+  editorStylePanelOpen = false;
+  applyLevelSceneVars();
+  playerPlaced = false;
+  goalPlaced = false;
+  selectedElementTool = null;
+  selectedDecorationBrush = null;
+  START = { x: 2, y: 3 };
+  GOAL = { x: 4, y: 2 };
+  pos = { ...START };
+  ori = tutorialInitialOrientation;
+  setCharacterAction('idle');
+  setBlockedCells([]);
+  activeLevelDecorations = [];
+  resetPrograms();
+  activeMainSlots = 0;
+  activeFnSlots = 0;
+  mainSlotEnabled = Array(SLOTS).fill(false);
+  fnSlotEnabled = Array(FSLOTS).fill(false);
+  editorBlockEnabled = { forward: false, left: false, right: false, function: false };
+  setAvailableBlocks([]);
+  applyEditorBoardChanges();
+  setupEditorElementPlacement();
+  renderSandboxToolbar();
+  renderAvail();
+  renderBoard();
+  renderFn();
+  updateRunAvailability();
+  syncSprite();
+}
+
+function stopTutorialStage() {
+  tutorialStageActive = false;
+  tutorialBoksDoubleClickUnlocked = false;
+  tutorialWaitingFor = null;
+  document.body?.classList.remove('tutorial-stage', 'tutorial-boks-visible', 'tutorial-forward-visible');
+}
+
+async function revealTutorialBoks() {
+  if (!tutorialStageActive) return;
+  playerPlaced = true;
+  pos = { ...START };
+  ori = tutorialInitialOrientation;
+  syncSprite();
+  const sprite = document.getElementById('sprite');
+  sprite?.classList.remove('tutorial-boks-enter');
+  void sprite?.offsetWidth;
+  sprite?.classList.add('tutorial-boks-enter');
+  document.body?.classList.add('tutorial-boks-visible');
+  await sleep(980);
+  sprite?.classList.remove('tutorial-boks-enter');
+}
+
+function setTutorialBoksDoubleClickUnlocked(enabled) {
+  tutorialBoksDoubleClickUnlocked = !!enabled;
+  document.getElementById('sprite')?.classList.toggle('tutorial-boks-locked', tutorialStageActive && !tutorialBoksDoubleClickUnlocked);
+}
+
+function triggerTutorialBoksNudge() {
+  const sprite = document.getElementById('sprite');
+  if (!sprite || !playerPlaced) return;
+  sprite.classList.remove('tutorial-boks-nudge');
+  void sprite.offsetWidth;
+  sprite.classList.add('tutorial-boks-nudge');
+}
+
+function notifyTutorialBoksTurned() {
+  if (!tutorialStageActive) return;
+  resolveTutorialWait('boks-turned');
+  if (ori === tutorialInitialOrientation) resolveTutorialWait('boks-facing-start');
+}
+
+function resolveTutorialWait(eventName) {
+  if (!tutorialWaitingFor || tutorialWaitingFor.eventName !== eventName) return;
+  tutorialWaitingFor.remaining -= 1;
+  if (tutorialWaitingFor.remaining > 0) return;
+  const resolve = tutorialWaitingFor.resolve;
+  tutorialWaitingFor = null;
+  resolve();
+}
+
+function waitForTutorialEvent(eventName, count = 1) {
+  if (!tutorialStageActive || !eventName) return Promise.resolve();
+  if (eventName === 'boks-facing-start' && ori === tutorialInitialOrientation) return Promise.resolve();
+  return new Promise(resolve => {
+    tutorialWaitingFor = {
+      eventName,
+      remaining: Math.max(1, Number(count) || 1),
+      resolve
+    };
+  });
+}
+
+async function revealTutorialForwardBlock() {
+  if (!tutorialStageActive) return;
+  editorBlockEnabled = { forward: true, left: false, right: false, function: false };
+  setAvailableBlocks(['forward']);
+  document.body?.classList.add('tutorial-forward-visible');
+  renderAvail();
+  await sleep(900);
+}
+
+window.BOKS_TUTORIAL_STAGE = {
+  revealBoks: revealTutorialBoks,
+  unlockBoksDoubleClick: () => setTutorialBoksDoubleClickUnlocked(true),
+  lockBoksDoubleClick: () => setTutorialBoksDoubleClickUnlocked(false),
+  revealForwardBlock: revealTutorialForwardBlock,
+  waitFor: waitForTutorialEvent
+};
+
 function renderSandboxToolbar() {
   const toolbar = document.getElementById('sandboxToolbar');
   if (!toolbar) return;
@@ -7348,6 +7496,29 @@ async function startSandboxFromGate() {
     if (btn) btn.disabled = false;
   }, 0);
 }
+async function startTutorialFromGate() {
+  if (startGameGateAnimating) return;
+  startGameGateAnimating = true;
+  const btn = document.getElementById('startTutorialBtn');
+  if (btn) btn.disabled = true;
+  pulseStartGameButtonPressedState('startTutorialBtn');
+  btn?.classList.add('is-popping');
+  playWelcomeSfx();
+  playBubblePopSfx();
+  await sleep(720);
+  openAppFromGate({
+    openEditor: false,
+    onOpen: () => {
+      startTutorialStage();
+      tutorialEngine?.start(window.BOKS_TUTORIAL_DATA?.intro);
+    },
+    playLevelIntro: false
+  });
+  window.setTimeout(() => {
+    startGameGateAnimating = false;
+    if (btn) btn.disabled = false;
+  }, 0);
+}
 function returnToMainMenu() {
   if (document.body.classList.contains('prestart')) return;
   if (running || animating) {
@@ -7356,6 +7527,8 @@ function returnToMainMenu() {
   }
   closeSettingsPanel();
   closeSaveLevelModal();
+  tutorialEngine?.stop();
+  stopTutorialStage();
   if (editorMode) exitEditorMode();
   if (sandboxMode) {
     setSandboxMode(false);
@@ -7473,10 +7646,12 @@ settingsPanel = window.BOKS_SETTINGS_PANEL.create({
   toast
 });
 settingsPanel.bindEvents();
+tutorialEngine = window.BOKS_TUTORIAL_ENGINE?.create?.() || null;
 
 // tap to skip
 document.getElementById('startGameBtn')?.addEventListener('click', startGameFromGate);
 document.getElementById('startBoksBtn')?.addEventListener('click', startSandboxFromGate);
+document.getElementById('startTutorialBtn')?.addEventListener('click', startTutorialFromGate);
 document.getElementById('startEditorBtn')?.addEventListener('click', startEditorFromGate);
 document.getElementById('openSpritePreviewBtn')?.addEventListener('click', openSpritePreviewTool);
 document.getElementById('openVfxToolBtn')?.addEventListener('click', openVfxTool);

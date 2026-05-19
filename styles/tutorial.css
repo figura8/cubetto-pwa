@@ -1,0 +1,157 @@
+#tutorialNarrator {
+  position: fixed;
+  inset: auto 0 calc(84px + env(safe-area-inset-bottom, 0px)) 0;
+  z-index: 7600;
+  display: flex;
+  justify-content: center;
+  padding: 0 18px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 260ms ease,
+    transform 260ms ease;
+}
+
+#tutorialNarrator.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.tutorial-caption {
+  width: min(620px, calc(100vw - 36px));
+  padding: 16px 18px;
+  border: 2px solid rgba(95, 78, 52, 0.22);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 246, 0.96) 0%, rgba(243, 234, 213, 0.96) 100%);
+  box-shadow:
+    0 4px 0 rgba(198, 184, 148, 0.82),
+    0 16px 32px rgba(54, 43, 28, 0.16);
+  backdrop-filter: blur(8px);
+}
+
+.tutorial-caption__text {
+  margin: 0;
+  color: #5f4e34;
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-size: clamp(1rem, 2.8vw, 1.34rem);
+  font-weight: 700;
+  line-height: 1.32;
+  text-align: center;
+}
+
+body.prestart #tutorialNarrator {
+  display: none;
+}
+
+body.tutorial-stage #sandboxToolbar {
+  display: none;
+}
+
+body.tutorial-stage #bottom {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(18px) scale(0.98);
+  transition:
+    opacity 560ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 560ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+body.tutorial-stage.tutorial-forward-visible #bottom {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+body.tutorial-stage #boardRow,
+body.tutorial-stage #runBtn {
+  display: none;
+}
+
+body.tutorial-stage #blocksRow {
+  pointer-events: none;
+}
+
+body.tutorial-stage.tutorial-forward-visible #blocksRow .ablock {
+  animation: tutorialElementEnter 780ms cubic-bezier(0.2, 1.2, 0.28, 1) both;
+}
+
+body.tutorial-stage #sprite {
+  pointer-events: auto;
+}
+
+body.tutorial-stage #sprite.tutorial-boks-enter {
+  animation: tutorialBoksEnter 920ms cubic-bezier(0.2, 1.18, 0.28, 1) both;
+}
+
+body.tutorial-stage #sprite.tutorial-boks-nudge .boks-hero {
+  animation: tutorialBoksNudge 360ms cubic-bezier(0.2, 1, 0.36, 1);
+}
+
+body.tutorial-stage #sprite.tutorial-boks-locked {
+  cursor: default;
+}
+
+@keyframes tutorialElementEnter {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 18px)) scale(0.72);
+    filter: saturate(0.9) blur(4px);
+  }
+  62% {
+    opacity: 1;
+    transform: translate(-50%, calc(-50% - 5px)) scale(1.08);
+    filter: saturate(1.06) blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    filter: none;
+  }
+}
+
+@keyframes tutorialBoksEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.72);
+    filter: saturate(0.88) blur(5px);
+  }
+  64% {
+    opacity: 1;
+    transform: translateY(-6px) scale(1.08);
+    filter: saturate(1.08) blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: none;
+  }
+}
+
+@keyframes tutorialBoksNudge {
+  0%, 100% {
+    transform: translateX(0) rotate(0deg) scale(1);
+  }
+  25% {
+    transform: translateX(-3px) rotate(-2deg) scale(1.02);
+  }
+  55% {
+    transform: translateX(3px) rotate(2deg) scale(1.01);
+  }
+  78% {
+    transform: translateX(-1px) rotate(-0.8deg) scale(1);
+  }
+}
+
+@media (max-width: 520px) {
+  #tutorialNarrator {
+    inset-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    padding: 0 12px;
+  }
+
+  .tutorial-caption {
+    width: calc(100vw - 24px);
+    padding: 13px 14px;
+    border-radius: 16px;
+  }
+}

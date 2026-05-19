@@ -1,0 +1,1522 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BOKS Tutorial Editor</title>
+  <style>
+    :root {
+      --bg: #e9edf2;
+      --panel: #f8f7f2;
+      --panel-2: #ffffff;
+      --edge: #cdd4dc;
+      --ink: #1f2933;
+      --muted: #66717d;
+      --soft: #eef1f4;
+      --focus: #235f8f;
+      --shadow: rgba(31, 41, 51, 0.12);
+      --narration: #2f8d62;
+      --pause: #8a6f2e;
+      --spawn: #2d7fc2;
+      --hide: #697386;
+      --highlight: #d49a20;
+      --lock: #b84b43;
+      --unlock: #7d62b8;
+      --wait: #2f8290;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      overflow: hidden;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, #f3f5f7 0%, var(--bg) 100%);
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      min-height: 34px;
+      border: 1px solid rgba(31, 41, 51, 0.16);
+      border-radius: 8px;
+      padding: 7px 10px;
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+    button.primary {
+      background: var(--focus);
+      color: #fff;
+      border-color: var(--focus);
+    }
+
+    button.icon {
+      width: 34px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+    }
+
+    button:disabled {
+      opacity: 0.42;
+      cursor: default;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      min-height: 36px;
+      border: 1px solid rgba(31, 41, 51, 0.18);
+      border-radius: 8px;
+      padding: 8px 9px;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    textarea {
+      min-height: 112px;
+      resize: vertical;
+      line-height: 1.35;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 700;
+    }
+
+    .app {
+      height: 100vh;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 260px minmax(430px, 1fr) 360px;
+      gap: 12px;
+    }
+
+    .column {
+      min-height: 0;
+      border: 1px solid var(--edge);
+      border-radius: 10px;
+      background: var(--panel);
+      box-shadow: 0 14px 28px var(--shadow);
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .column-header {
+      min-height: 58px;
+      padding: 12px;
+      border-bottom: 1px solid var(--edge);
+      background: rgba(255,255,255,0.72);
+      display: grid;
+      gap: 3px;
+    }
+
+    h1,
+    h2,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 1.08rem;
+    }
+
+    h2 {
+      font-size: 0.96rem;
+    }
+
+    .hint,
+    .status {
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.32;
+    }
+
+    .palette-body {
+      min-height: 0;
+      padding: 12px;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 12px;
+    }
+
+    .palette-list {
+      display: grid;
+      align-content: start;
+      gap: 9px;
+    }
+
+    .palette-block {
+      min-height: 48px;
+      border: 1px solid rgba(31, 41, 51, 0.14);
+      border-left: 8px solid var(--beat-color);
+      border-radius: 9px;
+      padding: 8px 10px;
+      background: var(--panel-2);
+      cursor: grab;
+      display: grid;
+      gap: 2px;
+    }
+
+    .palette-block:active {
+      cursor: grabbing;
+    }
+
+    .palette-block strong {
+      font-size: 0.88rem;
+    }
+
+    .palette-block span {
+      color: var(--muted);
+      font-size: 0.74rem;
+    }
+
+    .timeline {
+      min-height: 0;
+      grid-template-rows: auto auto 1fr;
+    }
+
+    .tabs {
+      min-width: 0;
+      min-height: 46px;
+      padding: 8px;
+      border-bottom: 1px solid var(--edge);
+      background: #eef2f5;
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+    }
+
+    .tab {
+      min-width: 108px;
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      background: #fff;
+    }
+
+    .tab.active {
+      color: #fff;
+      background: var(--focus);
+      border-color: var(--focus);
+    }
+
+    .timeline-toolbar {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--edge);
+      background: rgba(255,255,255,0.64);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .toolbar-group {
+      display: flex;
+      flex: 1;
+      align-items: center;
+      gap: 6px;
+    }
+
+    #previewBtn {
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .duration {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .beat-list {
+      min-height: 0;
+      padding: 10px;
+      overflow-y: auto;
+      display: grid;
+      align-content: start;
+      gap: 8px;
+    }
+
+    .beat-card {
+      min-height: 54px;
+      border: 1px solid rgba(31, 41, 51, 0.14);
+      border-radius: 9px;
+      background: #fff;
+      display: grid;
+      grid-template-columns: 24px 16px 1fr 34px;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+    }
+
+    .drag-handle {
+      width: 24px;
+      height: 34px;
+      border-radius: 7px;
+      color: #8a949f;
+      cursor: grab;
+      display: grid;
+      place-items: center;
+      font-size: 1.08rem;
+      line-height: 1;
+      user-select: none;
+    }
+
+    .drag-handle:active {
+      cursor: grabbing;
+      background: var(--soft);
+    }
+
+    .beat-card.active {
+      border-color: var(--focus);
+      box-shadow: 0 0 0 3px rgba(35, 95, 143, 0.13);
+    }
+
+    .beat-card.dragging {
+      opacity: 0.45;
+    }
+
+    .beat-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: var(--beat-color);
+    }
+
+    .beat-main {
+      min-width: 0;
+      display: grid;
+      gap: 3px;
+    }
+
+    .beat-title {
+      font-size: 0.86rem;
+      font-weight: 800;
+    }
+
+    .beat-preview {
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .drop-zone {
+      min-height: 62px;
+      border: 2px dashed rgba(31, 41, 51, 0.2);
+      border-radius: 10px;
+      color: var(--muted);
+      background: rgba(255,255,255,0.48);
+      display: grid;
+      place-items: center;
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    .drop-zone.over,
+    .beat-card.over {
+      border-color: var(--focus);
+      background: #eef7ff;
+    }
+
+    .inspector-body {
+      min-height: 0;
+      overflow-y: auto;
+      padding: 12px;
+      display: grid;
+      align-content: start;
+      gap: 12px;
+    }
+
+    .empty-state {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.35;
+      padding: 12px;
+      border-radius: 9px;
+      background: rgba(255,255,255,0.54);
+    }
+
+    .tag-picker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .tag {
+      min-height: 32px;
+      border-radius: 999px;
+      background: #fff;
+      color: var(--ink);
+      border: 1px solid rgba(31, 41, 51, 0.16);
+    }
+
+    .tag.active {
+      background: var(--unlock);
+      border-color: var(--unlock);
+      color: #fff;
+    }
+
+    .audio-box {
+      border: 1px solid rgba(31, 41, 51, 0.14);
+      border-radius: 9px;
+      background: rgba(255,255,255,0.56);
+      padding: 10px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .audio-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .audio-warning {
+      color: #a93932;
+      font-size: 0.8rem;
+      display: none;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .audio-warning.show {
+      display: flex;
+    }
+
+    .audio-warning::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #c94038;
+      display: inline-block;
+    }
+
+    @media (max-width: 1100px) {
+      body {
+        overflow: auto;
+      }
+
+      .app {
+        height: auto;
+        min-height: 100vh;
+        grid-template-columns: 1fr;
+      }
+
+      .column {
+        min-height: 520px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <aside class="column">
+      <div class="column-header">
+        <h1>Tutorial Editor</h1>
+        <p class="hint">Drag a block into the timeline.</p>
+      </div>
+      <div class="palette-body">
+        <div id="palette" class="palette-list"></div>
+        <div>
+          <button id="exportBtn" class="primary" type="button">Export tutorial data</button>
+          <p id="exportStatus" class="status"></p>
+        </div>
+      </div>
+    </aside>
+
+    <section class="column timeline">
+      <div id="sequenceTabs" class="tabs"></div>
+      <div class="timeline-toolbar">
+        <div class="toolbar-group">
+          <button id="previewBtn" class="primary" type="button">Preview in game</button>
+          <button id="duplicateBtn" type="button">Duplicate beat</button>
+          <button id="deleteSelectedBtn" type="button">Delete beat</button>
+        </div>
+        <span id="durationLabel" class="duration">0 ms</span>
+      </div>
+      <div id="beatList" class="beat-list"></div>
+    </section>
+
+    <aside class="column">
+      <div class="column-header">
+        <h2>Inspector</h2>
+        <p id="selectedSummary" class="hint">No beat selected.</p>
+      </div>
+      <div id="inspector" class="inspector-body"></div>
+    </aside>
+  </main>
+
+  <script>
+    const BEAT_TYPES = [
+      { type: 'Narration', color: 'var(--narration)', hint: 'Caption and optional audio.' },
+      { type: 'Pause', color: 'var(--pause)', hint: 'Wait for a fixed duration.' },
+      { type: 'Spawn', color: 'var(--spawn)', hint: 'Bring an element on stage.' },
+      { type: 'Hide', color: 'var(--hide)', hint: 'Remove an element from stage.' },
+      { type: 'Highlight', color: 'var(--highlight)', hint: 'Guide attention to an element.' },
+      { type: 'Lock', color: 'var(--lock)', hint: 'Disable interactions.' },
+      { type: 'Unlock', color: 'var(--unlock)', hint: 'Enable selected interactions.' },
+      { type: 'Wait for event', color: 'var(--wait)', hint: 'Wait until gameplay reports an event.' }
+    ];
+
+    const TRANSITIONS = {
+      Spawn: ['fade-in', 'scale-up', 'bounce-in', 'slide-up'],
+      Hide: ['fade-out', 'scale-down']
+    };
+    const INTERACTIONS = ['DRAG_BOKS', 'DOUBLE_TAP_BOKS', 'DRAG_BLOCK', 'DROP_IN_SLOT', 'PRESS_PLAY', 'ALL'];
+    const EVENTS = ['BOKS_DRAG_RELEASED', 'BOKS_DOUBLE_TAPPED', 'BLOCK_DROPPED_IN_SLOT', 'PLAY_PRESSED', 'PROGRAM_EXECUTION_FINISHED'];
+    const STORAGE_KEY = 'boks-dev-tutorial-editor-draft';
+
+    const state = {
+      data: createDefaultData(),
+      sequenceIndex: 0,
+      beatIndex: -1,
+      draggedPaletteType: '',
+      draggedBeatIndex: -1,
+      audioAttachments: new Map(),
+      activeAudio: null,
+      previewWindow: null,
+      previewRunning: false
+    };
+
+    const els = {
+      palette: document.getElementById('palette'),
+      tabs: document.getElementById('sequenceTabs'),
+      beatList: document.getElementById('beatList'),
+      inspector: document.getElementById('inspector'),
+      summary: document.getElementById('selectedSummary'),
+      duration: document.getElementById('durationLabel'),
+      exportStatus: document.getElementById('exportStatus'),
+      previewButton: document.getElementById('previewBtn')
+    };
+
+    function createDefaultData() {
+      return {
+        sequences: [
+          {
+            id: 'orientation_intro',
+            title: 'Orientation intro',
+            beats: [
+              {
+                type: 'Narration',
+                caption: 'Hello and welcome!!',
+                audio: '',
+                durationMs: 1800,
+                notes: ''
+              },
+              { type: 'Pause', durationMs: 2000 },
+              {
+                type: 'Narration',
+                caption: 'Our adventure begins here.',
+                audio: '',
+                durationMs: 1800,
+                notes: ''
+              },
+              { type: 'Pause', durationMs: 2000 },
+              {
+                type: 'Narration',
+                caption: 'This green meadow is a grid where our friend Bocs can move with your help!',
+                audio: '',
+                durationMs: 3400,
+                notes: ''
+              },
+              { type: 'Pause', durationMs: 2000 },
+              {
+                type: 'Narration',
+                caption: 'Hey Bocs...where are you?',
+                audio: '',
+                durationMs: 2000,
+                notes: ''
+              },
+              { type: 'Pause', durationMs: 2000 },
+              { type: 'Spawn', elementId: 'boks', transition: 'bounce-in', durationMs: 900, delayMs: 0 },
+              { type: 'Pause', durationMs: 1500 },
+              {
+                type: 'Narration',
+                caption: 'Here you are!',
+                audio: '',
+                durationMs: 1600,
+                notes: ''
+              },
+              { type: 'Pause', durationMs: 2000 },
+              {
+                type: 'Narration',
+                caption: "Okay, let's see what happens if you double-click Bocs.",
+                audio: '',
+                durationMs: 2800,
+                notes: ''
+              },
+              { type: 'Unlock', interactions: ['DOUBLE_TAP_BOKS'] },
+              { type: 'Wait for event', eventName: 'BOKS_DOUBLE_TAPPED', minRepetitions: 1, completionCondition: '' },
+              { type: 'Lock' },
+              {
+                type: 'Narration',
+                caption: 'Did you see?',
+                audio: '',
+                durationMs: 1600,
+                notes: ''
+              },
+              { type: 'Pause', durationMs: 2000 },
+              {
+                type: 'Narration',
+                caption: 'Now look down!',
+                audio: '',
+                durationMs: 1500,
+                notes: ''
+              },
+              { type: 'Pause', durationMs: 2000 },
+              {
+                type: 'Narration',
+                caption: 'And what happens if you try again?',
+                audio: '',
+                durationMs: 2300,
+                notes: ''
+              },
+              { type: 'Unlock', interactions: ['DOUBLE_TAP_BOKS'] },
+              { type: 'Wait for event', eventName: 'BOKS_DOUBLE_TAPPED', minRepetitions: 1, completionCondition: '' },
+              { type: 'Lock' },
+              {
+                type: 'Narration',
+                caption: 'Oh, yes, now Bocs looks to your left.',
+                audio: '',
+                durationMs: 2600,
+                notes: ''
+              },
+              { type: 'Pause', durationMs: 2000 },
+              {
+                type: 'Narration',
+                caption: 'Every time you double-click Bocs, he turns around and looks in a different direction.',
+                audio: '',
+                durationMs: 4600,
+                notes: ''
+              },
+              { type: 'Unlock', interactions: ['DOUBLE_TAP_BOKS'] },
+              { type: 'Wait for event', eventName: 'BOKS_DOUBLE_TAPPED', minRepetitions: 2, completionCondition: 'BOKS_FACING_INITIAL_ORIENTATION' },
+              { type: 'Lock' },
+              {
+                type: 'Narration',
+                caption: 'Okay, now Bocs would like to explore the world around him a little.',
+                audio: '',
+                durationMs: 3600,
+                notes: ''
+              },
+              { type: 'Pause', durationMs: 2000 },
+              {
+                type: 'Narration',
+                caption: 'But to move, he needs your help.',
+                audio: '',
+                durationMs: 2400,
+                notes: ''
+              },
+              { type: 'Pause', durationMs: 2000 },
+              {
+                type: 'Narration',
+                caption: "We have to tell Bocs where to go, and we'll need this.",
+                audio: '',
+                durationMs: 3600,
+                notes: ''
+              },
+              { type: 'Pause', durationMs: 2000 },
+              { type: 'Spawn', elementId: 'forward_block', transition: 'bounce-in', durationMs: 800, delayMs: 0 }
+            ]
+          }
+        ]
+      };
+    }
+
+    function getCurrentSequence() {
+      return state.data.sequences[state.sequenceIndex] || state.data.sequences[0];
+    }
+
+    function getSelectedBeat() {
+      return getCurrentSequence()?.beats[state.beatIndex] || null;
+    }
+
+    function createBeat(type) {
+      if (type === 'Narration') return withEditorDefaults({ type, caption: '', audioFilename: '', audioSource: '', durationMs: 3000, notes: '' });
+      if (type === 'Pause') return { type, durationMs: 2000 };
+      if (type === 'Spawn') return { type, elementId: '', transition: 'fade-in', durationMs: 600, delayMs: 0 };
+      if (type === 'Hide') return { type, elementId: '', transition: 'fade-out', durationMs: 400 };
+      if (type === 'Highlight') return { type, elementId: '' };
+      if (type === 'Lock') return { type };
+      if (type === 'Unlock') return { type, interactions: [] };
+      return { type: 'Wait for event', eventName: EVENTS[0], minRepetitions: 1, completionCondition: '' };
+    }
+
+    function withEditorDefaults(beat) {
+      if (!beat._editorId) beat._editorId = `beat_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      return beat;
+    }
+
+    function normalizeEditorData() {
+      state.data.sequences.forEach(sequence => {
+        sequence.beats.forEach(beat => {
+          withEditorDefaults(beat);
+          if (beat.type !== 'Narration') return;
+          if (beat.audio && !beat.audioFilename) beat.audioFilename = String(beat.audio).split(/[\\/]/).pop();
+          delete beat.audio;
+          if (beat.audioSrc && !beat.audioFilename) beat.audioFilename = String(beat.audioSrc).split('/').pop();
+          if (beat.audioSrc && !beat.audioSource) beat.audioSource = beat.audioSrc;
+          delete beat.audioSrc;
+        });
+        updateGeneratedAudioFilenames(sequence);
+      });
+    }
+
+    function updateGeneratedAudioFilenames(sequence) {
+      const narrationBeats = sequence.beats.filter(beat => beat.type === 'Narration');
+      narrationBeats.forEach((beat, index) => {
+        if (beat.audioFilenameEdited) return;
+        beat.audioFilename = suggestAudioFilename(beat.caption || '', index + 1);
+      });
+    }
+
+    function suggestAudioFilename(caption, index) {
+      const words = String(caption || 'narration')
+        .toLowerCase()
+        .replace(/['’]/g, '')
+        .replace(/[^a-z0-9\s]+/g, ' ')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 5);
+      const slug = words.length ? words.join('_') : 'narration';
+      return `${String(index).padStart(2, '0')}_${slug}.mp3`;
+    }
+
+    function getNarrationIndex(sequence, targetBeat) {
+      return sequence.beats
+        .filter(beat => beat.type === 'Narration')
+        .findIndex(beat => beat === targetBeat) + 1;
+    }
+
+    function render() {
+      normalizeEditorData();
+      renderPalette();
+      renderTabs();
+      renderTimeline();
+      renderInspector();
+      persistDraft();
+    }
+
+    function renderPalette() {
+      els.palette.innerHTML = '';
+      BEAT_TYPES.forEach(meta => {
+        const block = document.createElement('div');
+        block.className = 'palette-block';
+        block.draggable = true;
+        block.style.setProperty('--beat-color', meta.color);
+        block.dataset.type = meta.type;
+        block.innerHTML = `<strong>${meta.type}</strong><span>${meta.hint}</span>`;
+        block.addEventListener('dragstart', event => {
+          state.draggedPaletteType = meta.type;
+          event.dataTransfer.effectAllowed = 'copy';
+          event.dataTransfer.setData('application/x-boks-beat-type', meta.type);
+        });
+        block.addEventListener('dragend', () => {
+          state.draggedPaletteType = '';
+        });
+        els.palette.appendChild(block);
+      });
+    }
+
+    function renderTabs() {
+      els.tabs.innerHTML = '';
+      state.data.sequences.forEach((sequence, index) => {
+        const tab = document.createElement('button');
+        tab.className = 'tab' + (index === state.sequenceIndex ? ' active' : '');
+        tab.type = 'button';
+        tab.textContent = sequence.title || sequence.id || `Sequence ${index + 1}`;
+        tab.addEventListener('click', () => {
+          state.sequenceIndex = index;
+          state.beatIndex = -1;
+          render();
+        });
+        els.tabs.appendChild(tab);
+      });
+      const add = document.createElement('button');
+      add.className = 'icon';
+      add.type = 'button';
+      add.textContent = '+';
+      add.addEventListener('click', addSequence);
+      els.tabs.appendChild(add);
+    }
+
+    function renderTimeline() {
+      const sequence = getCurrentSequence();
+      els.duration.textContent = `Estimated ${estimateSequenceDuration(sequence)} ms`;
+      els.beatList.innerHTML = '';
+      sequence.beats.forEach((beat, index) => {
+        const card = document.createElement('div');
+        card.className = 'beat-card' + (index === state.beatIndex ? ' active' : '');
+        card.dataset.index = String(index);
+        card.style.setProperty('--beat-color', getBeatColor(beat.type));
+        card.innerHTML = `
+          <span class="drag-handle" draggable="true" title="Drag to reorder" aria-label="Drag to reorder">≡</span>
+          <span class="beat-dot"></span>
+          <span class="beat-main">
+            <span class="beat-title">${escapeHtml(beat.type)}</span>
+            <span class="beat-preview">${escapeHtml(previewBeat(beat))}</span>
+          </span>
+          <button class="icon" type="button" aria-label="Delete beat">x</button>
+        `;
+        card.addEventListener('click', event => {
+          if (event.target.closest('button')) return;
+          state.beatIndex = index;
+          render();
+        });
+        card.querySelector('button').addEventListener('click', event => {
+          event.stopPropagation();
+          deleteBeat(index);
+        });
+        card.querySelector('.drag-handle').addEventListener('dragstart', event => {
+          state.draggedBeatIndex = index;
+          card.classList.add('dragging');
+          event.dataTransfer.effectAllowed = 'move';
+          event.dataTransfer.setData('application/x-boks-beat-index', String(index));
+        });
+        card.querySelector('.drag-handle').addEventListener('dragend', () => {
+          state.draggedBeatIndex = -1;
+          card.classList.remove('dragging');
+        });
+        card.addEventListener('dragover', event => {
+          event.preventDefault();
+          card.classList.add('over');
+        });
+        card.addEventListener('dragleave', () => card.classList.remove('over'));
+        card.addEventListener('drop', event => {
+          event.preventDefault();
+          card.classList.remove('over');
+          const rect = card.getBoundingClientRect();
+          const after = event.clientY > rect.top + rect.height / 2;
+          handleTimelineDrop(index + (after ? 1 : 0));
+        });
+        els.beatList.appendChild(card);
+      });
+
+      const dropZone = document.createElement('div');
+      dropZone.className = 'drop-zone';
+      dropZone.textContent = 'Drop a block here';
+      dropZone.addEventListener('dragover', event => {
+        event.preventDefault();
+        dropZone.classList.add('over');
+      });
+      dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+      dropZone.addEventListener('drop', event => {
+        event.preventDefault();
+        dropZone.classList.remove('over');
+        handleTimelineDrop(sequence.beats.length);
+      });
+      els.beatList.appendChild(dropZone);
+    }
+
+    function renderInspector() {
+      const beat = getSelectedBeat();
+      if (!beat) {
+        els.summary.textContent = 'No beat selected.';
+        els.inspector.innerHTML = '<div class="empty-state">Select a beat from the timeline to configure it.</div>';
+        return;
+      }
+      els.summary.textContent = `${beat.type} beat`;
+      const fields = [];
+      if (beat.type === 'Narration') {
+        fields.push(textareaField('caption', 'Caption text', beat.caption || ''));
+        fields.push(numberField('durationMs', 'Caption duration in ms', beat.durationMs || 0));
+        fields.push(audioSectionField(beat));
+        fields.push(textareaField('notes', 'Internal notes', beat.notes || ''));
+      } else if (beat.type === 'Pause') {
+        fields.push(numberField('durationMs', 'Duration in ms', beat.durationMs || 0));
+      } else if (beat.type === 'Spawn') {
+        fields.push(textField('elementId', 'Element id', beat.elementId || ''));
+        fields.push(selectField('transition', 'Transition effect', TRANSITIONS.Spawn, beat.transition || 'fade-in'));
+        fields.push(numberField('durationMs', 'Duration ms', beat.durationMs || 0));
+        fields.push(numberField('delayMs', 'Delay ms', beat.delayMs || 0));
+      } else if (beat.type === 'Hide') {
+        fields.push(textField('elementId', 'Element id', beat.elementId || ''));
+        fields.push(selectField('transition', 'Transition effect', TRANSITIONS.Hide, beat.transition || 'fade-out'));
+        fields.push(numberField('durationMs', 'Duration ms', beat.durationMs || 0));
+      } else if (beat.type === 'Highlight') {
+        fields.push(textField('elementId', 'Element id', beat.elementId || ''));
+      } else if (beat.type === 'Lock') {
+        fields.push('<div class="empty-state">No configuration needed.</div>');
+      } else if (beat.type === 'Unlock') {
+        fields.push(tagPickerField('interactions', 'Allowed interactions', INTERACTIONS, beat.interactions || []));
+      } else if (beat.type === 'Wait for event') {
+        fields.push(selectField('eventName', 'Event name', EVENTS, beat.eventName || EVENTS[0]));
+        fields.push(numberField('minRepetitions', 'Minimum repetitions', beat.minRepetitions || 1));
+        fields.push(textField('completionCondition', 'Optional completion condition name', beat.completionCondition || ''));
+      }
+      els.inspector.innerHTML = fields.join('');
+      bindInspectorFields();
+    }
+
+    function textField(key, label, value) {
+      return `<label>${label}<input data-field="${key}" type="text" value="${escapeAttr(value)}"></label>`;
+    }
+
+    function numberField(key, label, value) {
+      return `<label>${label}<input data-field="${key}" type="number" min="0" step="1" value="${escapeAttr(value)}"></label>`;
+    }
+
+    function textareaField(key, label, value) {
+      return `<label>${label}<textarea data-field="${key}">${escapeHtml(value)}</textarea></label>`;
+    }
+
+    function selectField(key, label, options, value) {
+      return `
+        <label>${label}
+          <select data-field="${key}">
+            ${options.map(option => `<option value="${escapeAttr(option)}"${option === value ? ' selected' : ''}>${escapeHtml(option)}</option>`).join('')}
+          </select>
+        </label>
+      `;
+    }
+
+    function tagPickerField(key, label, options, selected) {
+      const active = new Set(selected);
+      return `
+        <label>${label}</label>
+        <div class="tag-picker" data-field="${key}">
+          ${options.map(option => `<button class="tag${active.has(option) ? ' active' : ''}" type="button" data-value="${escapeAttr(option)}">${escapeHtml(option)}</button>`).join('')}
+        </div>
+      `;
+    }
+
+    function audioSectionField(beat) {
+      const attachment = state.audioAttachments.get(beat._editorId);
+      const loadedLabel = getAudioLoadedLabel(beat, attachment);
+      return `
+        <div class="audio-box">
+          <label>Export filename
+            <input data-field="audioFilename" type="text" value="${escapeAttr(beat.audioFilename || '')}">
+          </label>
+          <div class="audio-row">
+            <button id="chooseAudioBtn" type="button">Choose audio file</button>
+            <button id="playAudioBtn" type="button">${state.activeAudio ? 'Stop' : 'Play'}</button>
+            <button id="regenerateAudioBtn" type="button">Regenerate filename</button>
+          </div>
+          <label>Absolute file path or URL
+            <input data-field="audioSource" type="text" value="${escapeAttr(beat.audioSource || '')}">
+          </label>
+          <div class="hint">${escapeHtml(loadedLabel)}</div>
+          <div id="audioWarning" class="audio-warning${beat.audioLoadFailed ? ' show' : ''}">file not found</div>
+          <input id="audioFileInput" type="file" accept="audio/*" hidden>
+        </div>
+      `;
+    }
+
+    function getAudioLoadedLabel(beat, attachment) {
+      if (attachment?.name) return `Loaded: ${attachment.name}`;
+      if (beat.audioSource) return `Loaded path: ${beat.audioSource}`;
+      if (beat.audioDisplayName) return `Previously selected: ${beat.audioDisplayName}. Rechoose it or paste its path to preview/export.`;
+      return `Suggested export: ${beat.audioFilename || ''}`;
+    }
+
+    function bindInspectorFields() {
+      els.inspector.querySelectorAll('[data-field]').forEach(input => {
+        if (input.classList.contains('tag-picker')) return;
+        input.addEventListener('input', updateBeatFromInput);
+        input.addEventListener('change', updateBeatFromInput);
+      });
+      document.getElementById('chooseAudioBtn')?.addEventListener('click', () => {
+        document.getElementById('audioFileInput')?.click();
+      });
+      document.getElementById('audioFileInput')?.addEventListener('change', handleAudioFilePicked);
+      document.getElementById('playAudioBtn')?.addEventListener('click', toggleSelectedAudio);
+      document.getElementById('regenerateAudioBtn')?.addEventListener('click', regenerateSelectedAudioFilename);
+      els.inspector.querySelectorAll('.tag').forEach(button => {
+        button.addEventListener('click', () => {
+          const beat = getSelectedBeat();
+          if (!beat) return;
+          const value = button.dataset.value;
+          const set = new Set(beat.interactions || []);
+          if (set.has(value)) set.delete(value);
+          else set.add(value);
+          beat.interactions = Array.from(set);
+          render();
+        });
+      });
+    }
+
+    function updateBeatFromInput(event) {
+      const beat = getSelectedBeat();
+      if (!beat) return;
+      const key = event.target.dataset.field;
+      if (key === 'minRepetitions') beat[key] = Math.max(1, Number(event.target.value) || 1);
+      else if (event.target.type === 'number') beat[key] = Number(event.target.value) || 0;
+      else beat[key] = event.target.value;
+      if (key === 'caption' && beat.type === 'Narration' && !beat.audioFilenameEdited) {
+        beat.audioFilename = suggestAudioFilename(beat.caption || '', getNarrationIndex(getCurrentSequence(), beat));
+        const filenameInput = els.inspector.querySelector('[data-field="audioFilename"]');
+        if (filenameInput) filenameInput.value = beat.audioFilename;
+      }
+      if (key === 'audioFilename') beat.audioFilenameEdited = true;
+      if (key === 'audioSource') {
+        beat.audioLoadFailed = false;
+        testAudioSource(beat);
+      }
+      renderTimeline();
+      persistDraft();
+    }
+
+    function handleAudioFilePicked(event) {
+      const beat = getSelectedBeat();
+      const file = event.target.files?.[0];
+      if (!beat || !file) return;
+      const objectUrl = URL.createObjectURL(file);
+      const filePath = getPickedFilePath(file);
+      state.audioAttachments.set(beat._editorId, {
+        kind: 'file',
+        file,
+        name: file.name,
+        objectUrl
+      });
+      beat.audioDisplayName = file.name;
+      if (filePath) beat.audioSource = filePath;
+      beat.audioLoadFailed = false;
+      persistDraft();
+      renderInspector();
+    }
+
+    function getPickedFilePath(file) {
+      return file.path || file.mozFullPath || file.webkitRelativePath || '';
+    }
+
+    function toggleSelectedAudio() {
+      const beat = getSelectedBeat();
+      if (!beat) return;
+      if (state.activeAudio) {
+        stopActiveAudio();
+        renderInspector();
+        return;
+      }
+      const src = getPreviewAudioSrc(beat);
+      if (!src) {
+        beat.audioLoadFailed = true;
+        renderInspector();
+        return;
+      }
+      const audio = new Audio(src);
+      state.activeAudio = audio;
+      audio.addEventListener('ended', () => {
+        state.activeAudio = null;
+        renderInspector();
+      }, { once: true });
+      audio.addEventListener('error', () => {
+        beat.audioLoadFailed = true;
+        state.activeAudio = null;
+        renderInspector();
+      }, { once: true });
+      audio.play().catch(() => {
+        beat.audioLoadFailed = true;
+        state.activeAudio = null;
+        renderInspector();
+      });
+      renderInspector();
+    }
+
+    function stopActiveAudio() {
+      if (!state.activeAudio) return;
+      state.activeAudio.pause();
+      state.activeAudio.currentTime = 0;
+      state.activeAudio = null;
+    }
+
+    function getPreviewAudioSrc(beat) {
+      const attachment = state.audioAttachments.get(beat._editorId);
+      if (attachment?.objectUrl) return attachment.objectUrl;
+      if (!beat.audioSource) return '';
+      if (/^https?:\/\//i.test(beat.audioSource)) return beat.audioSource;
+      if (/^\/?audio\//i.test(beat.audioSource)) return `/${beat.audioSource.replace(/^\//, '')}`;
+      return `/dev/tutorial-editor/api/local-audio?path=${encodeURIComponent(beat.audioSource)}`;
+    }
+
+    function testAudioSource(beat) {
+      if (!beat.audioSource) return;
+      const audio = new Audio(getPreviewAudioSrc(beat));
+      audio.addEventListener('canplaythrough', () => {
+        beat.audioLoadFailed = false;
+        renderInspector();
+      }, { once: true });
+      audio.addEventListener('error', () => {
+        beat.audioLoadFailed = true;
+        renderInspector();
+      }, { once: true });
+      audio.load();
+    }
+
+    function regenerateSelectedAudioFilename() {
+      const beat = getSelectedBeat();
+      if (!beat || beat.type !== 'Narration') return;
+      beat.audioFilename = suggestAudioFilename(beat.caption || '', getNarrationIndex(getCurrentSequence(), beat));
+      beat.audioFilenameEdited = false;
+      render();
+    }
+
+    function addSequence() {
+      const number = state.data.sequences.length + 1;
+      state.data.sequences.push({ id: `sequence_${number}`, title: `Sequence ${number}`, beats: [] });
+      state.sequenceIndex = state.data.sequences.length - 1;
+      state.beatIndex = -1;
+      render();
+    }
+
+    function handleTimelineDrop(targetIndex) {
+      const sequence = getCurrentSequence();
+      if (state.draggedPaletteType) {
+        const beat = createBeat(state.draggedPaletteType);
+        if (beat.type === 'Pause') beat.durationMs = suggestPauseDuration(sequence.beats[targetIndex - 1]);
+        sequence.beats.splice(targetIndex, 0, beat);
+        state.beatIndex = targetIndex;
+        state.draggedPaletteType = '';
+        render();
+        return;
+      }
+      if (state.draggedBeatIndex >= 0) {
+        const [beat] = sequence.beats.splice(state.draggedBeatIndex, 1);
+        const insertIndex = state.draggedBeatIndex < targetIndex ? targetIndex - 1 : targetIndex;
+        sequence.beats.splice(insertIndex, 0, beat);
+        state.beatIndex = insertIndex;
+        state.draggedBeatIndex = -1;
+        render();
+      }
+    }
+
+    function suggestPauseDuration(previousBeat) {
+      if (previousBeat?.type === 'Spawn') return 1500;
+      return 2000;
+    }
+
+    function deleteBeat(index = state.beatIndex) {
+      const sequence = getCurrentSequence();
+      if (index < 0 || index >= sequence.beats.length) return;
+      sequence.beats.splice(index, 1);
+      state.beatIndex = Math.min(index, sequence.beats.length - 1);
+      render();
+    }
+
+    function duplicateBeat() {
+      const sequence = getCurrentSequence();
+      const beat = getSelectedBeat();
+      if (!beat) return;
+      sequence.beats.splice(state.beatIndex + 1, 0, clone(beat));
+      state.beatIndex += 1;
+      render();
+    }
+
+    async function previewSequence() {
+      if (state.previewRunning) {
+        stopPreviewInGame();
+        return;
+      }
+      try {
+        await exportTutorialData({ silent: true });
+        await startPreviewInGame();
+      } catch (err) {
+        state.previewRunning = false;
+        updatePreviewButton();
+        els.exportStatus.textContent = `Preview failed: ${err.message}`;
+      }
+    }
+
+    async function startPreviewInGame() {
+      const previewUrl = new URL(`/?tutorialPreview=${Date.now()}`, window.location.href);
+      const previewWindow = window.open(previewUrl.href, 'boks-tutorial-preview');
+      if (!previewWindow) throw new Error('popup blocked');
+      state.previewWindow = previewWindow;
+      state.previewRunning = true;
+      updatePreviewButton();
+      els.exportStatus.textContent = 'Preview opening in game...';
+      await waitForGamePreview(previewWindow);
+      els.exportStatus.textContent = 'Preview running in the real game.';
+    }
+
+    async function waitForGamePreview(previewWindow) {
+      const started = await waitUntil(() => {
+        if (previewWindow.closed) throw new Error('preview window closed');
+        const doc = previewWindow.document;
+        const button = doc?.getElementById('startTutorialBtn');
+        if (!button || !previewWindow.BOKS_TUTORIAL_DATA?.intro) return false;
+        button.click();
+        return true;
+      }, 12000);
+      if (!started) throw new Error('game did not become ready');
+    }
+
+    function stopPreviewInGame() {
+      const previewWindow = state.previewWindow;
+      try {
+        previewWindow?.BOKS_TUTORIAL_ENGINE?.create?.()?.stop?.();
+      } catch (_err) {}
+      if (previewWindow && !previewWindow.closed) previewWindow.close();
+      state.previewWindow = null;
+      state.previewRunning = false;
+      updatePreviewButton();
+      els.exportStatus.textContent = 'Preview stopped.';
+    }
+
+    function updatePreviewButton() {
+      els.previewButton.textContent = state.previewRunning ? 'Stop preview' : 'Preview in game';
+    }
+
+    function waitUntil(check, timeoutMs) {
+      const startedAt = Date.now();
+      return new Promise((resolve, reject) => {
+        const tick = () => {
+          try {
+            const result = check();
+            if (result) {
+              resolve(true);
+              return;
+            }
+            if (Date.now() - startedAt >= timeoutMs) {
+              resolve(false);
+              return;
+            }
+            window.setTimeout(tick, 120);
+          } catch (err) {
+            reject(err);
+          }
+        };
+        tick();
+      });
+    }
+
+    async function exportTutorialData(options = {}) {
+      const silent = !!options.silent;
+      normalizeEditorData();
+      const files = await collectAudioExportFiles();
+      const canonicalData = buildCanonicalTutorialData(state.data);
+      const source = buildTypeScriptSource(canonicalData);
+      const legacySource = buildLegacyTutorialSource(canonicalData, state.sequenceIndex);
+      if (!silent) els.exportStatus.textContent = 'Exporting...';
+      try {
+        const response = await fetch('/dev/tutorial-editor/api/export', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ source, legacySource, files })
+        });
+        if (response.ok) {
+          if (!silent) els.exportStatus.textContent = 'Exported TS and legacy tutorial data.';
+          return;
+        }
+        if (silent) throw new Error('silent export failed');
+      } catch (_err) {
+        if (silent) throw _err;
+        // Static hosting fallback below.
+      }
+
+      if (window.showSaveFilePicker) {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: 'tutorialData.ts',
+          types: [{ description: 'TypeScript', accept: { 'text/plain': ['.ts'] } }]
+        });
+        const writable = await handle.createWritable();
+        await writable.write(source);
+        await writable.close();
+        if (!silent) els.exportStatus.textContent = 'Exported via file picker.';
+        return;
+      }
+
+      const blob = new Blob([source], { type: 'text/plain' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'tutorialData.ts';
+      link.click();
+      URL.revokeObjectURL(link.href);
+      if (!silent) els.exportStatus.textContent = 'Downloaded tutorialData.ts.';
+    }
+
+    function buildCanonicalTutorialData(data) {
+      return {
+        sequences: data.sequences.map(sequence => ({
+          id: sequence.id,
+          title: sequence.title,
+          beats: sequence.beats.map(stripInternalFields)
+        }))
+      };
+    }
+
+    function buildTypeScriptSource(data) {
+      return `export const tutorialData = ${JSON.stringify(data, null, 2)} as const;\n\nexport type TutorialData = typeof tutorialData;\n`;
+    }
+
+    function buildLegacyTutorialSource(data, sequenceIndex) {
+      const sequence = data.sequences[sequenceIndex] || data.sequences[0] || { id: 'intro', title: 'Intro', beats: [] };
+      const legacy = {
+        intro: {
+          id: sequence.id || 'intro',
+          title: sequence.title || 'Intro',
+          beats: sequence.beats.flatMap((beat, index) => canonicalBeatToLegacy(beat, index))
+        }
+      };
+      return `(() => {\n  window.BOKS_TUTORIAL_DATA = ${JSON.stringify(legacy, null, 2)};\n})();\n`;
+    }
+
+    function canonicalBeatToLegacy(beat, index) {
+      if (beat.type === 'Narration') {
+        const legacyBeat = {
+          id: legacyBeatId(beat, index),
+          type: 'narration',
+          text: beat.caption || '',
+          durationMs: Number(beat.durationMs) || 0
+        };
+        if (beat.audioSrc) legacyBeat.audio = beat.audioSrc;
+        return [legacyBeat];
+      }
+      if (beat.type === 'Pause') {
+        return [{ id: legacyBeatId(beat, index), type: 'pause', durationMs: Number(beat.durationMs) || 0 }];
+      }
+      if (beat.type === 'Spawn') {
+        return [{ id: legacyBeatId(beat, index), type: 'call', action: spawnActionForElement(beat.elementId) }];
+      }
+      if (beat.type === 'Hide') {
+        return [{ id: legacyBeatId(beat, index), type: 'call', action: 'hideElement', target: beat.elementId || '' }];
+      }
+      if (beat.type === 'Highlight') {
+        return [{ id: legacyBeatId(beat, index), type: 'call', action: 'highlightElement', target: beat.elementId || '' }];
+      }
+      if (beat.type === 'Lock') {
+        return [{ id: legacyBeatId(beat, index), type: 'call', action: 'lockBoksDoubleClick' }];
+      }
+      if (beat.type === 'Unlock') {
+        const interactions = beat.interactions || [];
+        if (interactions.includes('ALL') || interactions.includes('DOUBLE_TAP_BOKS')) {
+          return [{ id: legacyBeatId(beat, index), type: 'call', action: 'unlockBoksDoubleClick' }];
+        }
+        return [{ id: legacyBeatId(beat, index), type: 'call', action: 'unlockInteractions', interactions }];
+      }
+      if (beat.type === 'Wait for event') {
+        return [{
+          id: legacyBeatId(beat, index),
+          type: 'waitFor',
+          event: legacyEventName(beat),
+          count: Math.max(1, Number(beat.minRepetitions) || 1)
+        }];
+      }
+      return [];
+    }
+
+    function spawnActionForElement(elementId) {
+      const id = String(elementId || '').toLowerCase();
+      if (id === 'boks' || id === 'bocs') return 'revealBoks';
+      if (id === 'forward_block' || id === 'forward' || id === 'move_forward') return 'revealForwardBlock';
+      return `reveal${toPascalCase(id || 'element')}`;
+    }
+
+    function legacyEventName(beat) {
+      if (beat.completionCondition === 'BOKS_FACING_INITIAL_ORIENTATION') return 'boks-facing-start';
+      if (beat.eventName === 'BOKS_DOUBLE_TAPPED') return 'boks-turned';
+      return String(beat.eventName || '')
+        .toLowerCase()
+        .replace(/_/g, '-');
+    }
+
+    function legacyBeatId(beat, index) {
+      const base = beat.caption || beat.elementId || beat.eventName || beat.type || 'beat';
+      const slug = String(base)
+        .toLowerCase()
+        .replace(/['’]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 42) || 'beat';
+      return `${String(index + 1).padStart(2, '0')}-${slug}`;
+    }
+
+    function toPascalCase(value) {
+      return String(value)
+        .split(/[^a-z0-9]+/i)
+        .filter(Boolean)
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .join('');
+    }
+
+    function stripInternalFields(beat) {
+      const copy = { ...beat };
+      if (copy.type === 'Narration') {
+        const hasLocalAudio = !!state.audioAttachments.get(copy._editorId) || isLocalAudioPath(copy.audioSource);
+        const hasUrlAudio = /^https?:\/\//i.test(copy.audioSource || '');
+        const hasExportedAudio = /^\/?audio\//i.test(copy.audioSource || '');
+        if (hasLocalAudio && copy.audioFilename) copy.audioSrc = `audio/tutorial/${copy.audioFilename}`;
+        else if (hasUrlAudio) copy.audioSrc = copy.audioSource;
+        else if (hasExportedAudio) copy.audioSrc = copy.audioSource.replace(/^\//, '');
+      }
+      delete copy.notes;
+      delete copy.audioFilename;
+      delete copy.audioFilenameEdited;
+      delete copy.audioSource;
+      delete copy.audioDisplayName;
+      delete copy.audioLoadFailed;
+      delete copy._editorId;
+      return copy;
+    }
+
+    async function collectAudioExportFiles() {
+      const files = [];
+      state.data.sequences.forEach(sequence => {
+        sequence.beats.forEach(beat => {
+          if (beat.type !== 'Narration' || !beat.audioFilename) return;
+          const attachment = state.audioAttachments.get(beat._editorId);
+          if (attachment?.file) {
+            files.push({
+              filename: beat.audioFilename,
+              file: attachment.file
+            });
+            return;
+          }
+          if (isLocalAudioPath(beat.audioSource)) {
+            files.push({
+              filename: beat.audioFilename,
+              path: beat.audioSource
+            });
+          }
+        });
+      });
+      const encoded = [];
+      for (const item of files) {
+        if (item.file) {
+          encoded.push({
+            filename: item.filename,
+            base64: await fileToBase64(item.file)
+          });
+        } else {
+          encoded.push(item);
+        }
+      }
+      return encoded;
+    }
+
+    function isLocalAudioPath(value) {
+      return !!value && !/^https?:\/\//i.test(value) && !/^\/?audio\//i.test(value);
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function estimateSequenceDuration(sequence) {
+      return sequence.beats.reduce((total, beat) => total + getBeatDuration(beat), 0);
+    }
+
+    function getBeatDuration(beat) {
+      if (beat.type === 'Narration') return Number(beat.durationMs) || 0;
+      if (beat.type === 'Pause') return Number(beat.durationMs) || 0;
+      if (beat.type === 'Spawn') return (Number(beat.delayMs) || 0) + (Number(beat.durationMs) || 0);
+      if (beat.type === 'Hide') return Number(beat.durationMs) || 0;
+      return 0;
+    }
+
+    function getBeatColor(type) {
+      const meta = BEAT_TYPES.find(entry => entry.type === type);
+      return meta?.color || '#999';
+    }
+
+    function previewBeat(beat) {
+      if (beat.type === 'Narration') return beat.caption || 'Empty caption';
+      if (beat.type === 'Pause') return `${beat.durationMs || 0} ms`;
+      if (beat.type === 'Spawn') return `${beat.elementId || 'element'} via ${beat.transition}`;
+      if (beat.type === 'Hide') return `${beat.elementId || 'element'} via ${beat.transition}`;
+      if (beat.type === 'Highlight') return beat.elementId || 'element';
+      if (beat.type === 'Lock') return 'Lock interactions';
+      if (beat.type === 'Unlock') return (beat.interactions || []).join(', ') || 'No interactions';
+      return `${beat.eventName || EVENTS[0]} x${beat.minRepetitions || 1}`;
+    }
+
+    function persistDraft() {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
+    }
+
+    async function loadInitialData() {
+      const fromServer = await loadExistingTypeScript();
+      if (fromServer) {
+        state.data = fromServer;
+        render();
+        return;
+      }
+      try {
+        const draft = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || 'null');
+        if (draft?.sequences?.length) state.data = draft;
+      } catch (_err) {}
+      render();
+    }
+
+    async function loadExistingTypeScript() {
+      const urls = [
+        '/dev/tutorial-editor/api/tutorial-data',
+        '../../src/tutorial/tutorialData.ts'
+      ];
+      for (const url of urls) {
+        try {
+          const response = await fetch(url, { cache: 'no-store' });
+          if (!response.ok) continue;
+          const text = await response.text();
+          const parsed = parseTutorialDataSource(text);
+          if (parsed?.sequences?.length) return parsed;
+        } catch (_err) {}
+      }
+      return null;
+    }
+
+    function parseTutorialDataSource(source) {
+      const match = /export\s+const\s+tutorialData\s*=\s*([\s\S]*?)\s+as\s+const\s*;/.exec(source);
+      if (!match) return null;
+      try {
+        return JSON.parse(match[1]);
+      } catch (_err) {
+        return null;
+      }
+    }
+
+    function clone(value) {
+      return JSON.parse(JSON.stringify(value));
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, ch => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      })[ch]);
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/`/g, '&#096;');
+    }
+
+    document.getElementById('exportBtn').addEventListener('click', exportTutorialData);
+    document.getElementById('duplicateBtn').addEventListener('click', duplicateBeat);
+    document.getElementById('deleteSelectedBtn').addEventListener('click', () => deleteBeat());
+    document.getElementById('previewBtn').addEventListener('click', previewSequence);
+
+    loadInitialData();
+  </script>
+</body>
+</html>

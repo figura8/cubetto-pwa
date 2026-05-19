@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v25';
+const CACHE_VERSION = 'v26';
 const SHELL_CACHE = `cubetto-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `cubetto-runtime-${CACHE_VERSION}`;
 
@@ -8,6 +8,7 @@ const PRECACHE_URLS = [
   './manifest.webmanifest',
   './styles/app.css',
   './styles/character.css',
+  './styles/tutorial.css',
   './js/core/app-loader.js',
   './js/core/sw-register.js',
   './js/core/debug-tools.js',
@@ -18,6 +19,8 @@ const PRECACHE_URLS = [
   './js/editor/solver.js',
   './js/editor/level-editor.js',
   './js/editor/level-storage.js',
+  './js/tutorial/tutorial-data.js',
+  './js/tutorial/tutorial-engine.js',
   './js/levels/level1.js',
   './data/editor-levels.json',
   './assets/animations/characters/registry.json',

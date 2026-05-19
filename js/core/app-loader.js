@@ -131,6 +131,8 @@
     'js/core/audio-manager.js',
     'js/core/settings-panel.js',
     'js/editor/level-storage.js',
+    'js/tutorial/tutorial-data.js',
+    'js/tutorial/tutorial-engine.js',
     'js/core/game.js'
   ];
   let lottieLoadPromise = null;
