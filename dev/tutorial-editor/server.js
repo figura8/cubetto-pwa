@@ -76,6 +76,18 @@ function sanitizeFilename(filename) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || `${HOST}:${PORT}`}`);
 
+  if (req.method === 'GET' && url.pathname === '/dev/tutorial-editor/api/audio-files') {
+    try {
+      const files = await fs.promises.readdir(AUDIO_OUTPUT_DIR);
+      const audioExts = new Set(['.mp3', '.ogg', '.wav', '.m4a']);
+      const audioFiles = files.filter(f => audioExts.has(path.extname(f).toLowerCase()));
+      send(res, 200, JSON.stringify(audioFiles), 'application/json; charset=utf-8');
+    } catch (err) {
+      send(res, 200, JSON.stringify([]), 'application/json; charset=utf-8');
+    }
+    return;
+  }
+
   if (req.method === 'GET' && url.pathname === '/dev/tutorial-editor/api/tutorial-data') {
     try {
       const source = await fs.promises.readFile(OUTPUT_PATH, 'utf8');

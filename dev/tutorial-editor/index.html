@@ -1610,6 +1610,7 @@
       const fromServer = await loadExistingTypeScript();
       if (fromServer) {
         state.data = fromServer;
+        await autoLinkRepoAudio();
         render();
         return;
       }
@@ -1617,7 +1618,36 @@
         const draft = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || 'null');
         if (draft?.sequences?.length) state.data = draft;
       } catch (_err) {}
+      await autoLinkRepoAudio();
       render();
+    }
+
+    async function autoLinkRepoAudio() {
+      let repoFiles;
+      try {
+        const res = await fetch('/dev/tutorial-editor/api/audio-files', { cache: 'no-store' });
+        if (!res.ok) return;
+        repoFiles = await res.json();
+      } catch (_err) {
+        return;
+      }
+      if (!Array.isArray(repoFiles) || !repoFiles.length) return;
+      const fileSet = new Set(repoFiles.map(f => f.toLowerCase()));
+      for (const sequence of state.data.sequences) {
+        for (const beat of sequence.beats) {
+          if (beat.type !== 'Narration') continue;
+          withEditorDefaults(beat);
+          if (state.audioAttachments.has(beat._editorId)) continue;
+          const src = beat.audioSource || beat.audioSrc || '';
+          if (!src) continue;
+          const filename = src.split('/').pop().toLowerCase();
+          if (!fileSet.has(filename)) continue;
+          const url = `/dev/tutorial-editor/api/local-audio?path=${encodeURIComponent(
+            `assets/audio/sfx/gameplay/${src.split('/').pop()}`
+          )}`;
+          state.audioAttachments.set(beat._editorId, { kind: 'repo', name: src.split('/').pop(), objectUrl: url });
+        }
+      }
     }
 
     async function loadExistingTypeScript() {
