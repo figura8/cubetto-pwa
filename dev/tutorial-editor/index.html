@@ -1451,14 +1451,18 @@
         return [{ id: legacyBeatId(beat, index), type: 'call', action: 'highlightElement', target: beat.elementId || '' }];
       }
       if (beat.type === 'Lock') {
+        const interactions = beat.interactions || [];
+        if (interactions.includes('DRAG_BLOCK')) return [{ id: legacyBeatId(beat, index), type: 'call', action: 'lockDragBlock' }];
+        if (interactions.includes('PRESS_PLAY')) return [{ id: legacyBeatId(beat, index), type: 'call', action: 'lockPlay' }];
         return [{ id: legacyBeatId(beat, index), type: 'call', action: 'lockBoksDoubleClick' }];
       }
       if (beat.type === 'Unlock') {
         const interactions = beat.interactions || [];
-        if (interactions.includes('ALL') || interactions.includes('DOUBLE_TAP_BOKS')) {
-          return [{ id: legacyBeatId(beat, index), type: 'call', action: 'unlockBoksDoubleClick' }];
-        }
-        return [{ id: legacyBeatId(beat, index), type: 'call', action: 'unlockInteractions', interactions }];
+        if (interactions.includes('ALL')) return [{ id: legacyBeatId(beat, index), type: 'call', action: 'unlockAll' }];
+        if (interactions.includes('DOUBLE_TAP_BOKS')) return [{ id: legacyBeatId(beat, index), type: 'call', action: 'unlockBoksDoubleClick' }];
+        if (interactions.includes('DRAG_BLOCK')) return [{ id: legacyBeatId(beat, index), type: 'call', action: 'unlockDragBlock' }];
+        if (interactions.includes('PRESS_PLAY')) return [{ id: legacyBeatId(beat, index), type: 'call', action: 'unlockPlay' }];
+        return [{ id: legacyBeatId(beat, index), type: 'call', action: 'unlockBoksDoubleClick' }];
       }
       if (beat.type === 'Wait for event') {
         return [{
@@ -1475,12 +1479,18 @@
       const id = String(elementId || '').toLowerCase();
       if (id === 'boks' || id === 'bocs') return 'revealBoks';
       if (id === 'forward_block' || id === 'forward' || id === 'move_forward') return 'revealForwardBlock';
+      if (id === 'slot') return 'revealSlot';
+      if (id === 'play_button' || id === 'play') return 'revealPlayButton';
+      if (id === 'goal') return 'revealGoal';
       return `reveal${toPascalCase(id || 'element')}`;
     }
 
     function legacyEventName(beat) {
       if (beat.completionCondition === 'BOKS_FACING_INITIAL_ORIENTATION') return 'boks-facing-start';
       if (beat.eventName === 'BOKS_DOUBLE_TAPPED') return 'boks-turned';
+      if (beat.eventName === 'BLOCK_DROPPED_IN_SLOT') return 'block-dropped';
+      if (beat.eventName === 'PLAY_PRESSED') return 'play-pressed';
+      if (beat.eventName === 'PROGRAM_EXECUTION_FINISHED') return 'execution-finished';
       return String(beat.eventName || '')
         .toLowerCase()
         .replace(/_/g, '-');

@@ -196,21 +196,18 @@
       {
         "id": "33-unlock",
         "type": "call",
-        "action": "unlockInteractions",
-        "interactions": [
-          "DRAG_BLOCK"
-        ]
+        "action": "unlockDragBlock"
       },
       {
         "id": "34-block-dropped-in-slot",
         "type": "waitFor",
-        "event": "block-dropped-in-slot",
+        "event": "block-dropped",
         "count": 1
       },
       {
         "id": "35-lock",
         "type": "call",
-        "action": "lockBoksDoubleClick"
+        "action": "lockDragBlock"
       },
       {
         "id": "36-pause",
@@ -237,10 +234,7 @@
       {
         "id": "40-unlock",
         "type": "call",
-        "action": "unlockInteractions",
-        "interactions": [
-          "PRESS_PLAY"
-        ]
+        "action": "unlockPlay"
       },
       {
         "id": "41-play-pressed",
@@ -251,12 +245,12 @@
       {
         "id": "42-lock",
         "type": "call",
-        "action": "lockBoksDoubleClick"
+        "action": "lockPlay"
       },
       {
         "id": "43-program-execution-finished",
         "type": "waitFor",
-        "event": "program-execution-finished",
+        "event": "execution-finished",
         "count": 1
       },
       {
@@ -284,7 +278,7 @@
       {
         "id": "48-unlock",
         "type": "call",
-        "action": "unlockBoksDoubleClick"
+        "action": "unlockAll"
       }
     ]
   }
