@@ -152,7 +152,13 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && url.pathname === '/dev/tutorial-editor/api/local-audio') {
     const sourcePath = url.searchParams.get('path') || '';
     try {
-      const filePath = path.resolve(sourcePath);
+      const filePath = path.isAbsolute(sourcePath)
+        ? path.resolve(sourcePath)
+        : path.resolve(ROOT, sourcePath);
+      if (!filePath.startsWith(ROOT)) {
+        send(res, 403, 'Forbidden');
+        return;
+      }
       const stat = await fs.promises.stat(filePath);
       if (!stat.isFile()) {
         send(res, 404, 'Not found');

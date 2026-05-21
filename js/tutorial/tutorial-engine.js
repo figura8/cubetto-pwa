@@ -101,7 +101,7 @@
       return;
     }
     if (beat.type === 'call') {
-      await window.BOKS_TUTORIAL_STAGE?.[beat.action]?.();
+      await window.BOKS_TUTORIAL_STAGE?.[beat.action]?.(beat.target, beat);
       return;
     }
     if (beat.type === 'waitFor') {

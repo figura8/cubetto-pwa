@@ -440,6 +440,8 @@
       <div class="palette-body">
         <div id="palette" class="palette-list"></div>
         <div>
+          <p id="draftStatus" class="status"></p>
+          <button id="saveDraftBtn" type="button">Save editor draft now</button>
           <button id="exportBtn" class="primary" type="button">Export tutorial data</button>
           <p id="exportStatus" class="status"></p>
         </div>
@@ -450,7 +452,8 @@
       <div id="sequenceTabs" class="tabs"></div>
       <div class="timeline-toolbar">
         <div class="toolbar-group">
-          <button id="previewBtn" class="primary" type="button">Preview in game</button>
+          <button id="previewBtn" class="primary" type="button">Preview current sequence</button>
+          <button id="previewAllBtn" type="button">Preview full tutorial</button>
           <button id="duplicateBtn" type="button">Duplicate beat</button>
           <button id="deleteSelectedBtn" type="button">Delete beat</button>
         </div>
@@ -475,6 +478,9 @@
       { type: 'Spawn', color: 'var(--spawn)', hint: 'Bring an element on stage.' },
       { type: 'Hide', color: 'var(--hide)', hint: 'Remove an element from stage.' },
       { type: 'Highlight', color: 'var(--highlight)', hint: 'Guide attention to an element.' },
+      { type: 'Clear highlight', color: 'var(--highlight)', hint: 'Stop the current highlight.' },
+      { type: 'Hand hint', color: 'var(--wait)', hint: 'Show an animated gesture hint.' },
+      { type: 'Clear hand hint', color: 'var(--wait)', hint: 'Stop the animated gesture hint.' },
       { type: 'Lock', color: 'var(--lock)', hint: 'Disable interactions.' },
       { type: 'Unlock', color: 'var(--unlock)', hint: 'Enable selected interactions.' },
       { type: 'Wait for event', color: 'var(--wait)', hint: 'Wait until gameplay reports an event.' }
@@ -485,19 +491,29 @@
       Hide: ['fade-out', 'scale-down']
     };
     const INTERACTIONS = ['DRAG_BOKS', 'DOUBLE_TAP_BOKS', 'DRAG_BLOCK', 'DROP_IN_SLOT', 'PRESS_PLAY', 'ALL'];
-    const EVENTS = ['BOKS_DRAG_RELEASED', 'BOKS_DOUBLE_TAPPED', 'BLOCK_DROPPED_IN_SLOT', 'PLAY_PRESSED', 'PROGRAM_EXECUTION_FINISHED'];
+    const PERSISTENT_INTERACTIONS = ['DOUBLE_TAP_BOKS', 'DRAG_BLOCK', 'PRESS_PLAY'];
+    const STAGE_ELEMENTS = ['boks', 'forward_block', 'left_block', 'right_block', 'slot', 'play_button', 'goal'];
+    const ORIENTATIONS = ['right', 'down', 'left', 'up'];
+    const PROGRAM_SLOT_OPTIONS = ['forward', 'left', 'right'];
+    const HAND_HINTS = ['drag_block', 'press_play'];
+    const EVENTS = ['BOKS_DRAG_RELEASED', 'BOKS_DOUBLE_TAPPED', 'BLOCK_RELEASED_WITHOUT_SLOT', 'BLOCK_DROPPED_IN_SLOT', 'PLAY_PRESSED', 'PROGRAM_EXECUTION_FINISHED'];
     const STORAGE_KEY = 'boks-dev-tutorial-editor-draft';
+    const STORAGE_KEY_V2 = 'boks-dev-tutorial-editor-draft-v2';
 
     const state = {
       data: createDefaultData(),
       sequenceIndex: 0,
       beatIndex: -1,
+      dataSource: 'default',
+      lastDraftSavedAt: 0,
       draggedPaletteType: '',
       draggedBeatIndex: -1,
       audioAttachments: new Map(),
+      repoAudioFiles: [],
       activeAudio: null,
       previewWindow: null,
-      previewRunning: false
+      previewRunning: false,
+      previewMode: 'current'
     };
 
     const els = {
@@ -507,8 +523,11 @@
       inspector: document.getElementById('inspector'),
       summary: document.getElementById('selectedSummary'),
       duration: document.getElementById('durationLabel'),
+      draftStatus: document.getElementById('draftStatus'),
       exportStatus: document.getElementById('exportStatus'),
-      previewButton: document.getElementById('previewBtn')
+      previewButton: document.getElementById('previewBtn'),
+      previewAllButton: document.getElementById('previewAllBtn'),
+      saveDraftButton: document.getElementById('saveDraftBtn')
     };
 
     function createDefaultData() {
@@ -517,6 +536,7 @@
           {
             id: 'orientation_intro',
             title: 'Orientation intro',
+            startState: createEmptySequenceStartState(),
             beats: [
               {
                 type: 'Narration',
@@ -649,6 +669,39 @@
       return state.data.sequences[state.sequenceIndex] || state.data.sequences[0];
     }
 
+    function createEmptySequenceStartState() {
+      return {
+        visibleElements: [],
+        unlockedInteractions: [],
+        boksOrientation: 'right',
+        mainProgram: []
+      };
+    }
+
+    function normalizeSequenceStartState(input) {
+      const stateValue = input && typeof input === 'object' ? input : {};
+      const visibleElements = Array.isArray(stateValue.visibleElements)
+        ? Array.from(new Set(stateValue.visibleElements.map(normalizeElementId).filter(Boolean)))
+        : [];
+      const unlockedInteractions = Array.isArray(stateValue.unlockedInteractions)
+        ? Array.from(new Set(stateValue.unlockedInteractions.filter(value => PERSISTENT_INTERACTIONS.includes(value))))
+        : [];
+      const boksOrientation = ORIENTATIONS.includes(stateValue.boksOrientation) ? stateValue.boksOrientation : 'right';
+      const mainProgram = Array.isArray(stateValue.mainProgram)
+        ? stateValue.mainProgram.map(normalizeProgramBlock).slice(0, 8)
+        : [];
+      return {
+        visibleElements,
+        unlockedInteractions,
+        boksOrientation,
+        mainProgram
+      };
+    }
+
+    function cloneSequenceStartState(input) {
+      return normalizeSequenceStartState(JSON.parse(JSON.stringify(normalizeSequenceStartState(input))));
+    }
+
     function getSelectedBeat() {
       return getCurrentSequence()?.beats[state.beatIndex] || null;
     }
@@ -659,6 +712,9 @@
       if (type === 'Spawn') return { type, elementId: '', transition: 'fade-in', durationMs: 600, delayMs: 0 };
       if (type === 'Hide') return { type, elementId: '', transition: 'fade-out', durationMs: 400 };
       if (type === 'Highlight') return { type, elementId: '' };
+      if (type === 'Clear highlight') return { type };
+      if (type === 'Hand hint') return { type, hintType: HAND_HINTS[0] };
+      if (type === 'Clear hand hint') return { type };
       if (type === 'Lock') return { type };
       if (type === 'Unlock') return { type, interactions: [] };
       return { type: 'Wait for event', eventName: EVENTS[0], minRepetitions: 1, completionCondition: '' };
@@ -670,7 +726,13 @@
     }
 
     function normalizeEditorData() {
-      state.data.sequences.forEach(sequence => {
+      state.data.sequences.forEach((sequence, index) => {
+        if (!sequence.id) sequence.id = `sequence_${index + 1}`;
+        if (!sequence.title) sequence.title = `Sequence ${index + 1}`;
+        if (!Array.isArray(sequence.beats)) sequence.beats = [];
+        sequence.startState = sequence.startState
+          ? normalizeSequenceStartState(sequence.startState)
+          : deriveSequenceStartState(index, state.data);
         sequence.beats.forEach(beat => {
           withEditorDefaults(beat);
           if (beat.type !== 'Narration') return;
@@ -679,6 +741,7 @@
           if (beat.audioSrc && !beat.audioFilename) beat.audioFilename = String(beat.audioSrc).split('/').pop();
           if (beat.audioSrc && !beat.audioSource) beat.audioSource = beat.audioSrc;
           delete beat.audioSrc;
+          if (!beat.audioSource && beat.audioFilename) beat.audioSource = getRepoAudioPath(beat);
         });
         updateGeneratedAudioFilenames(sequence);
       });
@@ -718,6 +781,28 @@
       renderTimeline();
       renderInspector();
       persistDraft();
+      renderDraftStatus();
+    }
+
+    function renderDraftStatus() {
+      if (!els.draftStatus) return;
+      const sourceLabel = ({
+        draft: 'Draft loaded',
+        repo: 'Repo data loaded',
+        default: 'Default sample loaded'
+      })[state.dataSource] || 'Editor data loaded';
+      const saveLabel = state.lastDraftSavedAt
+        ? ` Last saved ${formatTimestamp(state.lastDraftSavedAt)}.`
+        : ' Not saved yet.';
+      els.draftStatus.textContent = `${sourceLabel}.${saveLabel}`;
+    }
+
+    function formatTimestamp(timestamp) {
+      try {
+        return new Date(timestamp).toLocaleString();
+      } catch (_err) {
+        return 'just now';
+      }
     }
 
     function renderPalette() {
@@ -834,8 +919,7 @@
     function renderInspector() {
       const beat = getSelectedBeat();
       if (!beat) {
-        els.summary.textContent = 'No beat selected.';
-        els.inspector.innerHTML = '<div class="empty-state">Select a beat from the timeline to configure it.</div>';
+        renderSequenceInspector();
         return;
       }
       els.summary.textContent = `${beat.type} beat`;
@@ -858,6 +942,12 @@
         fields.push(numberField('durationMs', 'Duration ms', beat.durationMs || 0));
       } else if (beat.type === 'Highlight') {
         fields.push(textField('elementId', 'Element id', beat.elementId || ''));
+      } else if (beat.type === 'Clear highlight') {
+        fields.push('<div class="empty-state">Stops whichever tutorial highlight is currently active.</div>');
+      } else if (beat.type === 'Hand hint') {
+        fields.push(selectField('hintType', 'Hint type', HAND_HINTS, beat.hintType || HAND_HINTS[0]));
+      } else if (beat.type === 'Clear hand hint') {
+        fields.push('<div class="empty-state">Stops the animated gesture hint.</div>');
       } else if (beat.type === 'Lock') {
         fields.push('<div class="empty-state">No configuration needed.</div>');
       } else if (beat.type === 'Unlock') {
@@ -871,33 +961,66 @@
       bindInspectorFields();
     }
 
-    function textField(key, label, value) {
-      return `<label>${label}<input data-field="${key}" type="text" value="${escapeAttr(value)}"></label>`;
+    function renderSequenceInspector() {
+      const sequence = getCurrentSequence();
+      if (!sequence) {
+        els.summary.textContent = 'No sequence selected.';
+        els.inspector.innerHTML = '<div class="empty-state">Select a sequence to edit its checkpoint.</div>';
+        return;
+      }
+      const startState = normalizeSequenceStartState(sequence.startState);
+      els.summary.textContent = `${sequence.title || sequence.id || 'Sequence'} checkpoint`;
+      els.inspector.innerHTML = [
+        textField('title', 'Sequence title', sequence.title || '', 'data-sequence-field'),
+        selectField('boksOrientation', 'Starting Boks orientation', ORIENTATIONS, startState.boksOrientation, 'data-sequence-field'),
+        tagPickerField('visibleElements', 'Visible elements at sequence start', STAGE_ELEMENTS, startState.visibleElements, 'data-sequence-tag-field'),
+        tagPickerField('unlockedInteractions', 'Unlocked interactions at sequence start', PERSISTENT_INTERACTIONS, startState.unlockedInteractions, 'data-sequence-tag-field'),
+        programSlotField(startState.mainProgram),
+        '<div class="audio-row"><button id="resetSequenceStateBtn" type="button">Reset from previous sequence</button></div>',
+        '<div class="hint">Preview starts from this checkpoint, then plays only the current sequence.</div>'
+      ].join('');
+      bindSequenceInspectorFields();
     }
 
-    function numberField(key, label, value) {
-      return `<label>${label}<input data-field="${key}" type="number" min="0" step="1" value="${escapeAttr(value)}"></label>`;
+    function programSlotField(mainProgram) {
+      const selected = mainProgram[0] || '';
+      return `
+        <label>Program slot 1 at sequence start
+          <select data-sequence-program-slot="0">
+            <option value="">Empty</option>
+            ${PROGRAM_SLOT_OPTIONS.map(option => `<option value="${escapeAttr(option)}"${option === selected ? ' selected' : ''}>${escapeHtml(option)}</option>`).join('')}
+          </select>
+        </label>
+      `;
+    }
+
+    function textField(key, label, value, attrName = 'data-field') {
+      return `<label>${label}<input ${attrName}="${key}" type="text" value="${escapeAttr(value)}"></label>`;
+    }
+
+    function numberField(key, label, value, attrName = 'data-field') {
+      return `<label>${label}<input ${attrName}="${key}" type="number" min="0" step="1" value="${escapeAttr(value)}"></label>`;
     }
 
     function textareaField(key, label, value) {
       return `<label>${label}<textarea data-field="${key}">${escapeHtml(value)}</textarea></label>`;
     }
 
-    function selectField(key, label, options, value) {
+    function selectField(key, label, options, value, attrName = 'data-field') {
       return `
         <label>${label}
-          <select data-field="${key}">
+          <select ${attrName}="${key}">
             ${options.map(option => `<option value="${escapeAttr(option)}"${option === value ? ' selected' : ''}>${escapeHtml(option)}</option>`).join('')}
           </select>
         </label>
       `;
     }
 
-    function tagPickerField(key, label, options, selected) {
+    function tagPickerField(key, label, options, selected, attrName = 'data-field') {
       const active = new Set(selected);
       return `
         <label>${label}</label>
-        <div class="tag-picker" data-field="${key}">
+        <div class="tag-picker" ${attrName}="${key}">
           ${options.map(option => `<button class="tag${active.has(option) ? ' active' : ''}" type="button" data-value="${escapeAttr(option)}">${escapeHtml(option)}</button>`).join('')}
         </div>
       `;
@@ -906,12 +1029,20 @@
     function audioSectionField(beat) {
       const attachment = state.audioAttachments.get(beat._editorId);
       const loadedLabel = getAudioLoadedLabel(beat, attachment);
+      const selectedRepoAudio = getSelectedRepoAudioName(beat);
       return `
         <div class="audio-box">
+          <label>Repo audio file
+            <select id="repoAudioSelect">
+              <option value="">Select file from assets/audio/sfx/gameplay</option>
+              ${state.repoAudioFiles.map(filename => `<option value="${escapeAttr(filename)}"${filename === selectedRepoAudio ? ' selected' : ''}>${escapeHtml(filename)}</option>`).join('')}
+            </select>
+          </label>
           <label>Export filename
             <input data-field="audioFilename" type="text" value="${escapeAttr(beat.audioFilename || '')}">
           </label>
           <div class="audio-row">
+            <button id="refreshRepoAudioBtn" type="button">Refresh repo files</button>
             <button id="chooseAudioBtn" type="button">Choose audio file</button>
             <button id="playAudioBtn" type="button">${state.activeAudio ? 'Stop' : 'Play'}</button>
             <button id="regenerateAudioBtn" type="button">Regenerate filename</button>
@@ -920,6 +1051,7 @@
             <input data-field="audioSource" type="text" value="${escapeAttr(beat.audioSource || '')}">
           </label>
           <div class="hint">${escapeHtml(loadedLabel)}</div>
+          <div class="hint">Preview URL: ${escapeHtml(getPreviewAudioSrc(beat) || 'none')}</div>
           <div id="audioWarning" class="audio-warning${beat.audioLoadFailed ? ' show' : ''}">file not found</div>
           <input id="audioFileInput" type="file" accept="audio/*" hidden>
         </div>
@@ -928,9 +1060,18 @@
 
     function getAudioLoadedLabel(beat, attachment) {
       if (attachment?.name) return `Loaded: ${attachment.name}`;
+      const selectedRepoAudio = getSelectedRepoAudioName(beat);
+      if (selectedRepoAudio) return `Repo file: ${selectedRepoAudio}`;
       if (beat.audioSource) return `Loaded path: ${beat.audioSource}`;
       if (beat.audioDisplayName) return `Previously selected: ${beat.audioDisplayName}. Rechoose it or paste its path to preview/export.`;
       return `Suggested export: ${beat.audioFilename || ''}`;
+    }
+
+    function getSelectedRepoAudioName(beat) {
+      const source = String(beat?.audioSource || '').trim();
+      if (/^\/?assets\/audio\/sfx\/gameplay\//i.test(source)) return source.split('/').pop() || '';
+      const filename = String(beat?.audioFilename || '').trim();
+      return state.repoAudioFiles.includes(filename) ? filename : '';
     }
 
     function bindInspectorFields() {
@@ -942,6 +1083,8 @@
       document.getElementById('chooseAudioBtn')?.addEventListener('click', () => {
         document.getElementById('audioFileInput')?.click();
       });
+      document.getElementById('repoAudioSelect')?.addEventListener('change', handleRepoAudioSelected);
+      document.getElementById('refreshRepoAudioBtn')?.addEventListener('click', refreshRepoAudioFilesForInspector);
       document.getElementById('audioFileInput')?.addEventListener('change', handleAudioFilePicked);
       document.getElementById('playAudioBtn')?.addEventListener('click', toggleSelectedAudio);
       document.getElementById('regenerateAudioBtn')?.addEventListener('click', regenerateSelectedAudioFilename);
@@ -959,6 +1102,100 @@
       });
     }
 
+    function handleRepoAudioSelected(event) {
+      const beat = getSelectedBeat();
+      const filename = String(event.target.value || '').trim();
+      if (!beat) return;
+      if (!filename) {
+        beat.audioSource = '';
+        beat.audioDisplayName = '';
+        beat.audioLoadFailed = false;
+        persistDraft();
+        renderInspector();
+        return;
+      }
+      const previousAttachment = state.audioAttachments.get(beat._editorId);
+      if (previousAttachment?.kind === 'file' && previousAttachment?.objectUrl) {
+        try { URL.revokeObjectURL(previousAttachment.objectUrl); } catch (_err) {}
+      }
+      state.audioAttachments.delete(beat._editorId);
+      beat.audioFilename = filename;
+      beat.audioFilenameEdited = true;
+      beat.audioSource = `assets/audio/sfx/gameplay/${filename}`;
+      beat.audioDisplayName = filename;
+      beat.audioDraftDataUrl = '';
+      beat.audioDraftBase64 = '';
+      beat.audioDraftMimeType = '';
+      beat.audioLoadFailed = false;
+      testAudioSource(beat);
+      persistDraft();
+      renderInspector();
+    }
+
+    async function refreshRepoAudioFilesForInspector() {
+      els.exportStatus.textContent = 'Refreshing repo audio files...';
+      await loadRepoAudioFiles();
+      els.exportStatus.textContent = `Loaded ${state.repoAudioFiles.length} repo audio files.`;
+      renderInspector();
+    }
+
+    function bindSequenceInspectorFields() {
+      els.inspector.querySelectorAll('[data-sequence-field]').forEach(input => {
+        input.addEventListener('input', updateSequenceFromInput);
+        input.addEventListener('change', updateSequenceFromInput);
+      });
+      els.inspector.querySelectorAll('[data-sequence-tag-field] .tag').forEach(button => {
+        button.addEventListener('click', () => {
+          const sequence = getCurrentSequence();
+          if (!sequence) return;
+          const field = button.closest('[data-sequence-tag-field]')?.dataset.sequenceTagField;
+          const value = button.dataset.value;
+          if (!field || !value) return;
+          const set = new Set(sequence.startState?.[field] || []);
+          if (set.has(value)) set.delete(value);
+          else set.add(value);
+          sequence.startState[field] = field === 'visibleElements'
+            ? Array.from(set).map(normalizeElementId).filter(Boolean)
+            : Array.from(set).filter(item => PERSISTENT_INTERACTIONS.includes(item));
+          render();
+        });
+      });
+      els.inspector.querySelectorAll('[data-sequence-program-slot]').forEach(input => {
+        input.addEventListener('change', updateSequenceProgramSlotFromInput);
+      });
+      document.getElementById('resetSequenceStateBtn')?.addEventListener('click', () => {
+        const sequence = getCurrentSequence();
+        if (!sequence) return;
+        sequence.startState = deriveSequenceStartState(state.sequenceIndex, state.data);
+        render();
+      });
+    }
+
+    function updateSequenceProgramSlotFromInput(event) {
+      const sequence = getCurrentSequence();
+      if (!sequence) return;
+      sequence.startState = normalizeSequenceStartState(sequence.startState);
+      const slotIndex = Math.max(0, Number(event.target.dataset.sequenceProgramSlot) || 0);
+      const nextProgram = sequence.startState.mainProgram.slice();
+      nextProgram[slotIndex] = normalizeProgramBlock(event.target.value);
+      sequence.startState.mainProgram = nextProgram;
+      render();
+    }
+
+    function updateSequenceFromInput(event) {
+      const sequence = getCurrentSequence();
+      if (!sequence) return;
+      const key = event.target.dataset.sequenceField;
+      if (key === 'title') sequence.title = event.target.value;
+      else {
+        sequence.startState = normalizeSequenceStartState(sequence.startState);
+        sequence.startState[key] = event.target.value;
+      }
+      renderTabs();
+      renderInspector();
+      persistDraft();
+    }
+
     function updateBeatFromInput(event) {
       const beat = getSelectedBeat();
       if (!beat) return;
@@ -971,8 +1208,19 @@
         const filenameInput = els.inspector.querySelector('[data-field="audioFilename"]');
         if (filenameInput) filenameInput.value = beat.audioFilename;
       }
-      if (key === 'audioFilename') beat.audioFilenameEdited = true;
+      if (key === 'audioFilename') {
+        beat.audioFilenameEdited = true;
+        const filename = String(beat.audioFilename || '').trim();
+        if (state.repoAudioFiles.includes(filename)) {
+          state.audioAttachments.delete(beat._editorId);
+          beat.audioSource = getRepoAudioPath(beat);
+          beat.audioDisplayName = filename;
+          beat.audioLoadFailed = false;
+          testAudioSource(beat);
+        }
+      }
       if (key === 'audioSource') {
+        state.audioAttachments.delete(beat._editorId);
         beat.audioLoadFailed = false;
         testAudioSource(beat);
       }
@@ -980,27 +1228,40 @@
       persistDraft();
     }
 
-    function handleAudioFilePicked(event) {
+    async function handleAudioFilePicked(event) {
       const beat = getSelectedBeat();
       const file = event.target.files?.[0];
       if (!beat || !file) return;
+      const previousAttachment = state.audioAttachments.get(beat._editorId);
+      if (previousAttachment?.objectUrl) {
+        try { URL.revokeObjectURL(previousAttachment.objectUrl); } catch (_err) {}
+      }
       const objectUrl = URL.createObjectURL(file);
-      const filePath = getPickedFilePath(file);
+      const repoAudioPath = `assets/audio/sfx/gameplay/${file.name}`;
       state.audioAttachments.set(beat._editorId, {
         kind: 'file',
         file,
         name: file.name,
         objectUrl
       });
+      beat.audioFilename = file.name;
+      beat.audioFilenameEdited = true;
       beat.audioDisplayName = file.name;
-      if (filePath) beat.audioSource = filePath;
+      beat.audioSource = repoAudioPath;
+      beat.audioDraftDataUrl = await fileToDataUrl(file).catch(() => '');
+      beat.audioDraftBase64 = beat.audioDraftDataUrl ? String(beat.audioDraftDataUrl).split(',')[1] || '' : '';
+      beat.audioDraftMimeType = file.type || 'audio/mpeg';
       beat.audioLoadFailed = false;
+      testAudioSource(beat);
+      event.target.value = '';
       persistDraft();
       renderInspector();
     }
 
-    function getPickedFilePath(file) {
-      return file.path || file.mozFullPath || file.webkitRelativePath || '';
+    function getRepoAudioPath(beat) {
+      const filename = String(beat?.audioFilename || '').trim();
+      if (!filename) return '';
+      return `assets/audio/sfx/gameplay/${filename}`;
     }
 
     function toggleSelectedAudio() {
@@ -1045,17 +1306,30 @@
 
     function getPreviewAudioSrc(beat) {
       const attachment = state.audioAttachments.get(beat._editorId);
-      if (attachment?.objectUrl) return attachment.objectUrl;
-      if (!beat.audioSource) return '';
-      if (/^https?:\/\//i.test(beat.audioSource)) return beat.audioSource;
-      if (/^\/?audio\//i.test(beat.audioSource)) return `/${beat.audioSource.replace(/^\//, '')}`;
-      return `/dev/tutorial-editor/api/local-audio?path=${encodeURIComponent(beat.audioSource)}`;
+      if (attachment?.objectUrl && attachment.kind !== 'repo') return attachment.objectUrl;
+      if (beat.audioDraftDataUrl) return beat.audioDraftDataUrl;
+      const source = beat.audioSource || getRepoAudioPath(beat);
+      if (!source) return '';
+      if (/^https?:\/\//i.test(source)) return source;
+      if (/^\/?assets\//i.test(source)) return `/${source.replace(/^\//, '')}`;
+      if (/^\/?audio\//i.test(source)) return `/${source.replace(/^\//, '')}`;
+      return `/dev/tutorial-editor/api/local-audio?path=${encodeURIComponent(source)}`;
     }
 
-    function testAudioSource(beat) {
-      if (!beat.audioSource) return;
-      const audio = new Audio(getPreviewAudioSrc(beat));
-      audio.addEventListener('canplaythrough', () => {
+    async function testAudioSource(beat) {
+      if (!beat.audioSource && !beat.audioFilename) return;
+      const src = getPreviewAudioSrc(beat);
+      if (!src) return;
+      try {
+        const response = await fetch(src, { cache: 'no-store' });
+        beat.audioLoadFailed = !response.ok;
+        renderInspector();
+        return;
+      } catch (_err) {
+        // Fall through to Audio for blob/data URLs or browser-only sources.
+      }
+      const audio = new Audio(src);
+      audio.addEventListener('canplay', () => {
         beat.audioLoadFailed = false;
         renderInspector();
       }, { once: true });
@@ -1069,14 +1343,25 @@
     function regenerateSelectedAudioFilename() {
       const beat = getSelectedBeat();
       if (!beat || beat.type !== 'Narration') return;
+      const previousRepoPath = getRepoAudioPath(beat);
       beat.audioFilename = suggestAudioFilename(beat.caption || '', getNarrationIndex(getCurrentSequence(), beat));
       beat.audioFilenameEdited = false;
+      if (!beat.audioSource || beat.audioSource === previousRepoPath || /^\/?assets\/audio\/sfx\/gameplay\//i.test(beat.audioSource)) {
+        beat.audioSource = getRepoAudioPath(beat);
+      }
+      beat.audioLoadFailed = false;
+      testAudioSource(beat);
       render();
     }
 
     function addSequence() {
       const number = state.data.sequences.length + 1;
-      state.data.sequences.push({ id: `sequence_${number}`, title: `Sequence ${number}`, beats: [] });
+      state.data.sequences.push({
+        id: `sequence_${number}`,
+        title: `Sequence ${number}`,
+        startState: deriveSequenceStartState(state.data.sequences.length, state.data),
+        beats: []
+      });
       state.sequenceIndex = state.data.sequences.length - 1;
       state.beatIndex = -1;
       render();
@@ -1125,11 +1410,12 @@
       render();
     }
 
-    async function previewSequence() {
+    async function previewSequence(mode = 'current') {
       if (state.previewRunning) {
         stopPreviewInGame();
         return;
       }
+      state.previewMode = mode;
       const previewUrl = new URL(`/?tutorialPreview=${Date.now()}`, window.location.href);
       const previewWindow = window.open('about:blank', 'boks-tutorial-preview');
       if (!previewWindow) {
@@ -1142,7 +1428,10 @@
       previewWindow.document.close();
       try {
         exportTutorialData({ silent: true }).catch(() => {});
-        await startPreviewInGame(previewWindow, previewUrl.href);
+        const legacyData = mode === 'all'
+          ? await buildFullPreviewLegacyData()
+          : await buildPreviewLegacyData(state.sequenceIndex);
+        await startPreviewInGame(previewWindow, previewUrl.href, legacyData);
       } catch (err) {
         if (!previewWindow.closed) {
           previewWindow.document.open();
@@ -1151,22 +1440,24 @@
         }
         state.previewRunning = false;
         state.previewWindow = null;
+        state.previewMode = 'current';
         updatePreviewButton();
         els.exportStatus.textContent = `Preview failed: ${err.message}`;
       }
     }
 
-    async function startPreviewInGame(previewWindow, previewUrl) {
+    async function startPreviewInGame(previewWindow, previewUrl, legacyData) {
       previewWindow.location.href = previewUrl;
       state.previewWindow = previewWindow;
       state.previewRunning = true;
       updatePreviewButton();
-      els.exportStatus.textContent = 'Preview opening in game...';
-      await waitForGamePreview(previewWindow);
+      els.exportStatus.textContent = state.previewMode === 'all'
+        ? 'Full tutorial preview opening in game...'
+        : 'Preview opening in game...';
+      await waitForGamePreview(previewWindow, legacyData);
     }
 
-    async function waitForGamePreview(previewWindow) {
-      const legacyData = await buildPreviewLegacyData(state.sequenceIndex);
+    async function waitForGamePreview(previewWindow, legacyData) {
       const started = await waitUntil(() => {
         if (previewWindow.closed) throw new Error('preview window closed');
         const doc = previewWindow.document;
@@ -1182,7 +1473,7 @@
     async function buildPreviewLegacyData(sequenceIndex) {
       normalizeEditorData();
       const sequence = state.data.sequences[sequenceIndex] || state.data.sequences[0] || { id: 'intro', title: 'Intro', beats: [] };
-      const beats = [];
+      const beats = buildSequenceStartSetupBeats(getResolvedSequenceStartState(sequenceIndex));
       for (let i = 0; i < sequence.beats.length; i++) {
         const beat = sequence.beats[i];
         if (beat.type !== 'Narration') {
@@ -1202,16 +1493,58 @@
       return { intro: { id: sequence.id || 'intro', title: sequence.title || 'Intro', beats } };
     }
 
+    async function buildFullPreviewLegacyData() {
+      normalizeEditorData();
+      const sequences = Array.isArray(state.data?.sequences) ? state.data.sequences : [];
+      const firstSequence = sequences[0] || { id: 'intro', title: 'Intro', beats: [], startState: createEmptySequenceStartState() };
+      const beats = [];
+      for (let sequenceIndex = 0; sequenceIndex < sequences.length; sequenceIndex++) {
+        const sequence = sequences[sequenceIndex];
+        const currentStart = getResolvedSequenceStartState(sequenceIndex);
+        if (sequenceIndex === 0) {
+          beats.push(...buildSequenceStartSetupBeats(currentStart));
+        } else {
+          const previousFinal = buildDerivedSequenceFinalSnapshot(sequenceIndex - 1);
+          beats.push(...buildSequenceTransitionSetupBeats(previousFinal, currentStart));
+        }
+        const sequenceBeats = Array.isArray(sequence?.beats) ? sequence.beats : [];
+        for (let beatIndex = 0; beatIndex < sequenceBeats.length; beatIndex++) {
+          const beat = sequenceBeats[beatIndex];
+          if (beat.type !== 'Narration') {
+            beats.push(...canonicalBeatToLegacy(stripInternalFields(beat), `${sequenceIndex}-${beatIndex}`));
+            continue;
+          }
+          const legacyBeat = {
+            id: legacyBeatId(beat, `${sequenceIndex}-${beatIndex}`),
+            type: 'narration',
+            text: beat.caption || '',
+            durationMs: Number(beat.durationMs) || 0
+          };
+          const audioSrc = await resolvePreviewAudioSrc(beat);
+          if (audioSrc) legacyBeat.audio = audioSrc;
+          beats.push(legacyBeat);
+        }
+      }
+      return {
+        intro: {
+          id: firstSequence.id || 'intro',
+          title: `${firstSequence.title || 'Intro'} full preview`,
+          beats
+        }
+      };
+    }
+
     async function resolvePreviewAudioSrc(beat) {
       const attachment = state.audioAttachments.get(beat._editorId);
       if (attachment?.file) {
         try { return await fileToDataUrl(attachment.file); } catch (_e) {}
       }
-      if (attachment?.objectUrl) return attachment.objectUrl;
-      const src = beat.audioSource || '';
+      if (attachment?.objectUrl && attachment.kind !== 'repo') return attachment.objectUrl;
+      if (beat.audioDraftDataUrl) return beat.audioDraftDataUrl;
+      const src = beat.audioSource || getRepoAudioPath(beat) || '';
       if (!src) return '';
       if (/^https?:\/\//i.test(src)) return src;
-      if (/^\/?assets\//i.test(src)) return src.replace(/^\//, '');
+      if (/^\/?assets\//i.test(src)) return `/${src.replace(/^\//, '')}`;
       try {
         const url = `/dev/tutorial-editor/api/local-audio?path=${encodeURIComponent(src)}`;
         const res = await fetch(url, { cache: 'no-store' });
@@ -1247,7 +1580,10 @@
         intro: {
           id: sequence.id || 'intro',
           title: sequence.title || 'Intro',
-          beats: sequence.beats.flatMap((beat, index) => canonicalBeatToLegacy(beat, index))
+          beats: [
+            ...buildSequenceStartSetupBeats(getResolvedSequenceStartState(sequenceIndex, data)),
+            ...sequence.beats.flatMap((beat, index) => canonicalBeatToLegacy(beat, index))
+          ]
         }
       };
     }
@@ -1310,12 +1646,18 @@
       if (previewWindow && !previewWindow.closed) previewWindow.close();
       state.previewWindow = null;
       state.previewRunning = false;
+      state.previewMode = 'current';
       updatePreviewButton();
       els.exportStatus.textContent = 'Preview stopped.';
     }
 
     function updatePreviewButton() {
-      els.previewButton.textContent = state.previewRunning ? 'Stop preview' : 'Preview in game';
+      els.previewButton.textContent = state.previewRunning && state.previewMode === 'current'
+        ? 'Stop preview'
+        : 'Preview current sequence';
+      els.previewAllButton.textContent = state.previewRunning && state.previewMode === 'all'
+        ? 'Stop preview'
+        : 'Preview full tutorial';
     }
 
     function waitUntil(check, timeoutMs) {
@@ -1406,6 +1748,7 @@
         sequences: data.sequences.map(sequence => ({
           id: sequence.id,
           title: sequence.title,
+          startState: normalizeSequenceStartState(sequence.startState),
           beats: sequence.beats.map(stripInternalFields)
         }))
       };
@@ -1421,7 +1764,10 @@
         intro: {
           id: sequence.id || 'intro',
           title: sequence.title || 'Intro',
-          beats: sequence.beats.flatMap((beat, index) => canonicalBeatToLegacy(beat, index))
+          beats: [
+            ...buildSequenceStartSetupBeats(getResolvedSequenceStartState(sequenceIndex, data)),
+            ...sequence.beats.flatMap((beat, index) => canonicalBeatToLegacy(beat, index))
+          ]
         }
       };
       return `(() => {\n  window.BOKS_TUTORIAL_DATA = ${JSON.stringify(legacy, null, 2)};\n})();\n`;
@@ -1450,19 +1796,20 @@
       if (beat.type === 'Highlight') {
         return [{ id: legacyBeatId(beat, index), type: 'call', action: 'highlightElement', target: beat.elementId || '' }];
       }
+      if (beat.type === 'Clear highlight') {
+        return [{ id: legacyBeatId(beat, index), type: 'call', action: 'clearHighlight' }];
+      }
+      if (beat.type === 'Hand hint') {
+        return [{ id: legacyBeatId(beat, index), type: 'call', action: handHintActionForBeat(beat) }];
+      }
+      if (beat.type === 'Clear hand hint') {
+        return [{ id: legacyBeatId(beat, index), type: 'call', action: 'clearHandHint' }];
+      }
       if (beat.type === 'Lock') {
-        const interactions = beat.interactions || [];
-        if (interactions.includes('DRAG_BLOCK')) return [{ id: legacyBeatId(beat, index), type: 'call', action: 'lockDragBlock' }];
-        if (interactions.includes('PRESS_PLAY')) return [{ id: legacyBeatId(beat, index), type: 'call', action: 'lockPlay' }];
-        return [{ id: legacyBeatId(beat, index), type: 'call', action: 'lockBoksDoubleClick' }];
+        return interactionCallsForBeat(beat, index, 'lock');
       }
       if (beat.type === 'Unlock') {
-        const interactions = beat.interactions || [];
-        if (interactions.includes('ALL')) return [{ id: legacyBeatId(beat, index), type: 'call', action: 'unlockAll' }];
-        if (interactions.includes('DOUBLE_TAP_BOKS')) return [{ id: legacyBeatId(beat, index), type: 'call', action: 'unlockBoksDoubleClick' }];
-        if (interactions.includes('DRAG_BLOCK')) return [{ id: legacyBeatId(beat, index), type: 'call', action: 'unlockDragBlock' }];
-        if (interactions.includes('PRESS_PLAY')) return [{ id: legacyBeatId(beat, index), type: 'call', action: 'unlockPlay' }];
-        return [{ id: legacyBeatId(beat, index), type: 'call', action: 'unlockBoksDoubleClick' }];
+        return interactionCallsForBeat(beat, index, 'unlock');
       }
       if (beat.type === 'Wait for event') {
         return [{
@@ -1475,10 +1822,235 @@
       return [];
     }
 
+    function interactionCallsForBeat(beat, index, mode) {
+      const prefix = mode === 'lock' ? 'lock' : 'unlock';
+      const interactions = normalizeInteractionList(beat.interactions, mode);
+      if (!interactions.length) return [];
+      return interactions.map((interaction, actionIndex) => ({
+        id: `${legacyBeatId(beat, index)}-${actionIndex + 1}`,
+        type: 'call',
+        action: interactionToLegacyAction(interaction, prefix)
+      })).filter(call => !!call.action);
+    }
+
+    function handHintActionForBeat(beat) {
+      if ((beat.hintType || HAND_HINTS[0]) === 'drag_block') return 'showDragHandHint';
+      if (beat.hintType === 'press_play') return 'showPlayHandHint';
+      return 'showDragHandHint';
+    }
+
+    function interactionToLegacyAction(interaction, prefix) {
+      if (interaction === 'DOUBLE_TAP_BOKS') return `${prefix}BoksDoubleClick`;
+      if (interaction === 'DRAG_BLOCK') return `${prefix}DragBlock`;
+      if (interaction === 'PRESS_PLAY') return `${prefix}Play`;
+      return '';
+    }
+
+    function normalizeInteractionList(interactions, mode = 'unlock') {
+      const list = Array.isArray(interactions) ? interactions.filter(Boolean) : [];
+      if (list.includes('ALL')) return ['DOUBLE_TAP_BOKS', 'DRAG_BLOCK', 'PRESS_PLAY'];
+      if (!list.length && mode === 'lock') return ['DOUBLE_TAP_BOKS', 'DRAG_BLOCK', 'PRESS_PLAY'];
+      return Array.from(new Set(list));
+    }
+
+    function buildSequenceStartSetupBeats(snapshot) {
+      const beats = [];
+      const visibleOrder = ['boks', 'forward_block', 'left_block', 'right_block', 'slot', 'play_button', 'goal'];
+      visibleOrder.forEach((elementId, index) => {
+        if (!snapshot.visibleElements.has(elementId)) return;
+        beats.push({
+          id: `setup-${index + 1}-${elementId}`,
+          type: 'call',
+          action: spawnActionForElement(elementId)
+        });
+      });
+      if (snapshot.visibleElements.has('boks') && snapshot.boksOrientation !== 'right') {
+        beats.push({
+          id: `setup-boks-facing-${snapshot.boksOrientation}`,
+          type: 'call',
+          action: `setBoksOrientation${toPascalCase(snapshot.boksOrientation)}`
+        });
+      }
+      normalizeInteractionList(Array.from(snapshot.unlockedInteractions), 'unlock').forEach((interaction, index) => {
+        beats.push({
+          id: `setup-unlock-${index + 1}-${interaction.toLowerCase()}`,
+          type: 'call',
+          action: interactionToLegacyAction(interaction, 'unlock')
+        });
+      });
+      snapshot.mainProgram.forEach((blockType, index) => {
+        if (!blockType) return;
+        beats.push({
+          id: `setup-program-main-${index + 1}-${blockType}`,
+          type: 'call',
+          action: 'setMainProgramSlot',
+          target: `${index}:${blockType}`
+        });
+      });
+      return beats;
+    }
+
+    function buildSequenceTransitionSetupBeats(previousSnapshot, currentSnapshot) {
+      const beats = [];
+      const visibleOrder = ['boks', 'forward_block', 'left_block', 'right_block', 'slot', 'play_button', 'goal'];
+      visibleOrder.forEach((elementId, index) => {
+        if (!currentSnapshot.visibleElements.has(elementId)) return;
+        if (previousSnapshot.visibleElements.has(elementId)) return;
+        beats.push({
+          id: `setup-delta-${index + 1}-${elementId}`,
+          type: 'call',
+          action: spawnActionForElement(elementId)
+        });
+      });
+      visibleOrder.forEach((elementId, index) => {
+        if (!previousSnapshot.visibleElements.has(elementId)) return;
+        if (currentSnapshot.visibleElements.has(elementId)) return;
+        beats.push({
+          id: `setup-delta-hide-${index + 1}-${elementId}`,
+          type: 'call',
+          action: 'hideElement',
+          target: elementId
+        });
+      });
+      if (
+        currentSnapshot.visibleElements.has('boks')
+        && currentSnapshot.boksOrientation !== previousSnapshot.boksOrientation
+      ) {
+        beats.push({
+          id: `setup-delta-boks-facing-${currentSnapshot.boksOrientation}`,
+          type: 'call',
+          action: `setBoksOrientation${toPascalCase(currentSnapshot.boksOrientation)}`
+        });
+      }
+      Array.from(currentSnapshot.unlockedInteractions).forEach((interaction, index) => {
+        if (previousSnapshot.unlockedInteractions.has(interaction)) return;
+        beats.push({
+          id: `setup-delta-unlock-${index + 1}-${interaction.toLowerCase()}`,
+          type: 'call',
+          action: interactionToLegacyAction(interaction, 'unlock')
+        });
+      });
+      Array.from(previousSnapshot.unlockedInteractions).forEach((interaction, index) => {
+        if (currentSnapshot.unlockedInteractions.has(interaction)) return;
+        beats.push({
+          id: `setup-delta-lock-${index + 1}-${interaction.toLowerCase()}`,
+          type: 'call',
+          action: interactionToLegacyAction(interaction, 'lock')
+        });
+      });
+      currentSnapshot.mainProgram.forEach((blockType, index) => {
+        if (!blockType || previousSnapshot.mainProgram[index] === blockType) return;
+        beats.push({
+          id: `setup-delta-program-main-${index + 1}-${blockType}`,
+          type: 'call',
+          action: 'setMainProgramSlot',
+          target: `${index}:${blockType}`
+        });
+      });
+      return beats;
+    }
+
+    function getResolvedSequenceStartState(sequenceIndex, data = state.data) {
+      const sequence = data?.sequences?.[sequenceIndex];
+      return toSequenceSnapshot(sequence?.startState || createEmptySequenceStartState());
+    }
+
+    function deriveSequenceStartState(sequenceIndex, data = state.data) {
+      if (sequenceIndex <= 0) return createEmptySequenceStartState();
+      return snapshotToSequenceStartState(buildDerivedSequenceFinalSnapshot(sequenceIndex - 1, data));
+    }
+
+    function buildDerivedSequenceFinalSnapshot(sequenceIndex, data = state.data) {
+      const sequence = data?.sequences?.[sequenceIndex];
+      const snapshot = toSequenceSnapshot(sequence?.startState || createEmptySequenceStartState());
+      const beats = Array.isArray(sequence?.beats) ? sequence.beats : [];
+      beats.forEach(beat => applyBeatToDerivedFinalSnapshot(snapshot, beat));
+      return snapshot;
+    }
+
+    function applyBeatToDerivedFinalSnapshot(snapshot, beat) {
+      if (!beat || !snapshot) return;
+      if (beat.type === 'Spawn') {
+        const elementId = normalizeElementId(beat.elementId);
+        if (!elementId) return;
+        snapshot.visibleElements.add(elementId);
+        if (elementId === 'boks') snapshot.boksOrientation = 'right';
+        return;
+      }
+      if (beat.type === 'Hide') {
+        const elementId = normalizeElementId(beat.elementId);
+        if (!elementId) return;
+        snapshot.visibleElements.delete(elementId);
+        if (elementId === 'boks') {
+          snapshot.unlockedInteractions.delete('DOUBLE_TAP_BOKS');
+          snapshot.boksOrientation = 'right';
+        }
+        return;
+      }
+      if (beat.type === 'Unlock') {
+        normalizeInteractionList(beat.interactions, 'unlock').forEach(interaction => snapshot.unlockedInteractions.add(interaction));
+        return;
+      }
+      if (beat.type === 'Lock') {
+        normalizeInteractionList(beat.interactions, 'lock').forEach(interaction => snapshot.unlockedInteractions.delete(interaction));
+        return;
+      }
+      if (beat.type === 'Wait for event' && beat.eventName === 'BOKS_DOUBLE_TAPPED' && snapshot.visibleElements.has('boks')) {
+        const turns = Math.max(1, Number(beat.minRepetitions) || 1);
+        snapshot.boksOrientation = rotateOrientation(snapshot.boksOrientation, turns);
+        return;
+      }
+      if (beat.type === 'Wait for event' && beat.eventName === 'BLOCK_DROPPED_IN_SLOT') {
+        snapshot.mainProgram[0] = 'forward';
+      }
+    }
+
+    function toSequenceSnapshot(startState) {
+      const normalized = normalizeSequenceStartState(startState);
+      return {
+        visibleElements: new Set(normalized.visibleElements),
+        unlockedInteractions: new Set(normalized.unlockedInteractions),
+        boksOrientation: normalized.boksOrientation,
+        mainProgram: normalized.mainProgram.slice()
+      };
+    }
+
+    function snapshotToSequenceStartState(snapshot) {
+      return normalizeSequenceStartState({
+        visibleElements: Array.from(snapshot.visibleElements || []),
+        unlockedInteractions: Array.from(snapshot.unlockedInteractions || []),
+        boksOrientation: snapshot.boksOrientation || 'right',
+        mainProgram: Array.isArray(snapshot.mainProgram) ? snapshot.mainProgram : []
+      });
+    }
+
+    function normalizeProgramBlock(value) {
+      const block = String(value || '').trim().toLowerCase();
+      return PROGRAM_SLOT_OPTIONS.includes(block) ? block : '';
+    }
+
+    function normalizeElementId(elementId) {
+      const id = String(elementId || '').trim().toLowerCase();
+      if (id === 'bocs') return 'boks';
+      if (id === 'forward' || id === 'move_forward') return 'forward_block';
+      if (id === 'left' || id === 'turn_left') return 'left_block';
+      if (id === 'right' || id === 'turn_right') return 'right_block';
+      if (id === 'play') return 'play_button';
+      return id;
+    }
+
+    function rotateOrientation(orientation, turns) {
+      const order = ['right', 'down', 'left', 'up'];
+      const startIndex = Math.max(0, order.indexOf(orientation));
+      return order[(startIndex + turns) % order.length];
+    }
+
     function spawnActionForElement(elementId) {
       const id = String(elementId || '').toLowerCase();
       if (id === 'boks' || id === 'bocs') return 'revealBoks';
       if (id === 'forward_block' || id === 'forward' || id === 'move_forward') return 'revealForwardBlock';
+      if (id === 'left_block' || id === 'left' || id === 'turn_left') return 'revealLeftBlock';
+      if (id === 'right_block' || id === 'right' || id === 'turn_right') return 'revealRightBlock';
       if (id === 'slot') return 'revealSlot';
       if (id === 'play_button' || id === 'play') return 'revealPlayButton';
       if (id === 'goal') return 'revealGoal';
@@ -1488,6 +2060,7 @@
     function legacyEventName(beat) {
       if (beat.completionCondition === 'BOKS_FACING_INITIAL_ORIENTATION') return 'boks-facing-start';
       if (beat.eventName === 'BOKS_DOUBLE_TAPPED') return 'boks-turned';
+      if (beat.eventName === 'BLOCK_RELEASED_WITHOUT_SLOT') return 'block-drop-failed';
       if (beat.eventName === 'BLOCK_DROPPED_IN_SLOT') return 'block-dropped';
       if (beat.eventName === 'PLAY_PRESSED') return 'play-pressed';
       if (beat.eventName === 'PROGRAM_EXECUTION_FINISHED') return 'execution-finished';
@@ -1498,13 +2071,16 @@
 
     function legacyBeatId(beat, index) {
       const base = beat.caption || beat.elementId || beat.eventName || beat.type || 'beat';
+      const sequenceLabel = typeof index === 'number'
+        ? String(index + 1).padStart(2, '0')
+        : String(index).replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'beat';
       const slug = String(base)
         .toLowerCase()
         .replace(/['’]/g, '')
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '')
         .slice(0, 42) || 'beat';
-      return `${String(index + 1).padStart(2, '0')}-${slug}`;
+      return `${sequenceLabel}-${slug}`;
     }
 
     function toPascalCase(value) {
@@ -1518,7 +2094,7 @@
     function stripInternalFields(beat) {
       const copy = { ...beat };
       if (copy.type === 'Narration') {
-        const hasLocalAudio = !!state.audioAttachments.get(copy._editorId) || isLocalAudioPath(copy.audioSource);
+        const hasLocalAudio = !!state.audioAttachments.get(copy._editorId) || isLocalAudioPath(copy.audioSource) || !!copy.audioDraftBase64;
         const hasUrlAudio = /^https?:\/\//i.test(copy.audioSource || '');
         const hasExportedAudio = /^\/?assets\//i.test(copy.audioSource || '');
         if (hasLocalAudio && copy.audioFilename) copy.audioSrc = `assets/audio/sfx/gameplay/${copy.audioFilename}`;
@@ -1531,6 +2107,9 @@
       delete copy.audioFilenameEdited;
       delete copy.audioSource;
       delete copy.audioDisplayName;
+      delete copy.audioDraftDataUrl;
+      delete copy.audioDraftBase64;
+      delete copy.audioDraftMimeType;
       delete copy.audioLoadFailed;
       delete copy._editorId;
       return copy;
@@ -1546,6 +2125,13 @@
             files.push({
               filename: beat.audioFilename,
               file: attachment.file
+            });
+            return;
+          }
+          if (beat.audioDraftBase64) {
+            files.push({
+              filename: beat.audioFilename,
+              base64: beat.audioDraftBase64
             });
             return;
           }
@@ -1607,55 +2193,121 @@
       if (beat.type === 'Spawn') return `${beat.elementId || 'element'} via ${beat.transition}`;
       if (beat.type === 'Hide') return `${beat.elementId || 'element'} via ${beat.transition}`;
       if (beat.type === 'Highlight') return beat.elementId || 'element';
+      if (beat.type === 'Clear highlight') return 'Stop current highlight';
+      if (beat.type === 'Hand hint') return beat.hintType || HAND_HINTS[0];
+      if (beat.type === 'Clear hand hint') return 'Stop hand hint';
       if (beat.type === 'Lock') return 'Lock interactions';
       if (beat.type === 'Unlock') return (beat.interactions || []).join(', ') || 'No interactions';
       return `${beat.eventName || EVENTS[0]} x${beat.minRepetitions || 1}`;
     }
 
     function persistDraft() {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
+      state.lastDraftSavedAt = Date.now();
+      try {
+        const draftSource = JSON.stringify(buildEditorDraftData());
+        window.localStorage.setItem(STORAGE_KEY_V2, draftSource);
+        window.localStorage.removeItem(STORAGE_KEY);
+        state.lastDraftByteSize = draftSource.length;
+      } catch (err) {
+        els.exportStatus.textContent = `Draft save failed: ${err.message}`;
+      }
+    }
+
+    function buildEditorDraftData() {
+      return {
+        sequences: state.data.sequences.map(sequence => ({
+          ...sequence,
+          beats: sequence.beats.map(beat => {
+            const copy = { ...beat };
+            if (copy.type === 'Narration' && !copy.audioSource && copy.audioFilename) {
+              copy.audioSource = getRepoAudioPath(copy);
+            }
+            delete copy.audioDraftDataUrl;
+            delete copy.audioDraftBase64;
+            delete copy.audioDraftMimeType;
+            delete copy.audioLoadFailed;
+            return copy;
+          })
+        }))
+      };
+    }
+
+    function saveDraftNow() {
+      normalizeEditorData();
+      persistDraft();
+      state.dataSource = 'draft';
+      renderDraftStatus();
+      els.exportStatus.textContent = `Editor draft saved locally (${state.lastDraftByteSize || 0} bytes).`;
     }
 
     async function loadInitialData() {
-      const fromServer = await loadExistingTypeScript();
-      if (fromServer) {
-        state.data = fromServer;
+      await loadRepoAudioFiles();
+      const draft = loadStoredDraft();
+      if (draft?.sequences?.length) {
+        state.data = draft;
+        state.dataSource = 'draft';
+        state.lastDraftSavedAt = Date.now();
         await autoLinkRepoAudio();
         render();
         return;
       }
-      try {
-        const draft = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || 'null');
-        if (draft?.sequences?.length) state.data = draft;
-      } catch (_err) {}
+      const fromServer = await loadExistingTypeScript();
+      if (fromServer) {
+        state.data = fromServer;
+        state.dataSource = 'repo';
+        await autoLinkRepoAudio();
+        render();
+        return;
+      }
+      state.dataSource = 'default';
       await autoLinkRepoAudio();
       render();
     }
 
-    async function autoLinkRepoAudio() {
-      let repoFiles;
+    function loadStoredDraft() {
+      const keys = [STORAGE_KEY_V2, STORAGE_KEY];
+      for (const key of keys) {
+        try {
+          const raw = window.localStorage.getItem(key);
+          if (!raw) continue;
+          const draft = JSON.parse(raw);
+          if (draft?.sequences?.length) return draft;
+        } catch (_err) {}
+      }
+      return null;
+    }
+
+    async function loadRepoAudioFiles() {
       try {
         const res = await fetch('/dev/tutorial-editor/api/audio-files', { cache: 'no-store' });
-        if (!res.ok) return;
-        repoFiles = await res.json();
+        if (!res.ok) {
+          state.repoAudioFiles = [];
+          return;
+        }
+        const repoFiles = await res.json();
+        state.repoAudioFiles = Array.isArray(repoFiles) ? repoFiles.slice().sort((a, b) => a.localeCompare(b)) : [];
       } catch (_err) {
-        return;
+        state.repoAudioFiles = [];
       }
-      if (!Array.isArray(repoFiles) || !repoFiles.length) return;
-      const fileSet = new Set(repoFiles.map(f => f.toLowerCase()));
+    }
+
+    async function autoLinkRepoAudio() {
+      if (!state.repoAudioFiles.length) return;
+      const fileSet = new Set(state.repoAudioFiles.map(f => f.toLowerCase()));
       for (const sequence of state.data.sequences) {
         for (const beat of sequence.beats) {
           if (beat.type !== 'Narration') continue;
           withEditorDefaults(beat);
-          if (state.audioAttachments.has(beat._editorId)) continue;
-          const src = beat.audioSource || beat.audioSrc || '';
+          const src = beat.audioSource || beat.audioSrc || getRepoAudioPath(beat) || '';
           if (!src) continue;
-          const filename = src.split('/').pop().toLowerCase();
-          if (!fileSet.has(filename)) continue;
-          const url = `/dev/tutorial-editor/api/local-audio?path=${encodeURIComponent(
-            `assets/audio/sfx/gameplay/${src.split('/').pop()}`
-          )}`;
-          state.audioAttachments.set(beat._editorId, { kind: 'repo', name: src.split('/').pop(), objectUrl: url });
+          const filename = src.split('/').pop();
+          if (!fileSet.has(filename.toLowerCase())) continue;
+          state.audioAttachments.delete(beat._editorId);
+          beat.audioFilename = filename;
+          beat.audioFilenameEdited = true;
+          beat.audioSource = `assets/audio/sfx/gameplay/${filename}`;
+          beat.audioDisplayName = filename;
+          beat.audioLoadFailed = false;
         }
       }
     }
@@ -1706,9 +2358,11 @@
     }
 
     document.getElementById('exportBtn').addEventListener('click', exportTutorialData);
+    document.getElementById('saveDraftBtn').addEventListener('click', saveDraftNow);
     document.getElementById('duplicateBtn').addEventListener('click', duplicateBeat);
     document.getElementById('deleteSelectedBtn').addEventListener('click', () => deleteBeat());
-    document.getElementById('previewBtn').addEventListener('click', previewSequence);
+    document.getElementById('previewBtn').addEventListener('click', () => previewSequence('current'));
+    document.getElementById('previewAllBtn').addEventListener('click', () => previewSequence('all'));
 
     loadInitialData();
   </script>
