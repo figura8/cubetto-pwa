@@ -1,8 +1,8 @@
 (() => {
   window.BOKS_TUTORIAL_DATA = {
   "intro": {
-    "id": "sequence_5",
-    "title": "Turnright",
+    "id": "sequence_3",
+    "title": "Sequence",
     "beats": [
       {
         "id": "setup-1-boks",
@@ -20,55 +20,52 @@
         "action": "revealSlot"
       },
       {
-        "id": "setup-6-play_button",
-        "type": "call",
-        "action": "revealPlayButton"
+        "id": "01-its-called-a-sequence",
+        "type": "narration",
+        "text": "its called a sequence",
+        "durationMs": 3000,
+        "audio": "assets/audio/sfx/gameplay/01_its_called_a_sequence.mp3"
       },
       {
-        "id": "setup-unlock-1-double_tap_boks",
-        "type": "call",
-        "action": "unlockBoksDoubleClick"
+        "id": "02-try-to-put-in-here",
+        "type": "narration",
+        "text": "Try to put in here",
+        "durationMs": 3000,
+        "audio": "assets/audio/sfx/gameplay/02_try_to_put_in_here.mp3"
       },
       {
-        "id": "setup-unlock-2-drag_block",
+        "id": "03-slot",
+        "type": "call",
+        "action": "highlightElement",
+        "target": "slot"
+      },
+      {
+        "id": "04-unlock-1",
         "type": "call",
         "action": "unlockDragBlock"
       },
       {
-        "id": "setup-unlock-3-press_play",
+        "id": "05-hand-hint",
         "type": "call",
-        "action": "unlockPlay"
+        "action": "showDragHandHint"
       },
       {
-        "id": "setup-program-main-1-forward",
-        "type": "call",
-        "action": "setMainProgramSlot",
-        "target": "0:forward"
+        "id": "06-block-dropped-in-slot",
+        "type": "waitFor",
+        "event": "block-dropped",
+        "count": 1
       },
       {
-        "id": "01-but-what",
+        "id": "07-clear-hand-hint",
+        "type": "call",
+        "action": "clearHandHint"
+      },
+      {
+        "id": "08-narration",
         "type": "narration",
-        "text": "But what",
+        "text": "",
         "durationMs": 3000,
-        "audio": "assets/audio/sfx/gameplay/tutorial_29_but_what_if.mp3"
-      },
-      {
-        "id": "02-well-in-tha-case",
-        "type": "narration",
-        "text": "Well, in tha case",
-        "durationMs": 3000,
-        "audio": "assets/audio/sfx/gameplay/tutorial_30_well...mp3"
-      },
-      {
-        "id": "03-forward-block",
-        "type": "call",
-        "action": "hideElement",
-        "target": "forward_block"
-      },
-      {
-        "id": "04-right-block",
-        "type": "call",
-        "action": "revealRightBlock"
+        "audio": "assets/audio/sfx/gameplay/03_narration.mp3"
       }
     ]
   }
