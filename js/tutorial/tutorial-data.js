@@ -61,11 +61,41 @@
         "action": "clearHandHint"
       },
       {
-        "id": "08-narration",
+        "id": "08-ok-perfect-now-we-have-have-our-first-inst",
         "type": "narration",
-        "text": "",
+        "text": "Ok, perfect. Now we have have our first instruction ready",
         "durationMs": 3000,
         "audio": "assets/audio/sfx/gameplay/03_narration.mp3"
+      },
+      {
+        "id": "09-but-how-do-we-see-in-action",
+        "type": "narration",
+        "text": "But how do we see in action?",
+        "durationMs": 3000,
+        "audio": "assets/audio/sfx/gameplay/tutorial_21_But_do_we_see_in_action.mp3"
+      },
+      {
+        "id": "10-pause",
+        "type": "pause",
+        "durationMs": 500
+      },
+      {
+        "id": "11-we-need-this",
+        "type": "narration",
+        "text": "We need this",
+        "durationMs": 3000,
+        "audio": "assets/audio/sfx/gameplay/tutorial_22_we_need_this.mp3"
+      },
+      {
+        "id": "12-play",
+        "type": "call",
+        "action": "revealPlayButton"
+      },
+      {
+        "id": "13-play",
+        "type": "call",
+        "action": "highlightElement",
+        "target": "play"
       }
     ]
   }

@@ -181,9 +181,61 @@ export const tutorialData = {
         },
         {
           "type": "Narration",
-          "caption": "",
+          "caption": "Ok, perfect. Now we have have our first instruction ready",
           "durationMs": 3000,
           "audioSrc": "assets/audio/sfx/gameplay/03_narration.mp3"
+        },
+        {
+          "type": "Narration",
+          "caption": "But how do we see in action?",
+          "durationMs": 3000,
+          "audioSrc": "assets/audio/sfx/gameplay/tutorial_21_But_do_we_see_in_action.mp3"
+        },
+        {
+          "type": "Pause",
+          "durationMs": 500
+        },
+        {
+          "type": "Narration",
+          "caption": "We need this",
+          "durationMs": 3000,
+          "audioSrc": "assets/audio/sfx/gameplay/tutorial_22_we_need_this.mp3"
+        },
+        {
+          "type": "Spawn",
+          "elementId": "play",
+          "transition": "fade-in",
+          "durationMs": 600,
+          "delayMs": 0
+        },
+        {
+          "type": "Highlight",
+          "elementId": "play"
+        }
+      ]
+    },
+    {
+      "id": "sequence_4",
+      "title": "PLAY",
+      "startState": {
+        "visibleElements": [
+          "boks",
+          "forward_block",
+          "slot"
+        ],
+        "unlockedInteractions": [
+          "DRAG_BLOCK"
+        ],
+        "boksOrientation": "right",
+        "mainProgram": [
+          "forward"
+        ]
+      },
+      "beats": [
+        {
+          "type": "Narration",
+          "caption": "",
+          "durationMs": 3000
         }
       ]
     }
