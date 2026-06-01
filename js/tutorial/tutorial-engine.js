@@ -20,7 +20,10 @@
   function resolveAudioSrc(src) {
     if (!src) return '';
     if (/^(https?:|blob:|data:)/i.test(src)) return src;
-    return new URL(String(src).replace(/^\//, ''), `${window.location.origin}/`).toString();
+    const url = new URL(String(src).replace(/^\//, ''), document.baseURI || window.location.href);
+    const build = window.BOKS_RUNTIME_CONFIG?.build || document.body?.dataset?.build || '';
+    if (build && !url.searchParams.has('v')) url.searchParams.set('v', build);
+    return url.toString();
   }
 
   async function unlockAudio(sequence = {}) {
