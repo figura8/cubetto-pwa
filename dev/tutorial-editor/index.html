@@ -1528,6 +1528,9 @@
       if (!previewWindow) {
         els.exportStatus.textContent = 'Popup blocked. Opening preview in this tab...';
         exportTutorialData({ silent: true }).catch(() => {});
+        try {
+          window.sessionStorage.setItem('boks-tutorial-preview-intent', previewUrl.searchParams.get('tutorialPreview') || '');
+        } catch (_err) {}
         window.location.href = previewUrl.href;
         return;
       }

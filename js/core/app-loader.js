@@ -79,6 +79,20 @@
 
   try {
     const url = new URL(window.location.href);
+    const tutorialPreviewToken = url.searchParams.get('tutorialPreview');
+    if (tutorialPreviewToken) {
+      const previewIntentKey = 'boks-tutorial-preview-intent';
+      let hasPreviewIntent = !!window.opener;
+      try {
+        hasPreviewIntent ||= window.sessionStorage?.getItem(previewIntentKey) === tutorialPreviewToken;
+        window.sessionStorage?.removeItem(previewIntentKey);
+      } catch (_err) {}
+      if (!hasPreviewIntent) {
+        url.searchParams.delete('tutorialPreview');
+        window.location.replace(url.toString());
+        return;
+      }
+    }
     if (url.searchParams.get('_build') !== build) {
       window.sessionStorage?.setItem('boks-hard-refresh-notice', build);
       url.searchParams.set('_build', build);
