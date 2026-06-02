@@ -318,9 +318,7 @@
         "type": "waitFor",
         "event": "block-dropped",
         "count": 1,
-        "target": "right",
-        "targetZone": "main",
-        "condition": "main_slot_0_right"
+        "target": "right"
       },
       {
         "id": "4-6-lock-1",
@@ -425,9 +423,7 @@
         "type": "waitFor",
         "event": "block-dropped",
         "count": 1,
-        "target": "left",
-        "targetZone": "main",
-        "condition": "main_slot_0_left"
+        "target": "left"
       },
       {
         "id": "4-20-lock-1",

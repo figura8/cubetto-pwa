@@ -588,6 +588,7 @@ let tutorialInitialOrientation = 'right';
 let tutorialWaitingFor = null;
 let activeTutorialHighlight = '';
 let activeTutorialHandHint = '';
+let tutorialMenuRevealTimers = [];
 const tutorialVisibleBlockTypes = new Set();
 let boksTouchRebukeUntil = 0;
 let boksTouchRebukeCooldownUntil = 0;
@@ -736,7 +737,7 @@ function resetStartGameButtonVisualState() {
     clearTimeout(startGameButtonPressedTimer);
     startGameButtonPressedTimer = null;
   }
-  ['startGameBtn', 'startBoksBtn'].forEach((buttonId) => {
+  ['startGameBtn', 'startBoksBtn', 'startTutorialBtn'].forEach((buttonId) => {
     const btn = document.getElementById(buttonId);
     if (!btn) return;
     btn.disabled = false;
@@ -804,6 +805,7 @@ const playStepSfx = () => audioManager.playStepSfx();
 const playErrorSfx = () => audioManager.playErrorSfx();
 const playBoksAnnoyedSfx = () => audioManager.playBoksAnnoyedSfx();
 const playBoksEntranceSfx = () => audioManager.playBoksEntranceSfx();
+const playMenuBubbleRevealSfx = volume => audioManager.playMenuBubbleRevealSfx(volume);
 const playDecorationRubberSfx = () => audioManager.playDecorationRubberSfx();
 const playGoalBubbleBounceSfx = () => audioManager.playGoalBubbleBounceSfx();
 const playBubblePopSfx = () => audioManager.playBubblePopSfx();
@@ -1241,12 +1243,6 @@ function ensureEndingCinematicRoot() {
     <span class="ending-cinematic__sun"></span>
     <span class="ending-cinematic__ring ending-cinematic__ring--a"></span>
     <span class="ending-cinematic__ring ending-cinematic__ring--b"></span>
-    <div class="ending-cinematic__message" aria-hidden="true">
-      <span class="ending-cinematic__thanks">Thank you for playing</span>
-      <span class="ending-cinematic__brand">
-        <img class="boks-logo boks-logo--ending" src="assets/ui/brand/boks-logo.svg" alt="BOKS">
-      </span>
-    </div>
     ${sparks}
     ${petals}
   `;
@@ -6202,7 +6198,9 @@ async function finishTutorialWithEnding() {
   setTutorialCompleted(true);
   tutorialEngine?.stop();
   await playEndingCinematic();
-  returnToMainMenu();
+  await fadeTransition(1850, async () => {
+    returnToMainMenu({ animateUnlockedReveal: true });
+  }, getEndingCinematicAnchor());
 }
 
 window.BOKS_TUTORIAL_STAGE = {
@@ -7891,11 +7889,52 @@ function syncStartGateUnlockState() {
   document.body?.classList.toggle('tutorial-menu-locked', !completed);
 }
 
-function showStartGate() {
+function clearTutorialMenuRevealTimers() {
+  tutorialMenuRevealTimers.forEach(timer => clearTimeout(timer));
+  tutorialMenuRevealTimers = [];
+}
+
+function resetStartGateBubbleRevealState() {
+  clearTutorialMenuRevealTimers();
+  document.body?.classList.remove('tutorial-menu-reveal-sequence');
+  ['startBoksBtn', 'startGameBtn'].forEach(id => {
+    document.getElementById(id)?.classList.remove('start-bubble-hidden', 'start-bubble-revealed');
+  });
+}
+
+function queueTutorialMenuBubbleReveal() {
+  resetStartGateBubbleRevealState();
+  if (!isTutorialCompleted()) return;
+  document.body?.classList.add('tutorial-menu-reveal-sequence');
+  const boksBtn = document.getElementById('startBoksBtn');
+  const gameBtn = document.getElementById('startGameBtn');
+  boksBtn?.classList.add('start-bubble-hidden');
+  gameBtn?.classList.add('start-bubble-hidden');
+
+  tutorialMenuRevealTimers.push(window.setTimeout(() => {
+    boksBtn?.classList.remove('start-bubble-hidden');
+    boksBtn?.classList.add('start-bubble-revealed');
+    playMenuBubbleRevealSfx(0.36);
+  }, 1000));
+
+  tutorialMenuRevealTimers.push(window.setTimeout(() => {
+    gameBtn?.classList.remove('start-bubble-hidden');
+    gameBtn?.classList.add('start-bubble-revealed');
+    playMenuBubbleRevealSfx(0.44);
+  }, 1480));
+
+  tutorialMenuRevealTimers.push(window.setTimeout(() => {
+    document.body?.classList.remove('tutorial-menu-reveal-sequence');
+  }, 2360));
+}
+
+function showStartGate({ animateUnlockedReveal = false } = {}) {
   document.body.classList.add('prestart');
   syncStartGateUnlockState();
   resetStartGameButtonVisualState();
   document.getElementById('startGate')?.classList.add('show');
+  if (animateUnlockedReveal && isTutorialCompleted()) queueTutorialMenuBubbleReveal();
+  else resetStartGateBubbleRevealState();
   queueFirstLevelOnboardingSync();
 }
 function dismissSplash() {
@@ -8011,7 +8050,7 @@ async function startTutorialFromGate() {
 window.BOKS_TUTORIAL_PREVIEW = {
   startWithAudio: startTutorialFromGate
 };
-function returnToMainMenu() {
+function returnToMainMenu({ animateUnlockedReveal = false } = {}) {
   if (document.body.classList.contains('prestart')) return;
   if (running || animating) {
     toast('Aspetta che il movimento finisca');
@@ -8034,7 +8073,7 @@ function returnToMainMenu() {
   clearAppSceneRevealWindow();
   const gate = document.getElementById('startGate');
   gate?.classList.remove('hiding');
-  showStartGate();
+  showStartGate({ animateUnlockedReveal });
   updateQuickEditorButton();
   queueFirstLevelOnboardingSync();
 }

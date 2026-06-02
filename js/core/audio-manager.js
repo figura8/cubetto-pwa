@@ -23,6 +23,7 @@
         errorAction: 'assets/audio/sfx/gameplay/error_action.mp3',
         boksAnnoyed: 'assets/audio/sfx/gameplay/boks_annoyed.ogg',
         entranceBoks: 'assets/audio/sfx/gameplay/entrance_boks.mp3',
+        revealBubble: 'assets/audio/sfx/gameplay/reveal_bubble_01.mp3',
         welcome: 'assets/audio/sfx/gameplay/wellcome.mp3',
         decorRubberTap: [
           'assets/audio/sfx/gameplay/decor_rubber_tap_01.ogg',
@@ -370,6 +371,7 @@
       playErrorSfx: () => playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.errorAction, 0.3),
       playBoksAnnoyedSfx: () => playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.boksAnnoyed, 0.34),
       playBoksEntranceSfx: () => playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.entranceBoks, 0.46),
+      playMenuBubbleRevealSfx: (volume = 0.42) => playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.revealBubble, volume),
       playDecorationRubberSfx: () => {
         const variants = AUDIO_PATHS.sfx.gameplay.decorRubberTap;
         const path = variants[Math.floor(Math.random() * variants.length)] || variants[0];
