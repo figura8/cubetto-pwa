@@ -7861,6 +7861,7 @@ async function init() {
 void init();
 
 function isTutorialCompleted() {
+  if (window.BOKS_RUNTIME_CONFIG?.releaseChannel !== 'live') return true;
   try { return localStorage.getItem(TUTORIAL_COMPLETED_STORAGE_KEY) === '1'; }
   catch (_err) { return false; }
 }
@@ -7932,8 +7933,10 @@ async function startGameFromGate() {
   requestAppFullscreen({ fromUserGesture: true });
   const btn = document.getElementById('startGameBtn');
   if (btn) btn.disabled = true;
+  const gameAudioUnlock = unlockAudioForUserGesture();
   pulseStartGameButtonPressedState('startGameBtn');
   btn?.classList.add('is-popping');
+  await Promise.resolve(gameAudioUnlock).catch(() => false);
   playWelcomeSfx();
   playBubblePopSfx();
   await sleep(720);
@@ -7955,8 +7958,10 @@ async function startSandboxFromGate() {
   startGameGateAnimating = true;
   const btn = document.getElementById('startBoksBtn');
   if (btn) btn.disabled = true;
+  const gameAudioUnlock = unlockAudioForUserGesture();
   pulseStartGameButtonPressedState('startBoksBtn');
   btn?.classList.add('is-popping');
+  await Promise.resolve(gameAudioUnlock).catch(() => false);
   playWelcomeSfx();
   playBubblePopSfx();
   await sleep(720);
@@ -7972,13 +7977,12 @@ async function startTutorialFromGate() {
   requestAppFullscreen({ fromUserGesture: true });
   const btn = document.getElementById('startTutorialBtn');
   if (btn) btn.disabled = true;
-  const gameAudioUnlock = unlockAudioForUserGesture();
   const narrationAudioUnlock = window.BOKS_TUTORIAL_ENGINE?.unlockAudio?.(window.BOKS_TUTORIAL_DATA?.intro);
+  await Promise.resolve(narrationAudioUnlock).catch(() => false);
+  const gameAudioUnlock = unlockAudioForUserGesture();
   pulseStartGameButtonPressedState('startTutorialBtn');
   btn?.classList.add('is-popping');
-  playWelcomeSfx();
-  playBubblePopSfx();
-  await Promise.allSettled([gameAudioUnlock, narrationAudioUnlock]);
+  await Promise.allSettled([gameAudioUnlock]);
   await sleep(720);
   openAppFromGate({
     openEditor: false,

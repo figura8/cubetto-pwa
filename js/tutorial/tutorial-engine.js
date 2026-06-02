@@ -26,14 +26,21 @@
     return url.toString();
   }
 
+  function prepareAudioElement(audio) {
+    if (!audio) return audio;
+    audio.preload = 'auto';
+    audio.playsInline = true;
+    audio.setAttribute?.('playsinline', '');
+    return audio;
+  }
+
   async function unlockAudio(sequence = {}) {
     const beats = Array.isArray(sequence.beats) ? sequence.beats : [];
     const firstAudio = beats.find(beat => beat?.type === 'narration' && beat.audio)?.audio;
     if (!firstAudio) return false;
     try {
-      unlockedAudio = unlockedAudio || new Audio();
+      unlockedAudio = prepareAudioElement(unlockedAudio || new Audio());
       unlockedAudio.src = resolveAudioSrc(firstAudio);
-      unlockedAudio.preload = 'auto';
       unlockedAudio.volume = 0.001;
       unlockedAudio.muted = false;
       await unlockedAudio.play();
@@ -79,9 +86,9 @@
     if (!src) return false;
     const resolvedSrc = resolveAudioSrc(src);
     const playAudioElement = async audio => {
+      prepareAudioElement(audio);
       audio.pause();
       audio.src = resolvedSrc;
-      audio.preload = 'auto';
       audio.currentTime = 0;
       audio.volume = 1;
       audio.muted = false;

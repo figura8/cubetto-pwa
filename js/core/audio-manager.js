@@ -90,6 +90,14 @@
     }
   }
 
+  function prepareAudioElement(audio) {
+    if (!audio) return audio;
+    audio.preload = 'auto';
+    audio.playsInline = true;
+    audio.setAttribute?.('playsinline', '');
+    return audio;
+  }
+
   function createAudioManager({
     getBuild = () => window.BOKS_RUNTIME_CONFIG?.build || document.body?.dataset?.build || 'dev',
     isGameStarted = () => false,
@@ -200,8 +208,7 @@
 
     function getBackgroundMusicAudio() {
       if (backgroundMusicAudio) return backgroundMusicAudio;
-      const audio = new Audio(getVersionedAudioPath(AUDIO_PATHS.music.gameLoop));
-      audio.preload = 'auto';
+      const audio = prepareAudioElement(new Audio(getVersionedAudioPath(AUDIO_PATHS.music.gameLoop)));
       audio.loop = true;
       audio.muted = !backgroundMusicEnabled;
       audio.volume = getBackgroundMusicLoopVolume();
@@ -236,8 +243,7 @@
 
     function getLevelOneIntroAudio() {
       if (levelOneIntroAudio) return levelOneIntroAudio;
-      const audio = new Audio(getVersionedAudioPath(AUDIO_PATHS.music.level01Intro));
-      audio.preload = 'auto';
+      const audio = prepareAudioElement(new Audio(getVersionedAudioPath(AUDIO_PATHS.music.level01Intro)));
       audio.muted = !backgroundMusicEnabled;
       audio.volume = getLevelOneIntroMixVolume();
       levelOneIntroAudio = audio;
@@ -247,8 +253,7 @@
     function getUiAudioSfxPlayer(path) {
       const cacheKey = getVersionedAudioPath(path);
       if (audioPlayers.has(cacheKey)) return audioPlayers.get(cacheKey);
-      const audio = new Audio(cacheKey);
-      audio.preload = 'auto';
+      const audio = prepareAudioElement(new Audio(cacheKey));
       audioPlayers.set(cacheKey, audio);
       return audio;
     }
@@ -258,7 +263,7 @@
       try {
         const audio = mode === 'restart'
           ? getUiAudioSfxPlayer(path)
-          : new Audio(getUiAudioSfxPlayer(path).src);
+          : prepareAudioElement(new Audio(getUiAudioSfxPlayer(path).src));
         audio.volume = volume;
         if (mode === 'restart') {
           audio.pause();
