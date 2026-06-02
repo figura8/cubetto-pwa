@@ -249,29 +249,34 @@
         "count": 1
       },
       {
-        "id": "3-7-lock-1",
+        "id": "3-7-clear-hand-hint",
+        "type": "call",
+        "action": "clearHandHint"
+      },
+      {
+        "id": "3-8-lock-1",
         "type": "call",
         "action": "lockBoksDoubleClick"
       },
       {
-        "id": "3-7-lock-2",
+        "id": "3-8-lock-2",
         "type": "call",
         "action": "lockDragBlock"
       },
       {
-        "id": "3-7-lock-3",
+        "id": "3-8-lock-3",
         "type": "call",
         "action": "lockPlay"
       },
       {
-        "id": "3-8-cool",
+        "id": "3-9-cool",
         "type": "narration",
         "text": "Cool!",
         "durationMs": 3000,
         "audio": "assets/audio/sfx/gameplay/04_cool.mp3"
       },
       {
-        "id": "3-9-now-thanks-to-you",
+        "id": "3-10-now-thanks-to-you",
         "type": "narration",
         "text": "Now thanks to you",
         "durationMs": 3000,
@@ -313,7 +318,9 @@
         "type": "waitFor",
         "event": "block-dropped",
         "count": 1,
-        "target": "right"
+        "target": "right",
+        "targetZone": "main",
+        "condition": "main_slot_0_right"
       },
       {
         "id": "4-6-lock-1",
@@ -414,69 +421,64 @@
         "action": "unlockDragBlock"
       },
       {
-        "id": "4-19-block-removed-from-slot",
-        "type": "waitFor",
-        "event": "block-removed",
-        "count": 1,
-        "target": "right"
-      },
-      {
-        "id": "4-20-block-dropped-in-slot",
+        "id": "4-19-block-dropped-in-slot",
         "type": "waitFor",
         "event": "block-dropped",
         "count": 1,
-        "target": "left"
+        "target": "left",
+        "targetZone": "main",
+        "condition": "main_slot_0_left"
       },
       {
-        "id": "4-21-lock-1",
+        "id": "4-20-lock-1",
         "type": "call",
         "action": "lockBoksDoubleClick"
       },
       {
-        "id": "4-21-lock-2",
+        "id": "4-20-lock-2",
         "type": "call",
         "action": "lockDragBlock"
       },
       {
-        "id": "4-21-lock-3",
+        "id": "4-20-lock-3",
         "type": "call",
         "action": "lockPlay"
       },
       {
-        "id": "4-22-ok-click-play",
+        "id": "4-21-ok-click-play",
         "type": "narration",
         "text": "Ok, click play",
         "durationMs": 3000,
         "audio": "assets/audio/sfx/gameplay/tutorial_38_ok_click_play.mp3"
       },
       {
-        "id": "4-23-unlock-1",
+        "id": "4-22-unlock-1",
         "type": "call",
         "action": "unlockPlay"
       },
       {
-        "id": "4-24-program-execution-finished",
+        "id": "4-23-program-execution-finished",
         "type": "waitFor",
         "event": "execution-finished",
         "count": 1
       },
       {
-        "id": "4-25-lock-1",
+        "id": "4-24-lock-1",
         "type": "call",
         "action": "lockBoksDoubleClick"
       },
       {
-        "id": "4-25-lock-2",
+        "id": "4-24-lock-2",
         "type": "call",
         "action": "lockDragBlock"
       },
       {
-        "id": "4-25-lock-3",
+        "id": "4-24-lock-3",
         "type": "call",
         "action": "lockPlay"
       },
       {
-        "id": "4-26-great",
+        "id": "4-25-great",
         "type": "narration",
         "text": "Great",
         "durationMs": 3000,

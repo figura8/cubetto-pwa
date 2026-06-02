@@ -803,6 +803,7 @@ const playBlockDropSuccessSfx = () => audioManager.playBlockDropSuccessSfx();
 const playStepSfx = () => audioManager.playStepSfx();
 const playErrorSfx = () => audioManager.playErrorSfx();
 const playBoksAnnoyedSfx = () => audioManager.playBoksAnnoyedSfx();
+const playBoksEntranceSfx = () => audioManager.playBoksEntranceSfx();
 const playDecorationRubberSfx = () => audioManager.playDecorationRubberSfx();
 const playGoalBubbleBounceSfx = () => audioManager.playGoalBubbleBounceSfx();
 const playBubblePopSfx = () => audioManager.playBubblePopSfx();
@@ -5793,8 +5794,9 @@ async function revealTutorialBoks() {
   sprite?.classList.remove('tutorial-boks-enter');
   void sprite?.offsetWidth;
   sprite?.classList.add('tutorial-boks-enter');
+  playBoksEntranceSfx();
   document.body?.classList.add('tutorial-boks-visible');
-  await sleep(980);
+  await sleep(820);
   sprite?.classList.remove('tutorial-boks-enter');
 }
 
@@ -5837,6 +5839,7 @@ function setTutorialGoalPosition(value = '') {
 function triggerTutorialBoksNudge() {
   const sprite = document.getElementById('sprite');
   if (!sprite || !playerPlaced) return;
+  playBoksAnnoyedSfx();
   sprite.classList.remove('tutorial-boks-nudge');
   void sprite.offsetWidth;
   sprite.classList.add('tutorial-boks-nudge');
@@ -5850,9 +5853,11 @@ function notifyTutorialBoksTurned() {
 
 function resolveTutorialWait(eventName, payload = {}) {
   if (!tutorialWaitingFor || tutorialWaitingFor.eventName !== eventName) return;
-  if (tutorialWaitingFor.targetBlock && payload.blockType !== tutorialWaitingFor.targetBlock) return;
-  if (tutorialWaitingFor.targetZone && payload.zone !== tutorialWaitingFor.targetZone) return;
-  if (tutorialWaitingFor.condition && !tutorialConditionMatches(tutorialWaitingFor.condition, payload)) return;
+  const tutorialStatePayload = getTutorialProgramStatePayload();
+  const combinedPayload = { ...tutorialStatePayload, ...payload };
+  if (tutorialWaitingFor.targetBlock && combinedPayload.blockType !== tutorialWaitingFor.targetBlock) return;
+  if (tutorialWaitingFor.targetZone && combinedPayload.zone !== tutorialWaitingFor.targetZone) return;
+  if (tutorialWaitingFor.condition && !tutorialConditionMatches(tutorialWaitingFor.condition, combinedPayload)) return;
   tutorialWaitingFor.remaining -= 1;
   if (tutorialWaitingFor.remaining > 0) return;
   const resolve = tutorialWaitingFor.resolve;
@@ -5880,6 +5885,12 @@ function waitForTutorialEvent(eventName, count = 1, beat = {}) {
 function tutorialConditionMatches(condition = '', payload = {}) {
   if (!condition) return true;
   if (condition === 'function_ready') return !!payload.functionReady;
+  const mainSlotMatch = /^main_slot_(\d+)_(forward|left|right|function)$/.exec(condition);
+  if (mainSlotMatch) {
+    const slotIndex = Number(mainSlotMatch[1]);
+    const expectedBlock = mainSlotMatch[2];
+    return (payload.mainBlocks?.[slotIndex] || '') === expectedBlock;
+  }
   return false;
 }
 

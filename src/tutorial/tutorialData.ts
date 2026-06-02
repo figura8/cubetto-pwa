@@ -306,6 +306,9 @@ export const tutorialData = {
           "completionCondition": ""
         },
         {
+          "type": "Clear hand hint"
+        },
+        {
           "type": "Lock"
         },
         {
@@ -382,7 +385,7 @@ export const tutorialData = {
           "type": "Wait for event",
           "eventName": "BLOCK_DROPPED_IN_SLOT",
           "minRepetitions": 1,
-          "completionCondition": "right"
+          "completionCondition": "main_slot_0_right"
         },
         {
           "type": "Lock"
@@ -459,7 +462,7 @@ export const tutorialData = {
           "type": "Wait for event",
           "eventName": "BLOCK_DROPPED_IN_SLOT",
           "minRepetitions": 1,
-          "completionCondition": "left"
+          "completionCondition": "main_slot_0_left"
         },
         {
           "type": "Lock"

@@ -22,6 +22,7 @@
         effort: 'assets/audio/sfx/gameplay/effort.mp3',
         errorAction: 'assets/audio/sfx/gameplay/error_action.mp3',
         boksAnnoyed: 'assets/audio/sfx/gameplay/boks_annoyed.ogg',
+        entranceBoks: 'assets/audio/sfx/gameplay/entrance_boks.mp3',
         welcome: 'assets/audio/sfx/gameplay/wellcome.mp3',
         decorRubberTap: [
           'assets/audio/sfx/gameplay/decor_rubber_tap_01.ogg',
@@ -368,6 +369,7 @@
       playEffortSfx: () => playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.effort, 0.24, { mode: 'restart' }),
       playErrorSfx: () => playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.errorAction, 0.3),
       playBoksAnnoyedSfx: () => playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.boksAnnoyed, 0.34),
+      playBoksEntranceSfx: () => playUiAudioSfx(AUDIO_PATHS.sfx.gameplay.entranceBoks, 0.46),
       playDecorationRubberSfx: () => {
         const variants = AUDIO_PATHS.sfx.gameplay.decorRubberTap;
         const path = variants[Math.floor(Math.random() * variants.length)] || variants[0];
