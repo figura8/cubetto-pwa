@@ -1,3 +1,15 @@
+  window.addEventListener('appinstalled', () => {
+    const el = document.getElementById('toast');
+    if (!el) return;
+    el.textContent = 'App installed — works offline!';
+    el.className = 'show';
+    el.style.top = '';
+    el.style.bottom = '70px';
+    el.style.left = '50%';
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.className = ''; }, 3000);
+  });
+
   if ('serviceWorker' in navigator) {
     const host = window.location.hostname;
     const isLocalhost = host === 'localhost' || host === '127.0.0.1' || host === '::1';

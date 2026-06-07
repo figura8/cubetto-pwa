@@ -1,6 +1,7 @@
-const CACHE_VERSION = 'v33';
+const CACHE_VERSION = 'v34';
 const SHELL_CACHE = `cubetto-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `cubetto-runtime-${CACHE_VERSION}`;
+const FONTS_CACHE = `cubetto-fonts-${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [
   './',
@@ -89,6 +90,7 @@ const PRECACHE_URLS = [
   './assets/audio/sfx/gameplay/tutorial_22_we_need_this.mp3',
   './assets/audio/sfx/gameplay/tutorial_32_great.mp3',
   './assets/audio/sfx/gameplay/tutorial_38_ok_click_play.mp3',
+  './assets/fonts/LilitaOne-Regular.ttf',
   './assets/ui/grids/grid_01.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -106,7 +108,7 @@ self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
     await Promise.all(keys
-      .filter(key => key !== SHELL_CACHE && key !== RUNTIME_CACHE)
+      .filter(key => key !== SHELL_CACHE && key !== RUNTIME_CACHE && key !== FONTS_CACHE)
       .map(key => caches.delete(key)));
     await self.clients.claim();
   })());
@@ -123,6 +125,12 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
+
+  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+    event.respondWith(cacheFirstCrossOrigin(request, FONTS_CACHE));
+    return;
+  }
+
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === 'navigate') {
@@ -206,4 +214,19 @@ function isCacheableResponse(response) {
 
 function matchCached(requestOrUrl) {
   return caches.match(requestOrUrl, { ignoreSearch: true });
+}
+
+async function cacheFirstCrossOrigin(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  try {
+    const response = await fetch(request);
+    if (response && (response.ok || response.type === 'opaque')) {
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch (_err) {
+    return Response.error();
+  }
 }
