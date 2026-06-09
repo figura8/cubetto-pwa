@@ -162,7 +162,10 @@
           gap: 8px;
         }
         body.editor-mode #header,
+        body.editor-mode #gameplayViewport,
+        body.editor-mode #gameplaySurface,
         body.editor-mode #gridWrap,
+        body.editor-mode #bottomWrap,
         body.editor-mode #bottom {
           width: 100%;
           max-width: var(--editor-main-w);
@@ -230,7 +233,7 @@
       background-size: var(--notebook-page-bg-size);
     }
     body.tablet-layout:not(.editor-mode) #app {
-      width: min(1040px, calc(var(--app-vw) - 32px));
+      width: min(1320px, calc(var(--app-vw) - 32px));
       max-width: none;
       padding: calc(8px + var(--safe-top)) 20px calc(14px + var(--safe-bottom));
       justify-content: center;
@@ -240,14 +243,19 @@
     }
     body.tablet-layout:not(.editor-mode) #editorMain {
       display: grid;
-      grid-template-columns: minmax(300px, 460px) minmax(300px, 460px);
       grid-template-areas:
-        "header header"
-        "grid controls";
+        "header"
+        "sandbox"
+        "gameplay";
       align-items: center;
       justify-content: center;
       gap: 18px 48px;
       width: 100%;
+    }
+    body.tablet-layout:not(.editor-mode):not(.sandbox-mode) #editorMain {
+      grid-template-areas:
+        "header"
+        "gameplay";
     }
     body.tablet-layout:not(.editor-mode) #header {
       grid-area: header;
@@ -257,20 +265,37 @@
       padding: 5px 18px;
       background: rgba(255, 249, 234, 0.82);
     }
+    body.tablet-layout:not(.editor-mode) #sandboxToolbar {
+      grid-area: sandbox;
+      justify-self: center;
+    }
+    body.tablet-layout:not(.editor-mode) #gameplayViewport {
+      grid-area: gameplay;
+      justify-self: center;
+      align-self: center;
+      max-width: none;
+    }
+    body.tablet-layout:not(.editor-mode) #gameplaySurface {
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 48px;
+    }
     body.tablet-layout:not(.editor-mode) #gridWrap {
-      grid-area: grid;
       width: 100%;
       max-width: 460px;
       justify-self: center;
       align-self: center;
       background: color-mix(in srgb, var(--panel-bg) 78%, #d9e9bd);
     }
+    body.tablet-layout:not(.editor-mode) #bottomWrap {
+      display: flex;
+      width: 100%;
+      max-width: 460px;
+    }
     body.tablet-layout:not(.editor-mode) #bottom {
-      grid-area: controls;
       display: flex;
       flex-direction: column;
-      justify-self: stretch;
-      align-self: center;
       width: 100%;
       max-width: 460px;
       gap: 24px;
@@ -312,6 +337,11 @@
         flex-direction: column;
         gap: 10px;
       }
+      body.tablet-layout:not(.editor-mode) #gameplaySurface {
+        flex-direction: column;
+        gap: 10px;
+      }
+      body.tablet-layout:not(.editor-mode) #bottomWrap,
       body.tablet-layout:not(.editor-mode) #bottom {
         display: flex;
         max-width: 460px;
@@ -478,19 +508,42 @@
       color: #2b8fd4;
     }
 
+    #gameplayViewport {
+      width: 100%;
+      max-width: 460px;
+      flex-shrink: 0;
+      position: relative;
+      overflow: visible;
+    }
+
+    #gameplaySurface {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      transform-origin: 0 0;
+    }
+
     #gridWrap {
       position: relative;
       width: 100%;
       max-width: 460px;
       flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       border-radius: var(--grid-wrap-radius);
       overflow: hidden;
       background: var(--panel-bg);
       border: 2px solid var(--panel-edge);
       box-shadow: 0 2px 0 #cdc2ab, 0 8px 14px rgba(95, 78, 52, 0.18);
+    }
+
+    #gridStage {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      transform-origin: 0 0;
     }
 
     #gameGrid {
@@ -1187,15 +1240,21 @@
       transition: opacity 0.22s ease, visibility 0.22s ease;
     }
 
-    #bottom {
+    #bottomWrap {
       width: 100%;
       max-width: 460px;
       flex-shrink: 0;
+      position: relative;
+    }
+
+    #bottom {
+      width: 100%;
+      max-width: 460px;
+      transform-origin: 0 0;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 6px;
-      position: relative;
     }
 
     /* Available blocks row */

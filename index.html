@@ -216,22 +216,30 @@
           <img class="boks-logo boks-logo--header" src="assets/ui/brand/boks-logo.svg" alt="B&Ouml;KS">
         </div>
         <div id="sandboxToolbar" aria-label="Strumenti modalita libera"></div>
-        <!-- Row 1: grid (flexible) -->
-        <div id="gridWrap">
-          <canvas id="bgCanvas" style="position:absolute;inset:0;pointer-events:none;border-radius:7px;"></canvas>
-          <div id="gameGrid"></div>
-          <div id="sprite"></div>
-        </div>
+        <div id="gameplayViewport">
+          <div id="gameplaySurface">
+            <!-- Row 1: grid (flexible) -->
+            <div id="gridWrap">
+              <div id="gridStage">
+                <canvas id="bgCanvas" style="position:absolute;inset:0;pointer-events:none;border-radius:7px;"></canvas>
+                <div id="gameGrid"></div>
+                <div id="sprite"></div>
+              </div>
+            </div>
 
-        <!-- Row 2: fixed bottom section -->
-        <div id="bottom">
-          <div id="blocksRow"></div>
-          <div id="boardRow"><div id="boardGrid"></div></div>
-          <button id="runBtn" type="button">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <use href="#icon-play-boks"></use>
-            </svg>
-          </button>
+            <!-- Row 2: fixed bottom section -->
+            <div id="bottomWrap">
+              <div id="bottom">
+                <div id="blocksRow"></div>
+                <div id="boardRow"><div id="boardGrid"></div></div>
+                <button id="runBtn" type="button">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <use href="#icon-play-boks"></use>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

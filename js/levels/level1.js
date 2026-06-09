@@ -112,15 +112,13 @@
     const wrap = document.getElementById('gridWrap');
     if (!canvas || !grid || !wrap) return null;
 
-    const rect = grid.getBoundingClientRect();
-    const wrapRect = wrap.getBoundingClientRect();
-    const size = Math.round(rect.width);
+    const size = Math.round(grid.offsetWidth || grid.clientWidth);
     if (!size) return null;
 
     canvas.width = size;
     canvas.height = size;
-    canvas.style.left = (rect.left - wrapRect.left) + 'px';
-    canvas.style.top = (rect.top - wrapRect.top) + 'px';
+    canvas.style.left = grid.offsetLeft + 'px';
+    canvas.style.top = grid.offsetTop + 'px';
     canvas.style.width = size + 'px';
     canvas.style.height = size + 'px';
     const cx = canvas.getContext('2d');

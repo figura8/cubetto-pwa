@@ -91,47 +91,77 @@ let goalCanvasParticles = [];
 let goalCanvasPopOrigin = { x: 0, y: 0 };
 let goalCanvasPopProfile = null;
 
-function ensureGoalCanvasLayers() {
+function ensureGridStage() {
   const wrap = document.getElementById('gridWrap');
+  const grid = document.getElementById('gameGrid');
+  let stage = document.getElementById('gridStage');
   if (!wrap) return null;
+  if (!stage) {
+    stage = document.createElement('div');
+    stage.id = 'gridStage';
+    while (wrap.firstChild) stage.appendChild(wrap.firstChild);
+    wrap.appendChild(stage);
+  } else if (stage.parentElement !== wrap) {
+    wrap.appendChild(stage);
+  }
+  if (grid && grid.parentElement !== stage) {
+    stage.appendChild(grid);
+  }
+  return stage;
+}
+
+function viewportPointToGridStage(clientX, clientY) {
+  const stage = ensureGridStage();
+  if (!stage) return null;
+  const rect = stage.getBoundingClientRect();
+  const scaleX = rect.width / (stage.offsetWidth || rect.width || 1);
+  const scaleY = rect.height / (stage.offsetHeight || rect.height || 1);
+  if (!Number.isFinite(scaleX) || !Number.isFinite(scaleY) || !scaleX || !scaleY) return null;
+  return {
+    x: (clientX - rect.left) / scaleX,
+    y: (clientY - rect.top) / scaleY,
+    scaleX,
+    scaleY
+  };
+}
+
+function ensureGoalCanvasLayers() {
+  const stage = ensureGridStage();
+  if (!stage) return null;
   let idle = document.getElementById('goalIdleCanvas');
   let pop = document.getElementById('goalPopCanvas');
   if (!idle) {
     idle = document.createElement('canvas');
     idle.id = 'goalIdleCanvas';
     idle.setAttribute('aria-hidden', 'true');
-    wrap.appendChild(idle);
   }
   if (!pop) {
     pop = document.createElement('canvas');
     pop.id = 'goalPopCanvas';
     pop.setAttribute('aria-hidden', 'true');
-    wrap.appendChild(pop);
   }
+  if (idle.parentElement !== stage) stage.appendChild(idle);
+  if (pop.parentElement !== stage) stage.appendChild(pop);
   return { idle, pop };
 }
 function getGoalCanvasOrigin() {
-  const goalCell = document.querySelector('.goal-cell');
-  const wrap = document.getElementById('gridWrap');
-  if (!goalCell || !wrap) return null;
-  const wrapRect = wrap.getBoundingClientRect();
-  const goalRect = goalCell.getBoundingClientRect();
+  const metrics = getGridMetrics();
+  if (!metrics || !goalPlaced) return null;
+  const goalRect = cellPos(GOAL.x, GOAL.y);
+  if (!goalRect) return null;
   return {
-    x: goalRect.left - wrapRect.left + (goalRect.width * 0.5),
-    y: goalRect.top - wrapRect.top + (goalRect.height * 0.5)
+    x: goalRect.l + (goalRect.w * 0.5),
+    y: goalRect.t + (goalRect.h * 0.5)
   };
 }
 function sizeGoalCanvasLayers() {
   const layers = ensureGoalCanvasLayers();
-  const grid = document.getElementById('gameGrid');
-  const wrap = document.getElementById('gridWrap');
-  if (!layers || !grid || !wrap) return;
-  const rect = grid.getBoundingClientRect();
-  const wrapRect = wrap.getBoundingClientRect();
-  const width = Math.round(rect.width);
-  const height = Math.round(rect.height);
-  const left = rect.left - wrapRect.left;
-  const top = rect.top - wrapRect.top;
+  const metrics = getGridMetrics();
+  if (!layers || !metrics) return;
+  const width = Math.round(metrics.width);
+  const height = Math.round(metrics.height);
+  const left = metrics.wrapLeft;
+  const top = metrics.wrapTop;
   [layers.idle, layers.pop].forEach((canvas, index) => {
     const dpr = getEffectiveCanvasDpr();
     if (index === 0) goalIdleCanvasDpr = dpr;
@@ -413,9 +443,11 @@ const TABLET_LAYOUT_STORAGE_KEY = 'boks-tablet-layout-enabled';
 const PINCH_ZOOM_ENABLED_KEY    = 'boks-pinch-zoom-enabled';
 const PINCH_ZOOM_SCALE_KEY      = 'boks-pinch-zoom-scale';
 const PINCH_ZOOM_MIN = 0.6;
-const PINCH_ZOOM_MAX = 1.5;
+const PINCH_ZOOM_MAX = 1.3;
 let pinchZoomEnabled = false;
 let pinchZoomScale   = 1.0;
+const GAME_GRID_BASE_MAX = 460;
+let lastControlsLayoutKey = '';
 const EDITOR_LEVELS_FILE_PATH = './data/editor-levels.json';
 const EDITOR_LEVELS_FILE_PICKER_SUGGESTED_NAME = 'editor-levels.json';
 const FILE_HANDLE_DB_NAME = 'boks-file-handles';
@@ -1067,12 +1099,13 @@ function updateViewportForPinch(enabled) {
 function applyZoomScaleToApp() {
   sizeGrid();
 }
+function getEffectiveGameplayZoomScale() {
+  return pinchZoomEnabled ? pinchZoomScale : 1.0;
+}
 function setPinchZoomEnabled(enabled, { persist = true } = {}) {
   pinchZoomEnabled = Boolean(enabled);
-  if (!pinchZoomEnabled) {
-    pinchZoomScale = 1.0;
-    try { localStorage.removeItem(PINCH_ZOOM_SCALE_KEY); } catch (_) {}
-  }
+  pinchZoomScale = 1.0;
+  try { localStorage.removeItem(PINCH_ZOOM_SCALE_KEY); } catch (_) {}
   if (persist) {
     try { localStorage.setItem(PINCH_ZOOM_ENABLED_KEY, pinchZoomEnabled ? '1' : '0'); } catch (_) {}
   }
@@ -1083,8 +1116,8 @@ function setPinchZoomEnabled(enabled, { persist = true } = {}) {
 function applyPinchZoomPreference() {
   try {
     pinchZoomEnabled = localStorage.getItem(PINCH_ZOOM_ENABLED_KEY) === '1';
-    const stored = parseFloat(localStorage.getItem(PINCH_ZOOM_SCALE_KEY));
-    pinchZoomScale = (Number.isFinite(stored) && stored >= PINCH_ZOOM_MIN && stored <= PINCH_ZOOM_MAX) ? stored : 1.0;
+    pinchZoomScale = 1.0;
+    localStorage.removeItem(PINCH_ZOOM_SCALE_KEY);
   } catch (_) {
     pinchZoomEnabled = false;
     pinchZoomScale = 1.0;
@@ -1122,7 +1155,6 @@ function initPinchZoom() {
   app.addEventListener('touchend', e => {
     if (e.touches.length < 2) {
       if (startDist !== null) {
-        try { localStorage.setItem(PINCH_ZOOM_SCALE_KEY, pinchZoomScale.toFixed(3)); } catch (_) {}
         startDist = null;
       }
     }
@@ -1495,48 +1527,116 @@ function initGrid() {
 
 // ═══ SIZE THE GRID AS A SQUARE ═══
 function sizeGrid() {
+  const gameplayViewport = document.getElementById('gameplayViewport');
+  const gameplaySurface = document.getElementById('gameplaySurface');
   const wrap  = document.getElementById('gridWrap');
+  const stage = ensureGridStage();
   const grid  = document.getElementById('gameGrid');
   const app   = document.getElementById('app');
+  const editorMain = document.getElementById('editorMain');
+  const bottomWrap = document.getElementById('bottomWrap');
   const bot   = document.getElementById('bottom');
   const header = document.getElementById('header');
+  const sandboxToolbar = document.getElementById('sandboxToolbar');
   const runBtn = document.getElementById('runBtn');
+  if (!gameplayViewport || !gameplaySurface || !wrap || !stage || !grid || !app || !bottomWrap || !bot) return;
   const desktopLike = window.matchMedia ? window.matchMedia('(pointer: fine)').matches : false;
   const tabletLayout = document.body.classList.contains('tablet-layout') && !document.body.classList.contains('editor-mode');
+  const tabletSideBySide = tabletLayout && (window.matchMedia ? window.matchMedia('(min-width: 761px)').matches : window.innerWidth > 760);
+  const effectivePinchZoomScale = getEffectiveGameplayZoomScale();
+  const surfaceGap = tabletSideBySide ? 48 : (tabletLayout ? 10 : 8);
 
   // Measure what bottom actually needs
   const appH  = app.clientHeight;
   const botH  = bot.offsetHeight;
   const availH = appH - botH - 6 - 6 - 6; // gaps + padding
-  const availW = wrap.clientWidth;
+  const layoutW = editorMain?.clientWidth || app.clientWidth || window.innerWidth;
+  const visualPanelW = tabletSideBySide
+    ? Math.max(220, Math.floor(((layoutW / effectivePinchZoomScale) - surfaceGap) / 2))
+    : layoutW;
+  const maxBasePanelW = visualPanelW;
+  const availW = document.body.classList.contains('editor-mode')
+    ? layoutW
+    : Math.min(maxBasePanelW, GAME_GRID_BASE_MAX);
   let sq;
   if (tabletLayout) {
     const headerH = header?.offsetHeight || 0;
+    const sandboxToolbarH = sandboxToolbar && window.getComputedStyle(sandboxToolbar).display !== 'none'
+      ? sandboxToolbar.offsetHeight
+      : 0;
     const runH = runBtn?.offsetHeight || 0;
-    const verticalRoom = appH - headerH - runH - 72;
-    sq = Math.max(220, Math.floor(Math.min(availW, verticalRoom)));
+    const verticalRoom = tabletSideBySide
+      ? appH - headerH - sandboxToolbarH - 72
+      : appH - headerH - sandboxToolbarH - runH - 72;
+    const baseVerticalRoom = tabletSideBySide
+      ? Math.floor(verticalRoom / effectivePinchZoomScale)
+      : verticalRoom;
+    const tabletMinSq = tabletSideBySide ? 180 : 220;
+    sq = Math.max(tabletMinSq, Math.floor(Math.min(availW, baseVerticalRoom)));
   } else {
     sq = Math.max(120, Math.floor(desktopLike ? availW : Math.min(availH, availW)));
   }
 
-  sq = Math.round(sq * pinchZoomScale);
+  const controlsBaseWidth = tabletSideBySide
+    ? sq
+    : Math.min(availW, GAME_GRID_BASE_MAX);
+  bot.style.width = controlsBaseWidth + 'px';
+  bot.style.maxWidth = 'none';
+  bot.style.transform = '';
   grid.style.width  = sq + 'px';
   grid.style.height = sq + 'px';
+  stage.style.width = sq + 'px';
+  stage.style.height = sq + 'px';
+  stage.style.transform = '';
   wrap.style.width  = sq + 'px';
   wrap.style.maxWidth = 'none';
   wrap.style.height = sq + 'px';
+  bottomWrap.style.width = controlsBaseWidth + 'px';
+  bottomWrap.style.maxWidth = 'none';
+  bottomWrap.style.removeProperty('height');
+  gameplaySurface.style.gap = `${surfaceGap}px`;
+  gameplaySurface.style.width = tabletSideBySide
+    ? `${sq + surfaceGap + controlsBaseWidth}px`
+    : `${Math.max(sq, controlsBaseWidth)}px`;
+  gameplaySurface.style.transform = effectivePinchZoomScale === 1
+    ? ''
+    : `scale(${effectivePinchZoomScale})`;
+  const surfaceBaseWidth = gameplaySurface.offsetWidth;
+  const surfaceBaseHeight = gameplaySurface.offsetHeight;
+  gameplayViewport.style.width = `${Math.round(surfaceBaseWidth * effectivePinchZoomScale)}px`;
+  gameplayViewport.style.maxWidth = 'none';
+  gameplayViewport.style.height = `${Math.round(surfaceBaseHeight * effectivePinchZoomScale)}px`;
+  const controlsLayoutKey = `${controlsBaseWidth}:${document.body.classList.contains('compact-ui') ? 1 : 0}:${tabletSideBySide ? 1 : 0}`;
+  if (controlsLayoutKey !== lastControlsLayoutKey && !running) {
+    lastControlsLayoutKey = controlsLayoutKey;
+    renderBoard();
+    renderFn();
+    renderAvail();
+  } else {
+    alignAvailBlocksToSlots();
+  }
+  if (editorMain) {
+    editorMain.style.removeProperty('grid-template-columns');
+    editorMain.style.removeProperty('column-gap');
+  }
   renderGridDecorations();
   sizeGoalCanvasLayers();
+  drawBackground();
+  syncSprite();
 }
 
 // ═══ SPRITE ═══
 
 function cellPos(x, y) {
   const cell = getGridCell(x, y);
-  const wrap = document.getElementById('gridWrap');
-  if(!cell || !wrap) return null;
-  const cr = cell.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
-  return { l: cr.left-wr.left, t: cr.top-wr.top, w: cr.width, h: cr.height };
+  const metrics = getGridMetrics();
+  if(!cell || !metrics) return null;
+  return {
+    l: metrics.wrapLeft + cell.offsetLeft,
+    t: metrics.wrapTop + cell.offsetTop,
+    w: cell.offsetWidth || metrics.cellWidth,
+    h: cell.offsetHeight || metrics.cellHeight
+  };
 }
 
 function spriteRectFromCellRect(r) {
@@ -2065,25 +2165,18 @@ async function animTo(tx, ty) {
 function setupSpriteDrag() {
   const s = document.getElementById('sprite');
   let sandboxDragActive = false;
-  let sandboxDragStartBox = null;
   let sandboxDragPointerOffset = null;
   function start(cx,cy) {
     if (tutorialStageActive) return false;
     if(!(editorMode || sandboxMode)||running||animating||!playerPlaced) return false;
     if (sandboxMode) {
-      const wrap = document.getElementById('gridWrap');
-      if (!wrap) return false;
+      const stagePoint = viewportPointToGridStage(cx, cy);
+      if (!stagePoint) return false;
       s.style.removeProperty('transform');
-      const rect = s.getBoundingClientRect();
-      const wrapRect = wrap.getBoundingClientRect();
       sandboxDragActive = true;
-      sandboxDragStartBox = {
-        width: rect.width,
-        height: rect.height
-      };
       sandboxDragPointerOffset = {
-        x: cx - rect.left,
-        y: cy - rect.top
+        x: stagePoint.x - s.offsetLeft,
+        y: stagePoint.y - s.offsetTop
       };
       s.style.transition = 'none';
       s.style.zIndex = '80';
@@ -2121,7 +2214,7 @@ function setupSpriteDrag() {
     }
     s.style.opacity='1';
     document.querySelectorAll('.cell.hi').forEach(c=>c.classList.remove('hi'));
-    const snapPoint = sandboxMode ? getSandboxSpriteDragCenter(cx, cy) : null;
+    const snapPoint = sandboxMode ? getSandboxSpriteDragCenter() : null;
     const snap = snapPoint ? getNearestGridCellFromPoint(snapPoint.x, snapPoint.y) : null;
     const u = sandboxMode ? null : document.elementFromPoint(cx,cy);
     const cell = snap?.cell || u?.closest('.cell');
@@ -2144,7 +2237,6 @@ function setupSpriteDrag() {
     }
     if (sandboxMode) {
       sandboxDragActive = false;
-      sandboxDragStartBox = null;
       sandboxDragPointerOffset = null;
       s.style.transition = '';
       s.style.zIndex = '';
@@ -2160,17 +2252,17 @@ function setupSpriteDrag() {
   }
   function setSpriteDragPosition(cx, cy) {
     if (!sandboxDragPointerOffset) return;
-    const wrap = document.getElementById('gridWrap');
-    if (!wrap) return;
-    const wrapRect = wrap.getBoundingClientRect();
-    s.style.left = `${cx - wrapRect.left - sandboxDragPointerOffset.x}px`;
-    s.style.top = `${cy - wrapRect.top - sandboxDragPointerOffset.y}px`;
+    const stagePoint = viewportPointToGridStage(cx, cy);
+    if (!stagePoint) return;
+    s.style.left = `${stagePoint.x - sandboxDragPointerOffset.x}px`;
+    s.style.top = `${stagePoint.y - sandboxDragPointerOffset.y}px`;
   }
-  function getSandboxSpriteDragCenter(cx, cy) {
-    if (!sandboxDragStartBox || !sandboxDragPointerOffset) return null;
+  function getSandboxSpriteDragCenter() {
+    const rect = s.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
     return {
-      x: cx - sandboxDragPointerOffset.x + sandboxDragStartBox.width / 2,
-      y: cy - sandboxDragPointerOffset.y + sandboxDragStartBox.height / 2
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2
     };
   }
   let lastTapAt = 0;
@@ -2589,46 +2681,47 @@ function renderDecorationAssetMarkup(assetInput) {
 }
 
 function getGridMetrics() {
-  const wrap = document.getElementById('gridWrap');
+  const stage = ensureGridStage();
   const grid = document.getElementById('gameGrid');
   const firstCell = getGridCell(0, 0);
-  if (!wrap || !grid || !firstCell) return null;
-  const wrapRect = wrap.getBoundingClientRect();
-  const gridRect = grid.getBoundingClientRect();
-  const cellRect = firstCell.getBoundingClientRect();
+  if (!stage || !grid || !firstCell) return null;
+  const width = grid.offsetWidth || grid.clientWidth;
+  const height = grid.offsetHeight || grid.clientHeight;
+  const cellWidth = firstCell.offsetWidth;
+  const cellHeight = firstCell.offsetHeight;
   return {
-    wrapLeft: gridRect.left - wrapRect.left,
-    wrapTop: gridRect.top - wrapRect.top,
-    width: gridRect.width,
-    height: gridRect.height,
-    cellWidth: cellRect.width,
-    cellHeight: cellRect.height
+    wrapLeft: grid.offsetLeft,
+    wrapTop: grid.offsetTop,
+    width,
+    height,
+    cellWidth,
+    cellHeight
   };
 }
 
 function ensureGridDecorationLayer() {
-  const wrap = document.getElementById('gridWrap');
-  if (!wrap) return null;
+  const stage = ensureGridStage();
+  if (!stage) return null;
   let layer = document.getElementById('gridDecor');
   if (!layer) {
     layer = document.createElement('div');
     layer.id = 'gridDecor';
     layer.setAttribute('aria-hidden', 'true');
-    wrap.appendChild(layer);
   }
+  if (layer.parentElement !== stage) stage.appendChild(layer);
   return layer;
 }
 
 function ensureGridDecorationFxLayer() {
-  const wrap = document.getElementById('gridWrap');
-  if (!wrap) return null;
+  const stage = ensureGridStage();
+  if (!stage) return null;
   let layer = document.getElementById('gridDecorFx');
   if (!layer) {
     layer = document.createElement('div');
     layer.id = 'gridDecorFx';
     layer.setAttribute('aria-hidden', 'true');
-    wrap.appendChild(layer);
   }
+  if (layer.parentElement !== stage) stage.appendChild(layer);
   return layer;
 }
 
@@ -2875,10 +2968,7 @@ function updateBeeDecorationActors(now = window.performance?.now?.() || Date.now
   }
 
   const hero = document.querySelector('#sprite .boks-hero');
-  const sprite = document.getElementById('sprite');
-  const wrap = document.getElementById('gridWrap');
-  const spriteRect = sprite?.getBoundingClientRect();
-  const wrapRect = wrap?.getBoundingClientRect();
+  const spriteFrame = playerPlaced ? spriteRectFromCellRect(cellPos(pos.x, pos.y)) : null;
   let isHeroNearAnyBee = false;
 
   decorationFxState.beeActors.forEach(actor => {
@@ -2923,12 +3013,12 @@ function updateBeeDecorationActors(now = window.performance?.now?.() || Date.now
     actor.localX = localX + drift;
     actor.localY = localY + bob;
 
-    if (hero && spriteRect && wrapRect) {
-      const spriteCenterX = (spriteRect.left - wrapRect.left) + (spriteRect.width * 0.5);
-      const spriteCenterY = (spriteRect.top - wrapRect.top) + (spriteRect.height * 0.42);
+    if (hero && spriteFrame) {
+      const spriteCenterX = spriteFrame.l + (spriteFrame.w * 0.5);
+      const spriteCenterY = spriteFrame.t + (spriteFrame.h * 0.42);
       const dxHero = actor.localX - spriteCenterX;
       const dyHero = actor.localY - spriteCenterY;
-      const isNear = Math.hypot(dxHero, dyHero) <= Math.max(46, spriteRect.width * 0.9);
+      const isNear = Math.hypot(dxHero, dyHero) <= Math.max(46, spriteFrame.w * 0.9);
       if (isNear) isHeroNearAnyBee = true;
     }
 
@@ -3216,12 +3306,11 @@ function getNearestGridCellFromPoint(clientX, clientY) {
 }
 
 function getDecorationHitAtPoint(clientX, clientY) {
-  const wrap = document.getElementById('gridWrap');
   const metrics = getGridMetrics();
-  if (!wrap || !metrics) return null;
-  const wrapRect = wrap.getBoundingClientRect();
-  const localX = clientX - wrapRect.left;
-  const localY = clientY - wrapRect.top;
+  const stagePoint = viewportPointToGridStage(clientX, clientY);
+  if (!metrics || !stagePoint) return null;
+  const localX = stagePoint.x;
+  const localY = stagePoint.y;
   const zIndexByLayer = { ground: 1, object: 2, overlay: 3 };
   const sorted = activeLevelDecorations
     .map((entry, index) => ({ entry, index }))
@@ -4867,8 +4956,11 @@ function syncFirstLevelOnboarding() {
 
 function renderDragHandHint(root, bottom, pathSvg, path, ghost) {
   const bottomRect = bottom.getBoundingClientRect();
-  pathSvg.setAttribute('viewBox', `0 0 ${Math.max(1, Math.round(bottomRect.width))} ${Math.max(1, Math.round(bottomRect.height))}`);
-  const clampX = (value, inset = 40) => Math.max(inset, Math.min(bottomRect.width - inset, value));
+  const zoomScale = getEffectiveGameplayZoomScale();
+  const bottomWidth = bottom.offsetWidth || (bottomRect.width / zoomScale);
+  const bottomHeight = bottom.offsetHeight || (bottomRect.height / zoomScale);
+  pathSvg.setAttribute('viewBox', `0 0 ${Math.max(1, Math.round(bottomWidth))} ${Math.max(1, Math.round(bottomHeight))}`);
+  const clampX = (value, inset = 40) => Math.max(inset, Math.min(bottomWidth - inset, value));
   const stage = hasAnyPlacedProgramBlock() ? 'play' : 'drag';
   firstLevelOnboardingStage = stage;
 
@@ -4880,16 +4972,17 @@ function renderDragHandHint(root, bottom, pathSvg, path, ghost) {
 
   const sourceRect = sourceBlock.getBoundingClientRect();
   const targetRect = targetSlot.getBoundingClientRect();
-  const sourceX = sourceRect.left - bottomRect.left + (sourceRect.width * 0.5);
-  const sourceY = sourceRect.top - bottomRect.top + (sourceRect.height * 0.5);
-  const targetX = targetRect.left - bottomRect.left + (targetRect.width * 0.5);
-  const targetY = targetRect.top - bottomRect.top + (targetRect.height * 0.5);
-  const controlX = clampX(Math.min(sourceX, targetX) - Math.max(22, Math.min(42, targetRect.width * 0.8)));
+  const sourceX = (sourceRect.left - bottomRect.left + (sourceRect.width * 0.5)) / zoomScale;
+  const sourceY = (sourceRect.top - bottomRect.top + (sourceRect.height * 0.5)) / zoomScale;
+  const targetX = (targetRect.left - bottomRect.left + (targetRect.width * 0.5)) / zoomScale;
+  const targetY = (targetRect.top - bottomRect.top + (targetRect.height * 0.5)) / zoomScale;
+  const targetWidth = targetRect.width / zoomScale;
+  const controlX = clampX(Math.min(sourceX, targetX) - Math.max(22, Math.min(42, targetWidth * 0.8)));
   const controlY = sourceY + ((targetY - sourceY) * 0.46);
 
   ghost.innerHTML = sourceBlock.innerHTML;
-  ghost.style.width = `${Math.round(sourceRect.width)}px`;
-  ghost.style.height = `${Math.round(sourceRect.height)}px`;
+  ghost.style.width = `${Math.round(sourceRect.width / zoomScale)}px`;
+  ghost.style.height = `${Math.round(sourceRect.height / zoomScale)}px`;
   targetSlot.classList.add('first-level-onboarding-slot');
   root.dataset.stage = 'drag';
   root.style.setProperty('--first-onboarding-start-x', `${sourceX}px`);
@@ -4905,8 +4998,9 @@ function renderPlayHandHint(root, bottom) {
   if (!runBtn) return;
   const btnRect = runBtn.getBoundingClientRect();
   const bottomRect = bottom.getBoundingClientRect();
-  const targetX = btnRect.left - bottomRect.left + (btnRect.width * 0.5);
-  const targetY = btnRect.top - bottomRect.top + (btnRect.height * 0.5);
+  const zoomScale = getEffectiveGameplayZoomScale();
+  const targetX = (btnRect.left - bottomRect.left + (btnRect.width * 0.5)) / zoomScale;
+  const targetY = (btnRect.top - bottomRect.top + (btnRect.height * 0.5)) / zoomScale;
 
   runBtn.classList.add('first-level-onboarding-run');
   root.dataset.stage = 'play';
@@ -6897,9 +6991,11 @@ function alignAvailBlocksToSlots() {
   const blocks = Array.from(row.querySelectorAll('.ablock'));
   if (!blocks.length) return;
   const rowRect = row.getBoundingClientRect();
+  const zoomScale = Math.max(0.001, getEffectiveGameplayZoomScale());
+  const localRowWidth = row.offsetWidth || row.clientWidth || (rowRect.width / zoomScale);
 
   if (blocks.length === 1) {
-    blocks[0].style.left = `${rowRect.width / 2}px`;
+    blocks[0].style.left = `${localRowWidth / 2}px`;
     return;
   }
 
@@ -6908,7 +7004,7 @@ function alignAvailBlocksToSlots() {
   if (firstRowSlots.length < blocks.length) {
     // fallback finche il board non e pronto
     blocks.forEach((b, i) => {
-      b.style.left = `${((i + 0.5) / blocks.length) * rowRect.width}px`;
+      b.style.left = `${((i + 0.5) / blocks.length) * localRowWidth}px`;
     });
     return;
   }
@@ -6916,7 +7012,7 @@ function alignAvailBlocksToSlots() {
   blocks.forEach((_, i) => {
     const slot = firstRowSlots[startIdx + i];
     const sr = slot.getBoundingClientRect();
-    const centerX = sr.left + sr.width / 2 - rowRect.left;
+    const centerX = (sr.left + sr.width / 2 - rowRect.left) / zoomScale;
     blocks[i].style.left = `${centerX}px`;
   });
 }
@@ -7246,7 +7342,7 @@ function getExpandedRect(rect, padX = 0, padY = padX) {
 
 function getDragGhostPoint(x, y) {
   if (dg?.pointerType !== 'touch') return { x, y };
-  const size = Number.isFinite(dg?.sz) ? dg.sz : 52;
+  const size = (Number.isFinite(dg?.sz) ? dg.sz : 52) * (Number.isFinite(dg?.zoomScale) ? dg.zoomScale : 1);
   return {
     x: x + Math.round(size * 0.32),
     y: y - Math.round(size * 0.9)
@@ -7327,7 +7423,8 @@ function activateDragVisuals() {
   if (!dg.active || dg.draggingVisuals) return;
   dg.draggingVisuals = true;
   const ghostPoint = getDragGhostPoint(dgPendingX, dgPendingY);
-  showGhost({ width: dg.sz, height: dg.sz, node: mkB(dg.block, dg.sz, dg.sz), x: ghostPoint.x, y: ghostPoint.y });
+  const visualSize = Math.round(dg.sz * (Number.isFinite(dg.zoomScale) ? dg.zoomScale : 1));
+  showGhost({ width: visualSize, height: visualSize, node: mkB(dg.block, visualSize, visualSize), x: ghostPoint.x, y: ghostPoint.y });
   if (dg.src !== 'avail') {
     const zone = dg.src === 'fn' ? 'fn' : 'main';
     const s = document.querySelector(`.pslot[data-zone="${zone}"][data-slot="${dg.si}"] .sinner`);
@@ -7347,6 +7444,7 @@ function startDg(cx,cy,src,idx,sz,pointerType='mouse') {
     src,
     si:idx,
     sz,
+    zoomScale: getEffectiveGameplayZoomScale(),
     pointerType,
     startX:cx,
     startY:cy,
@@ -8369,9 +8467,10 @@ document.addEventListener('keydown', e => {
   if (key === 'i' || key === 'o') {
     e.preventDefault();
     const step = 0.05;
+    pinchZoomEnabled = true;
     pinchZoomScale = Math.min(PINCH_ZOOM_MAX, Math.max(PINCH_ZOOM_MIN, pinchZoomScale + (key === 'i' ? step : -step)));
     applyZoomScaleToApp();
-    try { localStorage.setItem(PINCH_ZOOM_SCALE_KEY, pinchZoomScale.toFixed(3)); } catch (_) {}
+    try { localStorage.setItem(PINCH_ZOOM_ENABLED_KEY, '1'); } catch (_) {}
     toast(`Zoom ${Math.round(pinchZoomScale * 100)}%`);
     return;
   }
