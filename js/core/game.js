@@ -116,10 +116,9 @@ function getGoalCanvasOrigin() {
   if (!goalCell || !wrap) return null;
   const wrapRect = wrap.getBoundingClientRect();
   const goalRect = goalCell.getBoundingClientRect();
-  const z = pinchZoomScale || 1;
   return {
-    x: (goalRect.left - wrapRect.left) / z + (goalRect.width / z * 0.5),
-    y: (goalRect.top - wrapRect.top) / z + (goalRect.height / z * 0.5)
+    x: goalRect.left - wrapRect.left + (goalRect.width * 0.5),
+    y: goalRect.top - wrapRect.top + (goalRect.height * 0.5)
   };
 }
 function sizeGoalCanvasLayers() {
@@ -129,11 +128,10 @@ function sizeGoalCanvasLayers() {
   if (!layers || !grid || !wrap) return;
   const rect = grid.getBoundingClientRect();
   const wrapRect = wrap.getBoundingClientRect();
-  const z = pinchZoomScale || 1;
-  const width = Math.round(rect.width / z);
-  const height = Math.round(rect.height / z);
-  const left = (rect.left - wrapRect.left) / z;
-  const top = (rect.top - wrapRect.top) / z;
+  const width = Math.round(rect.width);
+  const height = Math.round(rect.height);
+  const left = rect.left - wrapRect.left;
+  const top = rect.top - wrapRect.top;
   [layers.idle, layers.pop].forEach((canvas, index) => {
     const dpr = getEffectiveCanvasDpr();
     if (index === 0) goalIdleCanvasDpr = dpr;
@@ -1537,8 +1535,7 @@ function cellPos(x, y) {
   const wrap = document.getElementById('gridWrap');
   if(!cell || !wrap) return null;
   const cr = cell.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
-  const z = pinchZoomScale || 1;
-  return { l: (cr.left-wr.left)/z, t: (cr.top-wr.top)/z, w: cr.width/z, h: cr.height/z };
+  return { l: cr.left-wr.left, t: cr.top-wr.top, w: cr.width, h: cr.height };
 }
 
 function spriteRectFromCellRect(r) {
