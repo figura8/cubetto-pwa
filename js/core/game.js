@@ -1067,9 +1067,9 @@ function updateViewportForPinch(enabled) {
     : 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
 }
 function applyZoomScaleToApp() {
-  const app = document.getElementById('app');
-  if (!app) return;
-  app.style.zoom = pinchZoomScale === 1.0 ? '' : pinchZoomScale.toFixed(3);
+  const wrap = document.getElementById('gameZoomWrap');
+  if (!wrap) return;
+  wrap.style.zoom = pinchZoomScale === 1.0 ? '' : pinchZoomScale.toFixed(3);
 }
 function setPinchZoomEnabled(enabled, { persist = true } = {}) {
   pinchZoomEnabled = Boolean(enabled);
