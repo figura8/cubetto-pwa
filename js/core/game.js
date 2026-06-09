@@ -1065,9 +1065,7 @@ function updateViewportForPinch(enabled) {
     : 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
 }
 function applyZoomScaleToApp() {
-  const wrap = document.getElementById('gameZoomWrap');
-  if (!wrap) return;
-  wrap.style.zoom = pinchZoomScale === 1.0 ? '' : pinchZoomScale.toFixed(3);
+  sizeGrid();
 }
 function setPinchZoomEnabled(enabled, { persist = true } = {}) {
   pinchZoomEnabled = Boolean(enabled);
@@ -1521,6 +1519,7 @@ function sizeGrid() {
     sq = Math.max(120, Math.floor(desktopLike ? availW : Math.min(availH, availW)));
   }
 
+  sq = Math.round(sq * pinchZoomScale);
   grid.style.width  = sq + 'px';
   grid.style.height = sq + 'px';
   wrap.style.height = sq + 'px'; // shrink wrap to exact grid size, no extra space
