@@ -112,7 +112,7 @@
         height: auto;
         justify-content: flex-start;
         margin: 0 auto;
-        transform: translateX(var(--app-center-shift-x)) translateY(var(--app-reveal-y)) scale(var(--app-reveal-scale));
+        transform: translateX(var(--app-center-shift-x)) translateY(var(--app-reveal-y)) scale(calc(var(--app-reveal-scale) * var(--app-zoom-scale)));
       }
       @media (min-width: 1120px) {
         body.editor-mode {
