@@ -1064,6 +1064,11 @@ function updateViewportForPinch(enabled) {
     ? 'width=device-width, initial-scale=1.0, viewport-fit=cover'
     : 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
 }
+function applyZoomScaleToApp() {
+  const app = document.getElementById('app');
+  if (!app) return;
+  app.style.setProperty('--app-zoom-scale', pinchZoomScale.toFixed(3));
+}
 function setPinchZoomEnabled(enabled, { persist = true } = {}) {
   pinchZoomEnabled = Boolean(enabled);
   if (!pinchZoomEnabled) {
@@ -1074,7 +1079,7 @@ function setPinchZoomEnabled(enabled, { persist = true } = {}) {
     try { localStorage.setItem(PINCH_ZOOM_ENABLED_KEY, pinchZoomEnabled ? '1' : '0'); } catch (_) {}
   }
   updateViewportForPinch(pinchZoomEnabled);
-  scheduleSceneRefresh({ label: 'pinch-zoom-toggle' });
+  applyZoomScaleToApp();
   toast(pinchZoomEnabled ? 'Zoom pinch attivo' : 'Zoom pinch disattivato');
 }
 function applyPinchZoomPreference() {
@@ -1087,6 +1092,7 @@ function applyPinchZoomPreference() {
     pinchZoomScale = 1.0;
   }
   updateViewportForPinch(pinchZoomEnabled);
+  applyZoomScaleToApp();
 }
 function initPinchZoom() {
   const app = document.getElementById('app');
@@ -1111,7 +1117,7 @@ function initPinchZoom() {
     const next = Math.min(PINCH_ZOOM_MAX, Math.max(PINCH_ZOOM_MIN, startScale * (dist / startDist)));
     if (Math.abs(next - pinchZoomScale) > 0.005) {
       pinchZoomScale = next;
-      sizeGrid();
+      applyZoomScaleToApp();
     }
   }, { passive: false });
 
@@ -1515,7 +1521,6 @@ function sizeGrid() {
     sq = Math.max(120, Math.floor(desktopLike ? availW : Math.min(availH, availW)));
   }
 
-  sq = Math.round(sq * pinchZoomScale);
   grid.style.width  = sq + 'px';
   grid.style.height = sq + 'px';
   wrap.style.height = sq + 'px'; // shrink wrap to exact grid size, no extra space

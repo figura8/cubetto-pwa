@@ -70,6 +70,7 @@
       --app-center-shift-x: -50%;
       --app-reveal-y: 0px;
       --app-reveal-scale: 1;
+      --app-zoom-scale: 1;
       position: fixed;
       left: 50%;
       top: 0;
@@ -82,7 +83,7 @@
       padding: calc(6px + var(--safe-top)) 12px calc(12px + var(--safe-bottom));
       gap: 8px;
       transform-origin: 50% 50%;
-      transform: translateX(var(--app-center-shift-x)) translateY(var(--app-reveal-y)) scale(var(--app-reveal-scale));
+      transform: translateX(var(--app-center-shift-x)) translateY(var(--app-reveal-y)) scale(calc(var(--app-reveal-scale) * var(--app-zoom-scale)));
     }
     #editorLayout,
     #editorMain {
