@@ -1057,6 +1057,13 @@ function applyTabletLayoutPreference() {
     setTabletLayout(false, { persist: false, announce: false });
   }
 }
+function updateViewportForPinch(enabled) {
+  const meta = document.querySelector('meta[name="viewport"]');
+  if (!meta) return;
+  meta.content = enabled
+    ? 'width=device-width, initial-scale=1.0, viewport-fit=cover'
+    : 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
+}
 function setPinchZoomEnabled(enabled, { persist = true } = {}) {
   pinchZoomEnabled = Boolean(enabled);
   if (!pinchZoomEnabled) {
@@ -1066,6 +1073,7 @@ function setPinchZoomEnabled(enabled, { persist = true } = {}) {
   if (persist) {
     try { localStorage.setItem(PINCH_ZOOM_ENABLED_KEY, pinchZoomEnabled ? '1' : '0'); } catch (_) {}
   }
+  updateViewportForPinch(pinchZoomEnabled);
   scheduleSceneRefresh({ label: 'pinch-zoom-toggle' });
   toast(pinchZoomEnabled ? 'Zoom pinch attivo' : 'Zoom pinch disattivato');
 }
@@ -1078,6 +1086,7 @@ function applyPinchZoomPreference() {
     pinchZoomEnabled = false;
     pinchZoomScale = 1.0;
   }
+  updateViewportForPinch(pinchZoomEnabled);
 }
 function initPinchZoom() {
   const app = document.getElementById('app');
