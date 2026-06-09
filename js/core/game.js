@@ -1522,7 +1522,9 @@ function sizeGrid() {
   sq = Math.round(sq * pinchZoomScale);
   grid.style.width  = sq + 'px';
   grid.style.height = sq + 'px';
-  wrap.style.height = sq + 'px'; // shrink wrap to exact grid size, no extra space
+  wrap.style.width  = sq + 'px';
+  wrap.style.maxWidth = 'none';
+  wrap.style.height = sq + 'px';
   renderGridDecorations();
   sizeGoalCanvasLayers();
 }
