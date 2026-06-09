@@ -8,6 +8,10 @@
     onBeforeOpen = () => {},
     onResetProgress = () => {},
     onMainMenu = () => {},
+    onToggleTabletLayout = () => {},
+    isTabletLayout = () => false,
+    onTogglePinchZoom = () => {},
+    isPinchZoomEnabled = () => false,
     toast = () => {}
   } = {}) {
     let settingsOpen = false;
@@ -39,6 +43,18 @@
         header.setAttribute('aria-label', headerLabel);
         header.setAttribute('title', headerLabel);
       }
+      const tabletBtn = document.getElementById('settingsTabletBtn');
+      const tabletSwitch = document.getElementById('settingsTabletSwitch');
+      const tabletEnabled = isTabletLayout();
+      if (tabletBtn) tabletBtn.setAttribute('aria-pressed', tabletEnabled ? 'true' : 'false');
+      if (tabletSwitch) tabletSwitch.classList.toggle('is-on', tabletEnabled);
+
+      const pinchBtn = document.getElementById('settingsPinchBtn');
+      const pinchSwitch = document.getElementById('settingsPinchSwitch');
+      const pinchEnabled = isPinchZoomEnabled();
+      if (pinchBtn) pinchBtn.setAttribute('aria-pressed', pinchEnabled ? 'true' : 'false');
+      if (pinchSwitch) pinchSwitch.classList.toggle('is-on', pinchEnabled);
+
       if (sfxBtn) sfxBtn.setAttribute('aria-pressed', sfxEnabled ? 'true' : 'false');
       if (sfxSwitch) sfxSwitch.classList.toggle('is-on', sfxEnabled);
       if (musicSlider) musicSlider.value = String(Math.round(musicVolume * 100));
@@ -132,6 +148,14 @@
         toggle();
       });
       document.getElementById('closeSettingsBtn')?.addEventListener('click', close);
+      document.getElementById('settingsTabletBtn')?.addEventListener('click', () => {
+        onToggleTabletLayout();
+        sync();
+      });
+      document.getElementById('settingsPinchBtn')?.addEventListener('click', () => {
+        onTogglePinchZoom();
+        sync();
+      });
       document.getElementById('settingsSfxBtn')?.addEventListener('click', () => {
         const audioState = getAudioState();
         setSoundEffectsEnabled(!(audioState.soundEffectsEnabled !== false));

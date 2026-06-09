@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect y="-7" width="512" height="442" fill="#FFEBCF" stroke="#F5C99D" stroke-width="3" stroke-miterlimit="10"/>
+  <rect y="435" width="512" height="77" fill="#FAD7B6" stroke="#F5C99D" stroke-width="4" stroke-miterlimit="10"/>
+  <!-- tablet outline -->
+  <rect x="136" y="80" width="240" height="352" rx="24" ry="24" fill="#ffffff" stroke="#D6B98A" stroke-width="12"/>
+  <!-- screen -->
+  <rect x="158" y="108" width="196" height="288" rx="8" ry="8" fill="#D4EDFF"/>
+  <!-- home button -->
+  <circle cx="256" cy="404" r="16" fill="#E8D4B0" stroke="#C9B08A" stroke-width="6"/>
+</svg>

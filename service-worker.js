@@ -31,6 +31,8 @@ const PRECACHE_URLS = [
   './assets/animations/characters/boks_red/manifest.js',
   './assets/animations/characters/boks_blu/manifest.js',
   './assets/ui/brand/boks-logo.svg',
+  './assets/ui/settings/tablet.svg',
+  './assets/ui/settings/pinch.svg',
   './assets/audio/music/game_loop_main.mp3',
   './assets/audio/music/level_01_intro_main.ogg',
   './assets/audio/sfx/gameplay/step_move_02.mp3',

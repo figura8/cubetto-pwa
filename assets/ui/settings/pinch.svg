@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect y="-7" width="512" height="442" fill="#FFEBCF" stroke="#F5C99D" stroke-width="3" stroke-miterlimit="10"/>
+  <rect y="435" width="512" height="77" fill="#FAD7B6" stroke="#F5C99D" stroke-width="4" stroke-miterlimit="10"/>
+  <!-- finger left -->
+  <ellipse cx="155" cy="310" rx="38" ry="52" fill="#fff" stroke="#D6B98A" stroke-width="10"/>
+  <rect x="117" y="260" width="76" height="120" rx="20" fill="#fff" stroke="#D6B98A" stroke-width="10"/>
+  <rect x="117" y="340" width="76" height="80" rx="10" fill="#FAD7B6" stroke="#D6B98A" stroke-width="8"/>
+  <!-- finger right -->
+  <ellipse cx="357" cy="310" rx="38" ry="52" fill="#fff" stroke="#D6B98A" stroke-width="10"/>
+  <rect x="319" y="260" width="76" height="120" rx="20" fill="#fff" stroke="#D6B98A" stroke-width="10"/>
+  <rect x="319" y="340" width="76" height="80" rx="10" fill="#FAD7B6" stroke="#D6B98A" stroke-width="8"/>
+  <!-- arrows spreading out -->
+  <line x1="200" y1="230" x2="150" y2="170" stroke="#C41616" stroke-width="14" stroke-linecap="round"/>
+  <polyline points="148,200 148,168 180,168" fill="none" stroke="#C41616" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="312" y1="230" x2="362" y2="170" stroke="#C41616" stroke-width="14" stroke-linecap="round"/>
+  <polyline points="364,200 364,168 332,168" fill="none" stroke="#C41616" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

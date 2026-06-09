@@ -410,6 +410,12 @@ const EDITOR_LEVELS_STORAGE_KEY = 'boks-editor-levels-v1';
 const PROJECT_LEVELS_CACHE_KEY = 'boks-project-levels-cache-v1';
 const STYLE_PRESETS_STORAGE_KEY = 'boks-style-presets-v1';
 const TABLET_LAYOUT_STORAGE_KEY = 'boks-tablet-layout-enabled';
+const PINCH_ZOOM_ENABLED_KEY    = 'boks-pinch-zoom-enabled';
+const PINCH_ZOOM_SCALE_KEY      = 'boks-pinch-zoom-scale';
+const PINCH_ZOOM_MIN = 0.6;
+const PINCH_ZOOM_MAX = 1.5;
+let pinchZoomEnabled = false;
+let pinchZoomScale   = 1.0;
 const EDITOR_LEVELS_FILE_PATH = './data/editor-levels.json';
 const EDITOR_LEVELS_FILE_PICKER_SUGGESTED_NAME = 'editor-levels.json';
 const FILE_HANDLE_DB_NAME = 'boks-file-handles';
@@ -1031,12 +1037,83 @@ function setTabletLayout(enabled, { persist = true, announce = true } = {}) {
 function toggleTabletLayout() {
   setTabletLayout(!document.body.classList.contains('tablet-layout'));
 }
+function isLikelyTabletOrMobile() {
+  const touch = navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
+  const w = window.screen?.width ?? window.innerWidth;
+  const h = window.screen?.height ?? window.innerHeight;
+  const minDim = Math.min(w, h);
+  const maxDim = Math.max(w, h);
+  return touch && minDim >= 600 && maxDim >= 800;
+}
 function applyTabletLayoutPreference() {
   try {
-    setTabletLayout(localStorage.getItem(TABLET_LAYOUT_STORAGE_KEY) === '1', { persist: false, announce: false });
+    const stored = localStorage.getItem(TABLET_LAYOUT_STORAGE_KEY);
+    if (stored !== null) {
+      setTabletLayout(stored === '1', { persist: false, announce: false });
+    } else {
+      setTabletLayout(isLikelyTabletOrMobile(), { persist: true, announce: false });
+    }
   } catch (_) {
     setTabletLayout(false, { persist: false, announce: false });
   }
+}
+function setPinchZoomEnabled(enabled, { persist = true } = {}) {
+  pinchZoomEnabled = Boolean(enabled);
+  if (!pinchZoomEnabled) {
+    pinchZoomScale = 1.0;
+    try { localStorage.removeItem(PINCH_ZOOM_SCALE_KEY); } catch (_) {}
+  }
+  if (persist) {
+    try { localStorage.setItem(PINCH_ZOOM_ENABLED_KEY, pinchZoomEnabled ? '1' : '0'); } catch (_) {}
+  }
+  scheduleSceneRefresh({ label: 'pinch-zoom-toggle' });
+  toast(pinchZoomEnabled ? 'Zoom pinch attivo' : 'Zoom pinch disattivato');
+}
+function applyPinchZoomPreference() {
+  try {
+    pinchZoomEnabled = localStorage.getItem(PINCH_ZOOM_ENABLED_KEY) === '1';
+    const stored = parseFloat(localStorage.getItem(PINCH_ZOOM_SCALE_KEY));
+    pinchZoomScale = (Number.isFinite(stored) && stored >= PINCH_ZOOM_MIN && stored <= PINCH_ZOOM_MAX) ? stored : 1.0;
+  } catch (_) {
+    pinchZoomEnabled = false;
+    pinchZoomScale = 1.0;
+  }
+}
+function initPinchZoom() {
+  const app = document.getElementById('app');
+  if (!app) return;
+  let startDist = null;
+  let startScale = 1.0;
+
+  app.addEventListener('touchstart', e => {
+    if (!pinchZoomEnabled || e.touches.length !== 2) return;
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    startDist  = Math.hypot(dx, dy);
+    startScale = pinchZoomScale;
+  }, { passive: true });
+
+  app.addEventListener('touchmove', e => {
+    if (!pinchZoomEnabled || e.touches.length !== 2 || startDist === null) return;
+    e.preventDefault();
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const dist = Math.hypot(dx, dy);
+    const next = Math.min(PINCH_ZOOM_MAX, Math.max(PINCH_ZOOM_MIN, startScale * (dist / startDist)));
+    if (Math.abs(next - pinchZoomScale) > 0.005) {
+      pinchZoomScale = next;
+      sizeGrid();
+    }
+  }, { passive: false });
+
+  app.addEventListener('touchend', e => {
+    if (e.touches.length < 2) {
+      if (startDist !== null) {
+        try { localStorage.setItem(PINCH_ZOOM_SCALE_KEY, pinchZoomScale.toFixed(3)); } catch (_) {}
+        startDist = null;
+      }
+    }
+  }, { passive: true });
 }
 function getCurrentFullscreenElement() {
   return document.fullscreenElement
@@ -1429,6 +1506,7 @@ function sizeGrid() {
     sq = Math.max(120, Math.floor(desktopLike ? availW : Math.min(availH, availW)));
   }
 
+  sq = Math.round(sq * pinchZoomScale);
   grid.style.width  = sq + 'px';
   grid.style.height = sq + 'px';
   wrap.style.height = sq + 'px'; // shrink wrap to exact grid size, no extra space
@@ -8193,6 +8271,10 @@ settingsPanel = window.BOKS_SETTINGS_PANEL.create({
   onBeforeOpen: () => closeSaveLevelModal(),
   onResetProgress: resetJourneyProgress,
   onMainMenu: () => returnToMainMenu(),
+  onToggleTabletLayout: toggleTabletLayout,
+  isTabletLayout: () => document.body.classList.contains('tablet-layout'),
+  onTogglePinchZoom: () => setPinchZoomEnabled(!pinchZoomEnabled),
+  isPinchZoomEnabled: () => pinchZoomEnabled,
   toast
 });
 settingsPanel.bindEvents();
@@ -8323,6 +8405,8 @@ function refreshSceneAfterAppResume() {
 }
 
 applyTabletLayoutPreference();
+applyPinchZoomPreference();
+initPinchZoom();
 
 // ri-entra in fullscreen se l'utente torna sull'app (es. dopo notifica)
 document.addEventListener('visibilitychange', () => {
