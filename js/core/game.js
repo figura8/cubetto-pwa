@@ -8365,6 +8365,15 @@ document.addEventListener('keydown', e => {
     toggleTabletLayout();
     return;
   }
+  if (key === 'i' || key === 'o') {
+    e.preventDefault();
+    const step = 0.05;
+    pinchZoomScale = Math.min(PINCH_ZOOM_MAX, Math.max(PINCH_ZOOM_MIN, pinchZoomScale + (key === 'i' ? step : -step)));
+    applyZoomScaleToApp();
+    try { localStorage.setItem(PINCH_ZOOM_SCALE_KEY, pinchZoomScale.toFixed(3)); } catch (_) {}
+    toast(`Zoom ${Math.round(pinchZoomScale * 100)}%`);
+    return;
+  }
   if (key === 'l') {
     toggleDebugBadge();
     return;
