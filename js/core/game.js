@@ -1067,7 +1067,7 @@ function updateViewportForPinch(enabled) {
 function applyZoomScaleToApp() {
   const app = document.getElementById('app');
   if (!app) return;
-  app.style.setProperty('--app-zoom-scale', pinchZoomScale.toFixed(3));
+  app.style.zoom = pinchZoomScale === 1.0 ? '' : pinchZoomScale.toFixed(3);
 }
 function setPinchZoomEnabled(enabled, { persist = true } = {}) {
   pinchZoomEnabled = Boolean(enabled);
