@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v34';
+const CACHE_VERSION = 'v35';
 const SHELL_CACHE = `cubetto-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `cubetto-runtime-${CACHE_VERSION}`;
 const FONTS_CACHE = `cubetto-fonts-${CACHE_VERSION}`;
@@ -35,6 +35,13 @@ const PRECACHE_URLS = [
   './assets/ui/settings/pinch.svg',
   './assets/audio/music/game_loop_main.mp3',
   './assets/audio/music/level_01_intro_main.ogg',
+  './assets/audio/sfx/ui/block_detach.ogg',
+  './assets/audio/sfx/ui/block_drop_success.mp3',
+  './assets/audio/sfx/ui/slot_hover.mp3',
+  './assets/audio/sfx/ui/play_press_main.mp3',
+  './assets/audio/sfx/gameplay/boks_annoyed.ogg',
+  './assets/audio/sfx/gameplay/decor_rubber_tap_01.ogg',
+  './assets/audio/sfx/gameplay/decor_rubber_tap_02.ogg',
   './assets/audio/sfx/gameplay/step_move_02.mp3',
   './assets/audio/sfx/gameplay/effort.mp3',
   './assets/audio/sfx/gameplay/error_action.mp3',
@@ -146,10 +153,66 @@ self.addEventListener('fetch', event => {
   }
 
   if (isStaticAssetRequest(url)) {
+    if (request.headers.has('range')) {
+      event.respondWith(rangeAwareResponse(request, RUNTIME_CACHE));
+      return;
+    }
     event.respondWith(staleWhileRevalidate(request, RUNTIME_CACHE));
     return;
   }
 });
+
+// Audio/video elements (especially Chrome on Android) issue requests with a
+// `Range:` header. A plain cached 200 response is rejected for a Range request,
+// so offline media playback fails. When we already hold the full asset in the
+// cache, slice out the requested byte range and answer with a 206 ourselves.
+async function rangeAwareResponse(request, cacheName) {
+  const cached = await matchCached(request);
+  if (!cached) {
+    // Not cached yet: go to the network and let the server handle the range.
+    try {
+      return await fetch(request);
+    } catch (_err) {
+      return staleWhileRevalidate(stripSearch(request), cacheName);
+    }
+  }
+
+  const rangeHeader = request.headers.get('range') || '';
+  const match = /bytes=(\d*)-(\d*)/.exec(rangeHeader);
+  const buffer = await cached.arrayBuffer();
+  const total = buffer.byteLength;
+
+  if (!match) {
+    return new Response(buffer, {
+      status: 200,
+      headers: cached.headers
+    });
+  }
+
+  const start = match[1] ? parseInt(match[1], 10) : 0;
+  const end = match[2] ? parseInt(match[2], 10) : total - 1;
+  if (start >= total || start > end) {
+    return new Response(null, {
+      status: 416,
+      headers: { 'Content-Range': `bytes */${total}` }
+    });
+  }
+
+  const clampedEnd = Math.min(end, total - 1);
+  const slice = buffer.slice(start, clampedEnd + 1);
+  const headers = new Headers(cached.headers);
+  headers.set('Content-Range', `bytes ${start}-${clampedEnd}/${total}`);
+  headers.set('Accept-Ranges', 'bytes');
+  headers.set('Content-Length', String(slice.byteLength));
+
+  return new Response(slice, { status: 206, statusText: 'Partial Content', headers });
+}
+
+function stripSearch(request) {
+  const url = new URL(request.url);
+  url.search = '';
+  return new Request(url.toString(), { headers: request.headers });
+}
 
 function isStaticAssetRequest(url) {
   return (
@@ -192,10 +255,14 @@ async function networkFirst(request, cacheName, fallbackUrl = '') {
 async function staleWhileRevalidate(request, cacheName) {
   const cache = await caches.open(cacheName);
   const cached = await cache.match(request, { ignoreSearch: true });
+  // Store under the search-stripped URL so the cache key matches the precache
+  // entries (which have no `?v=build`) and we don't accumulate one duplicate
+  // copy per build.
+  const cacheKey = stripSearch(request);
   const fetchPromise = fetch(request)
     .then(response => {
       if (isCacheableResponse(response)) {
-        cache.put(request, response.clone());
+        cache.put(cacheKey, response.clone());
       }
       return response;
     })
