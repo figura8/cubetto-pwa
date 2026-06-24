@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v37';
+const CACHE_VERSION = 'v37-live-20260624-203722';
 const SHELL_CACHE = `cubetto-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `cubetto-runtime-${CACHE_VERSION}`;
 const FONTS_CACHE = `cubetto-fonts-${CACHE_VERSION}`;
@@ -19,8 +19,6 @@ const PRECACHE_URLS = [
   './js/core/settings-panel.js',
   './js/core/game.js',
   './js/core/character/character-renderer.js',
-  './js/editor/solver.js',
-  './js/editor/level-editor.js',
   './js/editor/level-storage.js',
   './js/tutorial/tutorial-data.js',
   './js/tutorial/tutorial-engine.js',
@@ -35,8 +33,6 @@ const PRECACHE_URLS = [
   './assets/ui/brand/boks-logo.svg',
   './assets/ui/settings/tablet.svg',
   './assets/ui/settings/pinch.svg',
-  './assets/audio/music/game_loop_main.mp3',
-  './assets/audio/music/level_01_intro_main.ogg',
   './assets/audio/sfx/ui/block_detach.ogg',
   './assets/audio/sfx/ui/block_drop_success.mp3',
   './assets/audio/sfx/ui/slot_hover.mp3',
@@ -46,17 +42,12 @@ const PRECACHE_URLS = [
   './assets/audio/sfx/gameplay/decor_rubber_tap_02.ogg',
   './assets/audio/sfx/gameplay/step_move_02.mp3',
   './assets/audio/sfx/gameplay/effort.mp3',
-  './assets/audio/sfx/gameplay/error_action.mp3',
   './assets/audio/sfx/gameplay/rotation_position.mp3',
   './assets/audio/sfx/gameplay/rotation_position_02.mp3',
-  './assets/audio/sfx/gameplay/bubble_pop_main.ogg',
-  './assets/audio/sfx/gameplay/goal_bubble_bounce.ogg',
-  './assets/audio/sfx/gameplay/level_complete_main.mp3',
   './assets/audio/sfx/gameplay/entrance_boks.mp3',
   './assets/audio/sfx/gameplay/reveal_bubble_01.mp3',
   './assets/audio/sfx/gameplay/element_reveal.mp3',
   './assets/audio/sfx/gameplay/play_reveal.mp3',
-  './assets/audio/sfx/gameplay/wellcome.mp3',
   './assets/audio/sfx/gameplay/01_but_if.mp3',
   './assets/audio/sfx/gameplay/01_hello_and_welcome.mp3',
   './assets/audio/sfx/gameplay/01_its_called_a_sequence.mp3',
