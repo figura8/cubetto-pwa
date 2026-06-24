@@ -66,11 +66,17 @@ function resolveStaticPath(urlPath) {
 }
 
 function sanitizeFilename(filename) {
-  return String(filename || '')
+  const sanitized = String(filename || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
     .replace(/[\\/:*?"<>|]+/g, '_')
     .replace(/\s+/g, '_')
+    .replace(/[^a-z0-9._-]+/g, '_')
+    .replace(/_+/g, '_')
     .replace(/^_+|_+$/g, '')
     || 'audio.mp3';
+  return /\.(mp3|ogg|wav|m4a)$/i.test(sanitized) ? sanitized : `${sanitized}.mp3`;
 }
 
 const server = http.createServer(async (req, res) => {

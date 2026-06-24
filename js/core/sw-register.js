@@ -19,6 +19,49 @@
         .catch(() => {});
     } else {
 
+    window.BOKS_OFFLINE_STATUS = window.BOKS_OFFLINE_STATUS || {
+      type: 'OFFLINE_UNKNOWN',
+      cacheVersion: '',
+      cacheName: '',
+      expected: 0,
+      cached: 0,
+      failed: 0,
+      failedUrls: [],
+      checkedAt: ''
+    };
+
+    function updateOfflineStatus(message = {}) {
+      if (!message || typeof message.type !== 'string' || !message.type.startsWith('OFFLINE_')) return;
+      window.BOKS_OFFLINE_STATUS = {
+        ...window.BOKS_OFFLINE_STATUS,
+        ...message
+      };
+      window.dispatchEvent(new CustomEvent('boks-offline-status', {
+        detail: window.BOKS_OFFLINE_STATUS
+      }));
+      if (message.failed > 0) {
+        console.warn('[BOKS offline]', window.BOKS_OFFLINE_STATUS);
+      } else {
+        console.info('[BOKS offline]', window.BOKS_OFFLINE_STATUS);
+      }
+    }
+
+    function verifyOfflineCache() {
+      const controller = navigator.serviceWorker.controller;
+      if (!controller) return false;
+      controller.postMessage({ type: 'VERIFY_OFFLINE_CACHE' });
+      return true;
+    }
+
+    window.BOKS_OFFLINE_CACHE = {
+      getStatus: () => window.BOKS_OFFLINE_STATUS,
+      verify: verifyOfflineCache
+    };
+
+    navigator.serviceWorker.addEventListener('message', event => {
+      updateOfflineStatus(event.data);
+    });
+
     let lastUpdateCheckAt = 0;
     function maybeUpdateRegistration(registration, minIntervalMs = 5 * 60 * 1000) {
       const now = Date.now();

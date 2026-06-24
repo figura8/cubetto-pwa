@@ -793,6 +793,20 @@
       });
     }
 
+    function sanitizeAudioFilename(filename) {
+      const sanitized = String(filename || '')
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[\\/:*?"<>|]+/g, '_')
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9._-]+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        || 'audio.mp3';
+      return /\.(mp3|ogg|wav|m4a)$/i.test(sanitized) ? sanitized : `${sanitized}.mp3`;
+    }
+
     function suggestAudioFilename(caption, index) {
       const words = String(caption || 'narration')
         .toLowerCase()
@@ -803,7 +817,7 @@
         .filter(Boolean)
         .slice(0, 5);
       const slug = words.length ? words.join('_') : 'narration';
-      return `${String(index).padStart(2, '0')}_${slug}.mp3`;
+      return sanitizeAudioFilename(`${String(index).padStart(2, '0')}_${slug}.mp3`);
     }
 
     function getNarrationIndex(sequence, targetBeat) {
@@ -1317,7 +1331,9 @@
       }
       if (key === 'audioFilename') {
         beat.audioFilenameEdited = true;
-        const filename = String(beat.audioFilename || '').trim();
+        const filename = sanitizeAudioFilename(beat.audioFilename || '');
+        beat.audioFilename = filename;
+        event.target.value = filename;
         if (state.repoAudioFiles.includes(filename)) {
           state.audioAttachments.delete(beat._editorId);
           beat.audioSource = getRepoAudioPath(beat);
@@ -1344,16 +1360,17 @@
         try { URL.revokeObjectURL(previousAttachment.objectUrl); } catch (_err) {}
       }
       const objectUrl = URL.createObjectURL(file);
-      const repoAudioPath = `assets/audio/sfx/gameplay/${file.name}`;
+      const filename = sanitizeAudioFilename(file.name);
+      const repoAudioPath = `assets/audio/sfx/gameplay/${filename}`;
       state.audioAttachments.set(beat._editorId, {
         kind: 'file',
         file,
-        name: file.name,
+        name: filename,
         objectUrl
       });
-      beat.audioFilename = file.name;
+      beat.audioFilename = filename;
       beat.audioFilenameEdited = true;
-      beat.audioDisplayName = file.name;
+      beat.audioDisplayName = filename;
       beat.audioSource = repoAudioPath;
       beat.audioDraftDataUrl = await fileToDataUrl(file).catch(() => '');
       beat.audioDraftBase64 = beat.audioDraftDataUrl ? String(beat.audioDraftDataUrl).split(',')[1] || '' : '';

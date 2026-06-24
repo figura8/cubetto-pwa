@@ -213,7 +213,7 @@ export const tutorialData = {
           "type": "Narration",
           "caption": "But how do we see in action?",
           "durationMs": 3000,
-          "audioSrc": "assets/audio/sfx/gameplay/tutorial_21_But_do_we_see_in_action.mp3"
+          "audioSrc": "assets/audio/sfx/gameplay/tutorial_21_but_do_we_see_in_action.mp3"
         },
         {
           "type": "Pause",

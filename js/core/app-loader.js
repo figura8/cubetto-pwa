@@ -6,6 +6,15 @@
   const debugToolsEnabled = body?.dataset.debugToolsEnabled !== 'false';
   const buildBadgeEnabled = body?.dataset.buildBadgeEnabled !== 'false';
   const lightweightCharacterModeSetting = body?.dataset.lightweightCharacterMode || 'auto';
+  const audioDiagnosticsEnabled = (() => {
+    try {
+      const url = new URL(window.location.href);
+      return url.searchParams.get('audioDebug') === '1'
+        || window.localStorage?.getItem('boks-audio-debug') === '1';
+    } catch (_err) {
+      return false;
+    }
+  })();
   const perfNow = () => window.performance?.now?.() || Date.now();
   const perfEntries = [];
   const perfMarks = new Map();
@@ -52,6 +61,7 @@
     editorEnabled,
     debugToolsEnabled,
     buildBadgeEnabled,
+    audioDiagnosticsEnabled,
     lowEndDevice,
     lightweightCharacterMode: lowEndDevice,
     perf: {
@@ -284,6 +294,9 @@
       await loadScript(file);
     }
     scheduleDeferredScript('js/core/sw-register.js', 1200);
+    if (audioDiagnosticsEnabled) {
+      scheduleDeferredScript('js/core/offline-audio-diagnostics.js', 1600);
+    }
     markPerfEnd('bootstrap-total', { type: 'bootstrap' });
   })().catch(err => {
     console.error('App bootstrap failed:', err);

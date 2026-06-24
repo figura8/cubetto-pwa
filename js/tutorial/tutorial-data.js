@@ -180,7 +180,7 @@
         "type": "narration",
         "text": "But how do we see in action?",
         "durationMs": 3000,
-        "audio": "assets/audio/sfx/gameplay/tutorial_21_But_do_we_see_in_action.mp3"
+        "audio": "assets/audio/sfx/gameplay/tutorial_21_but_do_we_see_in_action.mp3"
       },
       {
         "id": "2-9-pause",
