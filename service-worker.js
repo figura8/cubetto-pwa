@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v37';
+const CACHE_VERSION = 'v38';
 const SHELL_CACHE = `cubetto-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `cubetto-runtime-${CACHE_VERSION}`;
 const FONTS_CACHE = `cubetto-fonts-${CACHE_VERSION}`;
@@ -248,21 +248,24 @@ function stripSearch(request) {
 }
 
 function isStaticAssetRequest(url) {
+  const scopePath = new URL(self.registration.scope).pathname.replace(/\/$/, '');
+  let pathname = url.pathname;
+  if (scopePath && pathname.startsWith(`${scopePath}/`)) {
+    pathname = pathname.slice(scopePath.length);
+  }
+  const [topLevel] = pathname.split('/').filter(Boolean);
   return (
-    url.pathname.startsWith('/assets/')
-    || url.pathname.startsWith('/icons/')
-    || url.pathname.startsWith('/js/')
-    || url.pathname.startsWith('/styles/')
-    || url.pathname.endsWith('.json')
-    || url.pathname.endsWith('.svg')
-    || url.pathname.endsWith('.png')
-    || url.pathname.endsWith('.jpg')
-    || url.pathname.endsWith('.jpeg')
-    || url.pathname.endsWith('.webp')
-    || url.pathname.endsWith('.mp3')
-    || url.pathname.endsWith('.ogg')
-    || url.pathname.endsWith('.ttf')
-    || url.pathname.endsWith('.woff2')
+    ['assets', 'icons', 'js', 'styles'].includes(topLevel)
+    || pathname.endsWith('.json')
+    || pathname.endsWith('.svg')
+    || pathname.endsWith('.png')
+    || pathname.endsWith('.jpg')
+    || pathname.endsWith('.jpeg')
+    || pathname.endsWith('.webp')
+    || pathname.endsWith('.mp3')
+    || pathname.endsWith('.ogg')
+    || pathname.endsWith('.ttf')
+    || pathname.endsWith('.woff2')
   );
 }
 
