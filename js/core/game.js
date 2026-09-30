@@ -601,6 +601,7 @@ const decorationFxState = {
 };
 const decorationTouchCooldowns = new Map();
 let editorStylePanelOpen = false;
+let editorWorkspaceTab = 'elements';
 let pendingNewLevelThemeOverrides = {};
 let pendingNewLevelCharacterId = DEFAULT_CHARACTER_ID;
 let pendingNewLevelHints = {};
@@ -5117,6 +5118,7 @@ function applyCustomLevel(level, { openEditor = false } = {}) {
   document.body.classList.toggle('editor-mode', editorMode);
   document.body.classList.toggle('editor-style-open', !!(editorMode && editorStylePanelOpen));
   updateStyleEditorButtons();
+  syncEditorWorkspaceTabs();
   initGrid();
   renderAvail();
   renderBoard();
@@ -5170,11 +5172,28 @@ function updateStyleEditorButtons() {
   }
 }
 
+function syncEditorWorkspaceTabs() {
+  const activeTab = editorStylePanelOpen ? 'style' : editorWorkspaceTab;
+  const elementsTab = document.getElementById('editorElementsTab');
+  const decorationsTab = document.getElementById('editorDecorationsTab');
+  const styleTab = document.getElementById('editorStyleTab');
+  const elementsPane = document.getElementById('editorElementsPane');
+  const decorationsPane = document.getElementById('editorDecorationsPane');
+  const stylePane = document.getElementById('editorStylePane');
+  elementsTab?.setAttribute('aria-selected', activeTab === 'elements' ? 'true' : 'false');
+  decorationsTab?.setAttribute('aria-selected', activeTab === 'decorations' ? 'true' : 'false');
+  styleTab?.setAttribute('aria-selected', activeTab === 'style' ? 'true' : 'false');
+  elementsPane?.classList.toggle('is-active', activeTab === 'elements');
+  decorationsPane?.classList.toggle('is-active', activeTab === 'decorations');
+  stylePane?.classList.toggle('is-active', activeTab === 'style');
+}
+
 function setEditorStylePanelOpen(open) {
   const next = !!(editorMode && open);
   editorStylePanelOpen = next;
   document.body.classList.toggle('editor-style-open', next);
   updateStyleEditorButtons();
+  syncEditorWorkspaceTabs();
   renderElementPalette();
   renderThemeEditorPanel();
 }
@@ -5523,13 +5542,17 @@ function renderDecorationPalette(palette) {
 function renderElementPalette() {
   const panel = document.getElementById('elementPalettePanel');
   const palette = document.getElementById('elementPalette');
+  const decorationPanel = document.getElementById('decorationPalettePanel');
+  const decorationPalette = document.getElementById('decorationPalette');
   if (!panel || !palette) {
     renderThemeEditorPanel();
     return;
   }
   panel.style.display = (editorMode && !editorStylePanelOpen) ? 'block' : 'none';
+  if (decorationPanel) decorationPanel.style.display = (editorMode && !editorStylePanelOpen) ? 'block' : 'none';
   if (!editorMode) {
     palette.innerHTML = '';
+    if (decorationPalette) decorationPalette.innerHTML = '';
     renderThemeEditorPanel();
     return;
   }
@@ -5604,7 +5627,10 @@ function renderElementPalette() {
       palette.appendChild(removeBtn);
     }
   });
-  renderDecorationPalette(palette);
+  if (decorationPalette) {
+    decorationPalette.innerHTML = '';
+    renderDecorationPalette(decorationPalette);
+  }
   renderEditorSetupControls(palette);
   renderThemeEditorPanel();
 }
@@ -8408,6 +8434,15 @@ document.getElementById('saveLevelBtn')?.addEventListener('click', openSaveLevel
 document.getElementById('openStyleEditorBtn')?.addEventListener('click', toggleStyleEditorPanel);
 document.getElementById('openVfxEditorBtn')?.addEventListener('click', openVfxTool);
 document.getElementById('closeStyleEditorBtn')?.addEventListener('click', () => setEditorStylePanelOpen(false));
+document.getElementById('editorElementsTab')?.addEventListener('click', () => {
+  editorWorkspaceTab = 'elements';
+  setEditorStylePanelOpen(false);
+});
+document.getElementById('editorDecorationsTab')?.addEventListener('click', () => {
+  editorWorkspaceTab = 'decorations';
+  setEditorStylePanelOpen(false);
+});
+document.getElementById('editorStyleTab')?.addEventListener('click', () => setEditorStylePanelOpen(true));
 document.getElementById('applyThemeStyleBtn')?.addEventListener('click', () => { void applyCurrentStyleToSelectedLevel(); });
 document.getElementById('resetThemeColorsBtn')?.addEventListener('click', resetCurrentEditorThemeOverrides);
 document.getElementById('saveStylePresetBtn')?.addEventListener('click', saveCurrentStylePreset);

@@ -2584,7 +2584,8 @@
       color: #7f6d50;
       letter-spacing: 0.01em;
     }
-    #elementPalettePanel {
+    #elementPalettePanel,
+    #decorationPalettePanel {
       width: 100%;
       max-width: 460px;
       padding: 12px;
@@ -2595,7 +2596,8 @@
       backdrop-filter: blur(4px);
       display: none;
     }
-    body.editor-mode #elementPalettePanel {
+    body.editor-mode #elementPalettePanel,
+    body.editor-mode #decorationPalettePanel {
       display: block;
     }
     .custom-levels-head h3 {
@@ -4765,6 +4767,233 @@
     body.low-end-device .ending-message,
     body.low-end-device .ending-return-btn {
       backdrop-filter: none !important;
+    }
+
+    /* ── Level editor: three-column workspace ── */
+    #editorLeft,
+    #editorCenter {
+      width: 100%;
+    }
+    #editorCenter {
+      display: contents;
+    }
+    .editor-tabs {
+      display: none;
+    }
+    .editor-tab-pane {
+      min-width: 0;
+    }
+    .editor-new-level-label {
+      display: none;
+    }
+
+    @media (pointer: fine) and (min-width: 1120px) {
+      body.editor-mode {
+        --editor-left-w: clamp(250px, 20vw, 300px);
+        --editor-center-w: minmax(360px, 1fr);
+        --editor-board-w: minmax(460px, 600px);
+      }
+      body.editor-mode #app {
+        width: min(1520px, calc(100vw - 32px));
+        padding: 16px;
+      }
+      body.editor-mode #editorLayout {
+        display: grid;
+        grid-template-columns: var(--editor-left-w) var(--editor-center-w) var(--editor-board-w);
+        align-items: start;
+        gap: 20px;
+        width: 100%;
+      }
+      body.editor-mode #editorLeft,
+      body.editor-mode #editorCenter {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-width: 0;
+      }
+      body.editor-mode #buildBadge {
+        position: static;
+        inset: auto;
+        z-index: auto;
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+        box-sizing: border-box;
+        margin: 0;
+        padding: 8px 10px;
+        transform: none;
+      }
+      body.editor-mode #editorCenter {
+        align-self: start;
+        max-height: calc(100vh - 32px);
+      }
+      body.editor-mode #editorMain {
+        position: sticky;
+        top: 16px;
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+        gap: 8px;
+      }
+      body.editor-mode #header,
+      body.editor-mode #gameplayViewport,
+      body.editor-mode #gameplaySurface,
+      body.editor-mode #gridWrap,
+      body.editor-mode #bottomWrap,
+      body.editor-mode #bottom {
+        width: 100%;
+        max-width: none;
+      }
+      body.editor-mode #editorToolbar {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+      body.editor-mode #exitEditorBtn {
+        grid-column: span 2;
+      }
+      body.editor-mode #customLevelsPanel,
+      body.editor-mode #elementPalettePanel,
+      body.editor-mode #decorationPalettePanel,
+      body.editor-mode #levelThemePanel {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 12px;
+        box-sizing: border-box;
+      }
+      body.editor-mode #customLevelsPanel {
+        display: block;
+      }
+      body.editor-mode #customLevelsList {
+        max-height: calc(100vh - 285px);
+        padding-right: 3px;
+      }
+      body.editor-mode .editor-new-level-label {
+        display: block;
+        margin: -2px 0 8px;
+        color: #8a775b;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+      }
+      body.editor-mode .editor-tabs {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 4px;
+        padding: 4px;
+        border: 2px solid rgba(210, 201, 180, .9);
+        border-radius: 14px;
+        background: rgba(255, 249, 234, .9);
+        box-shadow: 0 2px 0 #cdc2ab;
+      }
+      body.editor-mode .editor-tab {
+        min-height: 38px;
+        border: 0;
+        border-radius: 10px;
+        background: transparent;
+        color: #7a6750;
+        font-family: 'Fredoka', system-ui, sans-serif;
+        font-size: .86rem;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      body.editor-mode .editor-tab[aria-selected="true"] {
+        background: linear-gradient(180deg, #fffdf6 0%, #f0e5cf 100%);
+        color: #5f4e34;
+        box-shadow: 0 2px 0 rgba(149, 128, 92, .28);
+      }
+      body.editor-mode .editor-tab-pane {
+        display: none;
+        min-height: 0;
+        overflow: auto;
+        padding: 2px 4px 8px 0;
+      }
+      body.editor-mode .editor-tab-pane.is-active {
+        display: block;
+      }
+      body.editor-mode #editorElementsPane.is-active #elementPalettePanel,
+      body.editor-mode #editorDecorationsPane.is-active #decorationPalettePanel,
+      body.editor-mode #editorStylePane.is-active #levelThemePanel {
+        display: block !important;
+      }
+      body.editor-mode #editorElementsPane {
+        max-height: calc(100vh - 105px);
+      }
+      body.editor-mode #editorDecorationsPane {
+        max-height: calc(100vh - 105px);
+      }
+      body.editor-mode #editorStylePane {
+        max-height: calc(100vh - 105px);
+      }
+      body.editor-mode.editor-style-open #customLevelsPanel,
+      body.editor-mode.editor-style-open #elementPalettePanel {
+        display: block !important;
+      }
+      body.editor-mode #elementPalette {
+        gap: 8px;
+      }
+      body.editor-mode #themePicker,
+      body.editor-mode #characterPicker {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      body.editor-mode .theme-choice,
+      body.editor-mode .character-choice {
+        grid-template-columns: 42px minmax(0, 1fr);
+        gap: 7px;
+        min-height: 58px;
+        padding: 7px;
+      }
+      body.editor-mode .theme-choice-art,
+      body.editor-mode .character-choice-art {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+      }
+      body.editor-mode .theme-choice-title,
+      body.editor-mode .character-choice-title {
+        font-size: .8rem;
+      }
+      body.editor-mode .theme-choice-hint,
+      body.editor-mode .character-choice-hint {
+        display: none;
+      }
+      body.editor-mode #themeColorControls {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      body.editor-mode .theme-color-item {
+        grid-template-columns: minmax(0, 1fr) auto;
+      }
+      body.editor-mode .theme-color-reset {
+        display: none;
+      }
+    }
+
+    /* Editor status belongs to the left-column flow, not the workspace overlay. */
+    body.editor-mode #debugBadge {
+      position: static;
+      inset: auto;
+      z-index: auto;
+      display: block;
+      width: 100%;
+      max-width: none;
+      box-sizing: border-box;
+      margin: 0;
+      min-height: 0;
+      padding: 8px 10px;
+      border: 1px solid rgba(95, 78, 52, 0.28);
+      border-radius: 14px;
+      background: rgba(255, 250, 236, 0.94);
+      color: #5f4e34;
+      font-size: 0.78rem;
+      font-weight: 700;
+      line-height: 1.28;
+      letter-spacing: 0.1px;
+      box-shadow: 0 2px 7px rgba(95, 78, 52, 0.1);
+      white-space: normal;
+      transform: none;
+      pointer-events: none;
     }
 
     body.low-end-device .goal-light__bloom,

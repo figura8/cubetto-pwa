@@ -15,10 +15,18 @@
 
     function ensureDebugBadge() {
       let badge = document.getElementById('debugBadge');
-      if (badge) return badge;
-      badge = document.createElement('div');
-      badge.id = 'debugBadge';
-      document.body.appendChild(badge);
+      if (!badge) {
+        badge = document.createElement('div');
+        badge.id = 'debugBadge';
+      }
+      const editorLeft = document.getElementById('editorLeft');
+      const levelsPanel = document.getElementById('customLevelsPanel');
+      const editorActive = document.body.classList.contains('editor-mode');
+      if (editorActive && editorLeft) {
+        editorLeft.insertBefore(badge, levelsPanel || null);
+      } else if (badge.parentElement !== document.body) {
+        document.body.appendChild(badge);
+      }
       return badge;
     }
 
