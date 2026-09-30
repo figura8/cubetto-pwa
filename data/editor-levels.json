@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exportedAt": "2026-09-23T16:31:11.110Z",
+  "exportedAt": "2026-09-30T07:47:17.180Z",
   "levels": [
     {
       "id": "level1-step-1",
@@ -262,9 +262,9 @@
       "baseStepIndex": 2,
       "campaignIndex": 2,
       "name": "Livello 3",
-      "icon": "turtle",
+      "icon": "leaf",
       "baseLevel": "level1",
-      "characterId": "boks_yellow",
+      "characterId": "boks_city",
       "start": {
         "x": 3,
         "y": 2
@@ -274,7 +274,16 @@
         "y": 5
       },
       "startOri": "down",
-      "obstacles": [],
+      "obstacles": [
+        {
+          "x": 2,
+          "y": 5
+        },
+        {
+          "x": 4,
+          "y": 5
+        }
+      ],
       "decorations": [
         {
           "id": "decor-1775126242147-9cxf5",
@@ -374,7 +383,7 @@
       "enabledBlocks": {
         "forward": true,
         "left": false,
-        "right": true,
+        "right": false,
         "function": false
       },
       "themeOverrides": {
@@ -391,9 +400,9 @@
       "baseStepIndex": 3,
       "campaignIndex": 3,
       "name": "Livello 4",
-      "icon": "sun",
+      "icon": "leaf",
       "baseLevel": "level1",
-      "characterId": "boks_blu",
+      "characterId": "boks_green",
       "start": {
         "x": 5,
         "y": 3
@@ -405,8 +414,16 @@
       "startOri": "left",
       "obstacles": [
         {
-          "x": 4,
-          "y": 2
+          "x": 1,
+          "y": 5
+        },
+        {
+          "x": 2,
+          "y": 5
+        },
+        {
+          "x": 2,
+          "y": 4
         }
       ],
       "decorations": [
@@ -487,14 +504,92 @@
           "count": 5,
           "foliageColor": "",
           "trunkColor": ""
+        },
+        {
+          "id": "decor-1790740545245-p92mf",
+          "x": 1,
+          "y": 1,
+          "anchorX": 0.255,
+          "anchorY": 0.264,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1790740548622-j54az",
+          "x": 0,
+          "y": 2,
+          "anchorX": 0.118,
+          "anchorY": 0.44,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1790740549979-mrqxs",
+          "x": 2,
+          "y": 2,
+          "anchorX": 0.457,
+          "anchorY": 0.396,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1790740551116-oockc",
+          "x": 1,
+          "y": 4,
+          "anchorX": 0.272,
+          "anchorY": 0.731,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1790740552448-11yxi",
+          "x": 3,
+          "y": 4,
+          "anchorX": 0.618,
+          "anchorY": 0.761,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "decor-1790740554765-sf0nv",
+          "x": 2,
+          "y": 1,
+          "anchorX": 0.446,
+          "anchorY": 0.314,
+          "asset": "daisy_flower",
+          "layer": "object",
+          "scale": 0.9,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
         }
       ],
       "mainSlotEnabled": [
-        true,
-        true,
-        true,
-        true,
-        true,
+        false,
+        false,
+        false,
+        false,
+        false,
         false,
         false,
         false
@@ -506,8 +601,8 @@
         false
       ],
       "enabledBlocks": {
-        "forward": true,
-        "left": true,
+        "forward": false,
+        "left": false,
         "right": false,
         "function": false
       },
@@ -560,7 +655,10 @@
         "right": true,
         "function": false
       },
-      "themeOverrides": {},
+      "themeOverrides": {
+        "--panel-bg": "#a28439",
+        "--panel-edge": "#a9875b"
+      },
       "levelHints": {
         "availableBlockGlow": false
       }
