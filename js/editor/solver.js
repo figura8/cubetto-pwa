@@ -39,11 +39,12 @@
 
       const { cols, rows } = api.getBoardMeta();
       let next = { ...state };
-      if (dir === 'forward') {
-        if (state.ori === 'up') next.y = Math.max(0, state.y - 1);
-        else if (state.ori === 'down') next.y = Math.min(rows - 1, state.y + 1);
-        else if (state.ori === 'left') next.x = Math.max(0, state.x - 1);
-        else next.x = Math.min(cols - 1, state.x + 1);
+      if (dir === 'forward' || dir === 'backward') {
+        const reverse = dir === 'backward';
+        if (state.ori === 'up') next.y = Math.max(0, state.y + (reverse ? 1 : -1));
+        else if (state.ori === 'down') next.y = Math.min(rows - 1, state.y + (reverse ? -1 : 1));
+        else if (state.ori === 'left') next.x = Math.max(0, state.x + (reverse ? 1 : -1));
+        else next.x = Math.min(cols - 1, state.x + (reverse ? -1 : 1));
 
         if (api.isBlockedCell(next.x, next.y)) next = { ...state };
       } else if (dir === 'left') {

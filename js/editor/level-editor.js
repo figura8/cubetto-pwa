@@ -68,7 +68,7 @@
 
     function renderEditorAvail(row, sz) {
       row.classList.add('editor-blocks-row');
-      ['forward', 'left', 'right', 'function'].forEach(dir => {
+      ['forward', 'left', 'right', 'backward', 'function'].forEach(dir => {
         const enabledMap = api.getEditorBlockEnabled();
         const item = document.createElement('div');
         item.className = 'editor-block-item' + (enabledMap[dir] ? ' enabled' : ' disabled');

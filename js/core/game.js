@@ -433,6 +433,7 @@ const POOL = {
   forward:  {dir:'forward',  color:'#5BC85A', dark:'#3a8a39', light:'#8de88c'},
   left:     {dir:'left',     color:'#F5C842', dark:'#b8920a', light:'#ffe87a'},
   right:    {dir:'right',    color:'#E8504A', dark:'#a02820', light:'#ff8a84'},
+  backward: {dir:'backward', color:'#A86FD6', dark:'#6d3f9a', light:'#d4a6f3'},
   function: {dir:'function', color:'#2B8FD4', dark:'#1a5a8a', light:'#8fd1ff'}
 };
 const CUSTOM_LEVELS_STORAGE_KEY = 'boks-custom-levels';
@@ -570,6 +571,7 @@ let editorBlockEnabled = {
   forward: false,
   left: false,
   right: false,
+  backward: false,
   function: false
 };
 let fnUnlockHintActive = false;
@@ -1459,6 +1461,7 @@ const BLOCK_ICON_PATHS = {
   forward: 'assets/ui/elements/icon_forward.svg',
   left: 'assets/ui/elements/icon_turn_left.svg',
   right: 'assets/ui/elements/icon_turn_right.svg',
+  backward: 'assets/ui/elements/icon_backward.svg',
   function: 'assets/ui/elements/icon_function.svg'
 };
 
@@ -1521,6 +1524,24 @@ function initGrid() {
     gridCellEls[y][x] = c;
     g.appendChild(c);
   }
+  const coordinates = document.createElement('div');
+  coordinates.className = 'editor-grid-coordinates';
+  coordinates.setAttribute('aria-hidden', 'true');
+  for (let x = 0; x < COLS; x++) {
+    const label = document.createElement('span');
+    label.className = 'editor-grid-coordinate editor-grid-coordinate--x';
+    label.style.left = `${((x + 0.5) / COLS) * 100}%`;
+    label.textContent = `X${x + 1}`;
+    coordinates.appendChild(label);
+  }
+  for (let y = 0; y < ROWS; y++) {
+    const label = document.createElement('span');
+    label.className = 'editor-grid-coordinate editor-grid-coordinate--y';
+    label.style.top = `${((y + 0.5) / ROWS) * 100}%`;
+    label.textContent = `Y${y + 1}`;
+    coordinates.appendChild(label);
+  }
+  g.appendChild(coordinates);
   renderGridDecorations();
   ensureGoalIdleCanvasLoop();
   sizeGoalCanvasLayers();
@@ -4567,7 +4588,7 @@ function createLevelEditor() {
     isBusy: () => running || animating,
     getEditorBlockEnabled: () => editorBlockEnabled,
     resetEditorBlockEnabled: () => {
-      editorBlockEnabled = { forward: false, left: false, right: false, function: false };
+      editorBlockEnabled = { forward: false, left: false, right: false, backward: false, function: false };
     },
     getMainSlotEnabled: () => mainSlotEnabled,
     getFnSlotEnabled: () => fnSlotEnabled,
@@ -4729,7 +4750,10 @@ function toggleEditorSlot(zone, idx) {
 function getTutorialSteps() {
   if (currentCustomLevel) return [];
   if (currentLevel === 'level1') {
-    const projectCampaignLevels = readCustomLevels().map(editorLevelToCampaignLevel);
+    const projectCampaignLevels = readCustomLevels()
+      .filter(level => Number.isInteger(level.campaignIndex ?? level.baseStepIndex))
+      .sort((a, b) => (a.campaignIndex ?? a.baseStepIndex) - (b.campaignIndex ?? b.baseStepIndex))
+      .map(editorLevelToCampaignLevel);
     if (projectCampaignLevels.length) {
       return projectCampaignLevels;
     }
@@ -5880,7 +5904,7 @@ function startBlankEditorLevel() {
   resetPrograms();
   mainSlotEnabled = Array(SLOTS).fill(false);
   fnSlotEnabled = Array(FSLOTS).fill(false);
-  editorBlockEnabled = { forward: false, left: false, right: false, function: false };
+  editorBlockEnabled = { forward: false, left: false, right: false, backward: false, function: false };
   setAvailableBlocks([]);
   refreshEditorValues();
   applyEditorBoardChanges();
@@ -5918,8 +5942,8 @@ function startSandboxLevel() {
   activeFnSlots = FSLOTS;
   mainSlotEnabled = Array(SLOTS).fill(true);
   fnSlotEnabled = Array(FSLOTS).fill(true);
-  editorBlockEnabled = { forward: true, left: true, right: true, function: true };
-  setAvailableBlocks(['forward', 'left', 'right', 'function']);
+  editorBlockEnabled = { forward: true, left: true, right: true, backward: true, function: true };
+  setAvailableBlocks(['forward', 'left', 'right', 'backward', 'function']);
   applyEditorBoardChanges();
   setupEditorElementPlacement();
   renderSandboxToolbar();
@@ -5967,7 +5991,7 @@ function startTutorialStage() {
   activeFnSlots = 0;
   mainSlotEnabled = Array(SLOTS).fill(false);
   fnSlotEnabled = Array(FSLOTS).fill(false);
-  editorBlockEnabled = { forward: false, left: false, right: false, function: false };
+  editorBlockEnabled = { forward: false, left: false, right: false, backward: false, function: false };
   setAvailableBlocks([]);
   applyEditorBoardChanges();
   setupEditorElementPlacement();
@@ -6233,9 +6257,10 @@ async function revealTutorialBlock(blockType = 'forward') {
     forward: tutorialVisibleBlockTypes.has('forward'),
     left: tutorialVisibleBlockTypes.has('left'),
     right: tutorialVisibleBlockTypes.has('right'),
+    backward: tutorialVisibleBlockTypes.has('backward'),
     function: tutorialVisibleBlockTypes.has('function')
   };
-  const orderedBlocks = ['forward', 'left', 'right', 'function'].filter(dir => tutorialVisibleBlockTypes.has(dir));
+  const orderedBlocks = ['forward', 'left', 'right', 'backward', 'function'].filter(dir => tutorialVisibleBlockTypes.has(dir));
   setAvailableBlocks(orderedBlocks);
   document.body?.classList.add('tutorial-forward-visible');
   renderAvail();
@@ -6258,9 +6283,10 @@ async function hideTutorialElement(elementId = '') {
       forward: tutorialVisibleBlockTypes.has('forward'),
       left: tutorialVisibleBlockTypes.has('left'),
       right: tutorialVisibleBlockTypes.has('right'),
+      backward: tutorialVisibleBlockTypes.has('backward'),
       function: tutorialVisibleBlockTypes.has('function')
     };
-    const orderedBlocks = ['forward', 'left', 'right', 'function'].filter(dir => tutorialVisibleBlockTypes.has(dir));
+    const orderedBlocks = ['forward', 'left', 'right', 'backward', 'function'].filter(dir => tutorialVisibleBlockTypes.has(dir));
     setAvailableBlocks(orderedBlocks);
     if (!orderedBlocks.length) document.body?.classList.remove('tutorial-forward-visible');
     renderAvail();
@@ -6826,13 +6852,30 @@ async function saveCurrentEditorLevel() {
 async function reorderEditorLevels(draggedLevelId, targetLevelId) {
   if (!draggedLevelId || !targetLevelId || draggedLevelId === targetLevelId) return false;
   const current = readCustomLevels();
-  const from = current.findIndex(entry => entry.id === draggedLevelId);
-  const to = current.findIndex(entry => entry.id === targetLevelId);
-  if (from === -1 || to === -1) return false;
+  const campaignLevels = current
+    .map(normalizeCustomLevel)
+    .filter(level => Number.isInteger(level.campaignIndex ?? level.baseStepIndex))
+    .sort((a, b) => (a.campaignIndex ?? a.baseStepIndex) - (b.campaignIndex ?? b.baseStepIndex));
+  const from = campaignLevels.findIndex(entry => entry.id === draggedLevelId);
+  const to = campaignLevels.findIndex(entry => entry.id === targetLevelId);
+  if (from === -1 || to === -1) {
+    toast('I livelli custom non entrano nell’ordine della campagna');
+    return false;
+  }
 
-  const reordered = current.map(normalizeCustomLevel);
-  const [moved] = reordered.splice(from, 1);
-  reordered.splice(to, 0, moved);
+  const [moved] = campaignLevels.splice(from, 1);
+  campaignLevels.splice(to, 0, moved);
+  const reorderedCampaign = campaignLevels.map((level, index) => normalizeCustomLevel({
+    ...level,
+    number: index + 1,
+    name: /^Livello\s+\d+$/i.test(level.name) ? `Livello ${index + 1}` : level.name,
+    campaignIndex: index,
+    baseStepIndex: index
+  }));
+  const customLevels = current
+    .map(normalizeCustomLevel)
+    .filter(level => !Number.isInteger(level.campaignIndex ?? level.baseStepIndex));
+  const reordered = [...reorderedCampaign, ...customLevels];
 
   const persistResult = await persistEditorLevels(reordered, { promptIfMissing: true });
   syncEditorStateAfterLevelsChange(reordered, { preferredLevelId: moved.id });
@@ -6881,7 +6924,13 @@ async function deleteEditorLevel(levelId) {
 function renderCustomLevels() {
   const list = document.getElementById('customLevelsList');
   if (!list || !LEVEL_EDITOR_ENABLED) return;
-  const levels = readCustomLevels();
+  const sourceLevels = readCustomLevels().map(normalizeCustomLevel);
+  const campaignLevels = sourceLevels
+    .filter(level => Number.isInteger(level.campaignIndex ?? level.baseStepIndex))
+    .sort((a, b) => (a.campaignIndex ?? a.baseStepIndex) - (b.campaignIndex ?? b.baseStepIndex));
+  const customLevels = sourceLevels
+    .filter(level => !Number.isInteger(level.campaignIndex ?? level.baseStepIndex));
+  const levels = [...campaignLevels, ...customLevels];
   list.innerHTML = '';
   if (!levels.length) return;
 
@@ -6896,8 +6945,10 @@ function renderCustomLevels() {
     tile.className = 'editor-level-tile ' + normalizeThemeClassName(themeId) + (selectedEditorLevelId === normalized.id ? ' active' : '');
     tile.draggable = true;
     tile.dataset.levelId = normalized.id;
-    tile.textContent = String(index + 1);
-    tile.title = `Livello ${index + 1} - ${getThemeLabel(themeId)}`;
+    const levelNumber = normalized.campaignIndex != null ? normalized.campaignIndex + 1 : normalized.number || index + 1;
+    tile.textContent = String(levelNumber);
+    tile.title = `Livello ${levelNumber} - ${getThemeLabel(themeId)}`;
+    tile.setAttribute('aria-current', selectedEditorLevelId === normalized.id ? 'true' : 'false');
     tile.addEventListener('click', () => {
       selectedEditorLevelId = normalized.id;
       if (editorMode) {
@@ -7827,12 +7878,13 @@ async function moveChar(dir) {
   syncSprite();
   const activeCharacterId = resolveRuntimeCharacterId(getActiveCharacterId());
   const containerDriven = isContainerDrivenCharacter(activeCharacterId);
-  if(dir==='forward') {
+  if(dir==='forward' || dir==='backward') {
     const p={...pos};
-    if(ori==='up')        p.y=Math.max(0,p.y-1);
-    else if(ori==='down') p.y=Math.min(ROWS-1,p.y+1);
-    else if(ori==='left') p.x=Math.max(0,p.x-1);
-    else                   p.x=Math.min(COLS-1,p.x+1);
+    const reverse = dir === 'backward';
+    if(ori==='up')        p.y=Math.max(0, p.y + (reverse ? 1 : -1));
+    else if(ori==='down') p.y=Math.min(ROWS-1, p.y + (reverse ? -1 : 1));
+    else if(ori==='left') p.x=Math.max(0, p.x + (reverse ? 1 : -1));
+    else                   p.x=Math.min(COLS-1, p.x + (reverse ? -1 : 1));
     if (isBlockedCell(p.x, p.y)) {
       triggerBoksObstacleStruggle();
       audioManager.playEffortSfx();

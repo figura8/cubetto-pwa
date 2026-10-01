@@ -669,6 +669,11 @@
     if ((x * 7 + y * 5) % 9 === 0) cell.classList.add('decor-space-crater');
   }
 
+  function decorateSkyClouds(cell, x, y) {
+    if ((x * 5 + y * 3) % 8 === 0) cell.classList.add('decor-cloud-small');
+    if ((x + y * 4) % 17 === 0) cell.classList.add('decor-cloud-large');
+  }
+
   function decorateZeldaGreco(cell, x, y) {
     if ((x + y * 2) % 4 === 0) cell.classList.add('decor-greek-glyph');
     if ((x * 5 + y * 3) % 7 === 0) cell.classList.add('decor-greek-crystal');
@@ -782,6 +787,24 @@
     renderGoal: goalSVGLevel1,
     renderSprite: renderCharacter,
     renderBackground: drawBackgroundLevel1
+  };
+
+  window.BOKS_LEVELS['level-sky-clouds'] = {
+    id: 'level-sky-clouds',
+    characterId: 'boks_green',
+    name: 'Sky Clouds',
+    themeSelectable: true,
+    themeLabel: 'Sky Clouds',
+    themeHint: 'Fluttua tra le nuvole',
+    thumbnailPalette: { scene: '#dff4ff', cellA: '#aee5ff', cellB: '#8ed8fa', cellStroke: '#65bce5', obstacleFill: '#b8c8d2', obstacleStroke: '#7292a2', goalFill: '#fff5a8', goalStroke: '#dfad3f', startFill: '#ffffff', startStroke: '#5ba9ce' },
+    sceneVars: {
+      '--scene-body-bg': 'linear-gradient(#eaf9ff 0%, #d9f1ff 100%)', '--bg-base': '#d9f1ff', '--panel-bg': '#eefaff', '--panel-edge': '#b9ddeb',
+      '--scene-grid-wrap-bg': '#d6f3ff', '--grid-bg': '#8fdafa', '--cell-bg': '#aee5ff', '--cell-edge': 'rgba(70,166,210,0.55)',
+      '--cell-hi-bg': 'rgba(255,255,255,0.92)', '--cell-hi-edge': '#f2c64e', '--cell-hi-ring': 'rgba(255,255,255,0.6)',
+      '--grid-wrap-radius': '16px', '--grid-radius': '16px', '--cell-radius': '8px', '--obstacle-pattern-radius': '7px',
+      '--obstacle-bg-top': 'rgba(230,241,246,0.98)', '--obstacle-bg-bottom': 'rgba(174,195,205,0.98)', '--obstacle-edge': 'rgba(104,137,153,0.78)', '--obstacle-pattern': 'rgba(255,255,255,0.5)'
+    },
+    decorateCell: decorateSkyClouds, renderGoal: goalSVGLevel1, renderSprite: renderCharacter, renderBackground: drawBackgroundLevel1
   };
 
   window.BOKS_LEVELS['level-city'] = {

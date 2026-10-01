@@ -558,6 +558,43 @@
       border-radius: var(--grid-radius);
       border: 1px solid #dfd5bf;
     }
+    .editor-grid-coordinates {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 16;
+      pointer-events: none;
+    }
+    body.editor-mode .editor-grid-coordinates {
+      display: block;
+    }
+    .editor-grid-coordinate {
+      position: absolute;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 24px;
+      height: 16px;
+      padding: 0 3px;
+      box-sizing: border-box;
+      border: 1px solid rgba(91, 75, 45, 0.35);
+      border-radius: 5px;
+      background: rgba(255, 250, 232, 0.86);
+      color: #66522c;
+      font-family: Fredoka, sans-serif;
+      font-size: 9px;
+      font-weight: 700;
+      line-height: 1;
+      box-shadow: 0 1px 1px rgba(91, 75, 45, 0.14);
+    }
+    .editor-grid-coordinate--x {
+      top: 8px;
+      transform: translateX(-50%);
+    }
+    .editor-grid-coordinate--y {
+      left: 8px;
+      transform: translateY(-50%);
+    }
     #gridDecor {
       position: absolute;
       inset: 0;
@@ -2600,6 +2637,18 @@
     body.editor-mode #decorationPalettePanel {
       display: block;
     }
+    .cell.decor-cloud-small::after, .cell.decor-cloud-large::after {
+      content: ''; position: absolute; pointer-events: none; background: rgba(255,255,255,0.88); border-radius: 999px;
+      box-shadow: -8px 3px 0 rgba(255,255,255,0.78), 8px 2px 0 rgba(255,255,255,0.78), 0 5px 8px rgba(79,160,199,0.18);
+    }
+    .cell.decor-cloud-small::after {
+      width: 28%; height: 16%; right: 19%; top: 17%;
+      box-shadow: -10px 5px 0 rgba(255,255,255,0.82), 11px 3px 0 rgba(255,255,255,0.82), 0 7px 10px rgba(79,160,199,0.2);
+    }
+    .cell.decor-cloud-large::after {
+      width: 44%; height: 24%; left: 27%; bottom: 18%;
+      box-shadow: -15px 7px 0 rgba(255,255,255,0.84), 16px 5px 0 rgba(255,255,255,0.84), 0 10px 13px rgba(79,160,199,0.22);
+    }
     .custom-levels-head h3 {
       color: #5f4e34;
       font-size: 0.95rem;
@@ -3054,6 +3103,19 @@
       border-color: #3d6e25;
       box-shadow: none;
       color: #f8fff0;
+    }
+    /* The open level needs a distinct number color, not only a subtle border change. */
+    .editor-level-tile.active,
+    .editor-level-tile.theme-level-base.active,
+    .editor-level-tile.theme-level-city.active,
+    .editor-level-tile.theme-level-universe.active,
+    .editor-level-tile.theme-level-zelda-greco.active,
+    .editor-level-tile.theme-level-manuale01.active,
+    .editor-level-tile.theme-level-thomas.active {
+      border-color: #b8920a;
+      background: #f5c842;
+      color: #5f4212;
+      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.48), 0 3px 0 #b8920a;
     }
     .editor-level-tile-empty {
       border-style: dashed;

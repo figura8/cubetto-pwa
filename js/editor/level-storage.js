@@ -23,6 +23,7 @@
         forward: !!source.forward,
         left: !!source.left,
         right: !!source.right,
+        backward: !!source.backward,
         function: !!source.function
       };
     }
