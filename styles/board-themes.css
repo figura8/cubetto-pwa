@@ -1,0 +1,8 @@
+/* Presentation only. New world SVGs are lightweight placeholders. */
+body[data-world-theme] .cell:not(.obstacle-cell) {
+  background-color: var(--cell-bg);
+  background-image: var(--world-surface-art);
+  background-size: 100% 100%;
+}
+body[data-world-theme] .cell.world-cell-alternate:not(.obstacle-cell) { background-color: var(--world-tile-alternate); }
+body[data-world-theme] .cell.highlight:not(.obstacle-cell) { background-color: var(--cell-hi-bg); }

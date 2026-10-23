@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exportedAt": "2026-10-01T14:30:40.301Z",
+  "exportedAt": "2026-10-23T14:42:41.907Z",
   "levels": [
     {
       "id": "campaign-1",
@@ -8,18 +8,19 @@
       "baseStepIndex": 0,
       "campaignIndex": 0,
       "name": "L1",
+      "notes": "Mondo 1 (Prato) - Primo passo: 1 Forward",
       "icon": "leaf",
-      "baseLevel": "level-sky-clouds",
-      "characterId": "boks_green",
+      "baseLevel": "level1",
+      "characterId": "boks_red",
       "start": {
-        "x": 1,
-        "y": 4
-      },
-      "goal": {
-        "x": 1,
+        "x": 2,
         "y": 3
       },
-      "startOri": "up",
+      "goal": {
+        "x": 3,
+        "y": 3
+      },
+      "startOri": "right",
       "obstacles": [],
       "decorations": [],
       "mainSlotEnabled": [
@@ -56,24 +57,30 @@
       "baseStepIndex": 1,
       "campaignIndex": 1,
       "name": "L2",
+      "notes": "Mondo 1 (Prato) - Conta due passi avanti",
       "icon": "leaf",
-      "baseLevel": "level1",
-      "characterId": "boks_green",
+      "baseLevel": "world-dinosaur-jungle",
+      "characterId": "boks_red",
       "start": {
         "x": 4,
-        "y": 1
+        "y": 2
       },
       "goal": {
-        "x": 1,
-        "y": 1
+        "x": 2,
+        "y": 2
       },
       "startOri": "left",
-      "obstacles": [],
+      "obstacles": [
+        {
+          "x": 1,
+          "y": 2
+        }
+      ],
       "decorations": [],
       "mainSlotEnabled": [
         true,
         true,
-        true,
+        false,
         false,
         false,
         false,
@@ -104,25 +111,31 @@
       "baseStepIndex": 2,
       "campaignIndex": 2,
       "name": "L3",
+      "notes": "Mondo 1 (Prato) - Linea lunga: 3 Forward",
       "icon": "leaf",
-      "baseLevel": "level1",
-      "characterId": "boks_green",
+      "baseLevel": "world-moss-forest",
+      "characterId": "boks_red",
       "start": {
-        "x": 0,
-        "y": 5
+        "x": 1,
+        "y": 4
       },
       "goal": {
-        "x": 0,
+        "x": 1,
         "y": 1
       },
       "startOri": "up",
-      "obstacles": [],
+      "obstacles": [
+        {
+          "x": 1,
+          "y": 0
+        }
+      ],
       "decorations": [],
       "mainSlotEnabled": [
         true,
         true,
         true,
-        true,
+        false,
         false,
         false,
         false,
@@ -152,9 +165,10 @@
       "baseStepIndex": 3,
       "campaignIndex": 3,
       "name": "L4",
+      "notes": "Mondo 1 (Prato) - Ostacolo davanti: gira a destra (R F L F)",
       "icon": "leaf",
-      "baseLevel": "level1",
-      "characterId": "boks_green",
+      "baseLevel": "world-botanical-garden",
+      "characterId": "boks_red",
       "start": {
         "x": 1,
         "y": 4
@@ -168,56 +182,11 @@
         {
           "x": 1,
           "y": 3
-        }
-      ],
-      "decorations": [],
-      "mainSlotEnabled": [
-        true,
-        true,
-        true,
-        true,
-        false,
-        false,
-        false,
-        false
-      ],
-      "fnSlotEnabled": [
-        false,
-        false,
-        false,
-        false
-      ],
-      "enabledBlocks": {
-        "forward": true,
-        "left": true,
-        "right": true,
-        "backward": false,
-        "function": false
-      },
-      "themeOverrides": {},
-      "levelHints": {
-        "availableBlockGlow": true
-      }
-    },
-    {
-      "id": "campaign-5",
-      "number": 5,
-      "baseStepIndex": 4,
-      "campaignIndex": 4,
-      "name": "L5",
-      "icon": "leaf",
-      "baseLevel": "level-sky-clouds",
-      "characterId": "boks_green",
-      "start": {
-        "x": 4,
-        "y": 1
-      },
-      "goal": {
-        "x": 3,
-        "y": 2
-      },
-      "startOri": "left",
-      "obstacles": [
+        },
+        {
+          "x": 2,
+          "y": 2
+        },
         {
           "x": 3,
           "y": 1
@@ -249,7 +218,73 @@
       },
       "themeOverrides": {},
       "levelHints": {
-        "availableBlockGlow": true
+        "availableBlockGlow": false
+      }
+    },
+    {
+      "id": "campaign-5",
+      "number": 5,
+      "baseStepIndex": 4,
+      "campaignIndex": 4,
+      "name": "L5",
+      "notes": "Mondo 2 (Cielo) - Gira a sinistra per aggirare il blocco (L F R F)",
+      "icon": "sun",
+      "baseLevel": "world-poppy-garden",
+      "characterId": "boks_blu",
+      "start": {
+        "x": 4,
+        "y": 1
+      },
+      "goal": {
+        "x": 3,
+        "y": 2
+      },
+      "startOri": "left",
+      "obstacles": [
+        {
+          "x": 3,
+          "y": 1
+        },
+        {
+          "x": 2,
+          "y": 2
+        },
+        {
+          "x": 1,
+          "y": 2
+        },
+        {
+          "x": 2,
+          "y": 1
+        }
+      ],
+      "decorations": [],
+      "mainSlotEnabled": [
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "fnSlotEnabled": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "enabledBlocks": {
+        "forward": true,
+        "left": true,
+        "right": true,
+        "backward": false,
+        "function": false
+      },
+      "themeOverrides": {},
+      "levelHints": {
+        "availableBlockGlow": false
       }
     },
     {
@@ -258,8 +293,9 @@
       "baseStepIndex": 5,
       "campaignIndex": 5,
       "name": "L6",
-      "icon": "leaf",
-      "baseLevel": "level-sky-clouds",
+      "notes": "Mondo 2 (Cielo) - Dietro l angolo (L F F R F F)",
+      "icon": "sun",
+      "baseLevel": "world-maple-forest",
       "characterId": "boks_green",
       "start": {
         "x": 1,
@@ -274,6 +310,10 @@
         {
           "x": 1,
           "y": 3
+        },
+        {
+          "x": 2,
+          "y": 2
         }
       ],
       "decorations": [],
@@ -302,7 +342,7 @@
       },
       "themeOverrides": {},
       "levelHints": {
-        "availableBlockGlow": true
+        "availableBlockGlow": false
       }
     },
     {
@@ -311,23 +351,29 @@
       "baseStepIndex": 6,
       "campaignIndex": 6,
       "name": "L7",
-      "icon": "leaf",
-      "baseLevel": "level-sky-clouds",
+      "notes": "Mondo 2 (Cielo) - Scoperta Backward: un passo indietro (B)",
+      "icon": "sun",
+      "baseLevel": "world-terracotta-canyon",
       "characterId": "boks_green",
       "start": {
-        "x": 2,
-        "y": 2
+        "x": 3,
+        "y": 3
       },
       "goal": {
-        "x": 2,
+        "x": 3,
         "y": 4
       },
       "startOri": "up",
-      "obstacles": [],
+      "obstacles": [
+        {
+          "x": 3,
+          "y": 2
+        }
+      ],
       "decorations": [],
       "mainSlotEnabled": [
         true,
-        true,
+        false,
         false,
         false,
         false,
@@ -359,25 +405,31 @@
       "baseStepIndex": 7,
       "campaignIndex": 7,
       "name": "L8",
+      "notes": "Mondo 2 (Cielo) - Indietro senza girarsi (B B)",
       "icon": "leaf",
-      "baseLevel": "level-sky-clouds",
+      "baseLevel": "world-ruby-planet",
       "characterId": "boks_green",
       "start": {
-        "x": 3,
-        "y": 3
+        "x": 2,
+        "y": 2
       },
       "goal": {
-        "x": 1,
-        "y": 4
+        "x": 0,
+        "y": 2
       },
-      "startOri": "up",
-      "obstacles": [],
+      "startOri": "right",
+      "obstacles": [
+        {
+          "x": 3,
+          "y": 2
+        }
+      ],
       "decorations": [],
       "mainSlotEnabled": [
         true,
         true,
-        true,
-        true,
+        false,
+        false,
         false,
         false,
         false,
@@ -407,25 +459,43 @@
       "baseStepIndex": 8,
       "campaignIndex": 8,
       "name": "L9",
+      "notes": "Mondo 3 (Stazione) - Arretra per svoltare (B L F F)",
       "icon": "leaf",
-      "baseLevel": "level1",
+      "baseLevel": "world-desert-dunes",
       "characterId": "boks_green",
       "start": {
-        "x": 1,
-        "y": 2
+        "x": 3,
+        "y": 3
       },
       "goal": {
-        "x": 4,
-        "y": 2
+        "x": 1,
+        "y": 4
       },
-      "startOri": "left",
-      "obstacles": [],
+      "startOri": "up",
+      "obstacles": [
+        {
+          "x": 1,
+          "y": 2
+        },
+        {
+          "x": 1,
+          "y": 3
+        },
+        {
+          "x": 1,
+          "y": 5
+        },
+        {
+          "x": 2,
+          "y": 3
+        }
+      ],
       "decorations": [],
       "mainSlotEnabled": [
         true,
         true,
         true,
-        false,
+        true,
         false,
         false,
         false,
@@ -455,8 +525,9 @@
       "baseStepIndex": 9,
       "campaignIndex": 9,
       "name": "L10",
+      "notes": "Mondo 3 (Stazione) - Binario cieco: esci in retromarcia (B L B B)",
       "icon": "leaf",
-      "baseLevel": "level1",
+      "baseLevel": "world-toy-workshop",
       "characterId": "boks_green",
       "start": {
         "x": 2,
@@ -481,7 +552,44 @@
           "y": 1
         }
       ],
-      "decorations": [],
+      "decorations": [
+        {
+          "id": "d-10-1",
+          "x": 0,
+          "y": 4,
+          "anchorX": 0.083,
+          "anchorY": 0.803,
+          "asset": "world_clock",
+          "layer": "object",
+          "scale": 0.65,
+          "rotation": 0,
+          "pivotX": 0.5,
+          "pivotY": 0.5,
+          "motion": "pulse",
+          "motionExtent": 0.35,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "d-10-2",
+          "x": 5,
+          "y": 4,
+          "anchorX": 0.917,
+          "anchorY": 0.803,
+          "asset": "world_stone",
+          "layer": "object",
+          "scale": 0.6,
+          "rotation": 0,
+          "pivotX": 0.5,
+          "pivotY": 0.5,
+          "motion": "none",
+          "motionExtent": 1,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        }
+      ],
       "mainSlotEnabled": [
         true,
         true,
@@ -505,7 +613,9 @@
         "backward": true,
         "function": false
       },
-      "themeOverrides": {},
+      "themeOverrides": {
+        "--cell-bg": "#d8d987"
+      },
       "levelHints": {
         "availableBlockGlow": false
       }
@@ -516,8 +626,9 @@
       "baseStepIndex": 10,
       "campaignIndex": 10,
       "name": "L11",
+      "notes": "Mondo 3 (Stazione) - Scambio a L in retromarcia (B B L F F)",
       "icon": "leaf",
-      "baseLevel": "level1",
+      "baseLevel": "world-supermarket",
       "characterId": "boks_green",
       "start": {
         "x": 4,
@@ -528,8 +639,48 @@
         "y": 2
       },
       "startOri": "right",
-      "obstacles": [],
-      "decorations": [],
+      "obstacles": [
+        {
+          "x": 1,
+          "y": 4
+        },
+        {
+          "x": 1,
+          "y": 2
+        },
+        {
+          "x": 2,
+          "y": 5
+        },
+        {
+          "x": 3,
+          "y": 3
+        },
+        {
+          "x": 4,
+          "y": 2
+        }
+      ],
+      "decorations": [
+        {
+          "id": "d-11-2",
+          "x": 0,
+          "y": 5,
+          "anchorX": 0.083,
+          "anchorY": 0.97,
+          "asset": "world_stone",
+          "layer": "object",
+          "scale": 0.6,
+          "rotation": 0,
+          "pivotX": 0.5,
+          "pivotY": 0.5,
+          "motion": "none",
+          "motionExtent": 1,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        }
+      ],
       "mainSlotEnabled": [
         true,
         true,
@@ -553,7 +704,10 @@
         "backward": true,
         "function": false
       },
-      "themeOverrides": {},
+      "themeOverrides": {
+        "--grid-bg": "#ede587",
+        "--cell-bg": "#f2f1d4"
+      },
       "levelHints": {
         "availableBlockGlow": false
       }
@@ -564,37 +718,87 @@
       "baseStepIndex": 11,
       "campaignIndex": 11,
       "name": "L12",
+      "notes": "Mondo 3 (Stazione) - Retromarcia lunga sul binario (B B B L F)",
       "icon": "leaf",
-      "baseLevel": "level1",
+      "baseLevel": "world-desert-dunes",
       "characterId": "boks_green",
       "start": {
         "x": 1,
-        "y": 0
+        "y": 1
       },
       "goal": {
         "x": 4,
         "y": 2
       },
-      "startOri": "right",
+      "startOri": "left",
       "obstacles": [
         {
-          "x": 4,
+          "x": 1,
+          "y": 3
+        },
+        {
+          "x": 2,
+          "y": 4
+        },
+        {
+          "x": 2,
           "y": 0
         },
         {
-          "x": 3,
-          "y": 1
+          "x": 2,
+          "y": 2
+        },
+        {
+          "x": 1,
+          "y": 5
         }
       ],
-      "decorations": [],
+      "decorations": [
+        {
+          "id": "d-12-1",
+          "x": 5,
+          "y": 5,
+          "anchorX": 0.917,
+          "anchorY": 0.97,
+          "asset": "world_clock",
+          "layer": "object",
+          "scale": 0.65,
+          "rotation": 0,
+          "pivotX": 0.5,
+          "pivotY": 0.5,
+          "motion": "pulse",
+          "motionExtent": 0.35,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "d-12-2",
+          "x": 0,
+          "y": 3,
+          "anchorX": 0.083,
+          "anchorY": 0.637,
+          "asset": "world_stone",
+          "layer": "object",
+          "scale": 0.6,
+          "rotation": 0,
+          "pivotX": 0.5,
+          "pivotY": 0.5,
+          "motion": "none",
+          "motionExtent": 1,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        }
+      ],
       "mainSlotEnabled": [
         true,
         true,
         true,
         true,
         true,
-        true,
-        true,
+        false,
+        false,
         false
       ],
       "fnSlotEnabled": [
@@ -607,10 +811,12 @@
         "forward": true,
         "left": true,
         "right": true,
-        "backward": false,
+        "backward": true,
         "function": false
       },
-      "themeOverrides": {},
+      "themeOverrides": {
+        "--grid-bg": "#e1cb7a"
+      },
       "levelHints": {
         "availableBlockGlow": false
       }
@@ -621,21 +827,34 @@
       "baseStepIndex": 12,
       "campaignIndex": 12,
       "name": "L13",
+      "notes": "Mondo 4 (Strada Piovosa) - Falsa scorciatoia (B B B R F F)",
       "icon": "leaf",
-      "baseLevel": "level1",
+      "baseLevel": "world-seabed",
       "characterId": "boks_green",
       "start": {
-        "x": 0,
-        "y": 4
+        "x": 1,
+        "y": 3
       },
       "goal": {
-        "x": 3,
-        "y": 2
+        "x": 4,
+        "y": 1
       },
-      "startOri": "up",
+      "startOri": "left",
       "obstacles": [
         {
           "x": 0,
+          "y": 3
+        },
+        {
+          "x": 1,
+          "y": 2
+        },
+        {
+          "x": 2,
+          "y": 2
+        },
+        {
+          "x": 3,
           "y": 2
         }
       ],
@@ -647,7 +866,7 @@
         true,
         true,
         true,
-        true,
+        false,
         false
       ],
       "fnSlotEnabled": [
@@ -660,7 +879,7 @@
         "forward": true,
         "left": true,
         "right": true,
-        "backward": false,
+        "backward": true,
         "function": false
       },
       "themeOverrides": {},
@@ -674,46 +893,35 @@
       "baseStepIndex": 13,
       "campaignIndex": 13,
       "name": "L14",
+      "notes": "Mondo 4 (Strada Piovosa) - Uscita dalla U (B R F F L F)",
       "icon": "leaf",
-      "baseLevel": "level1",
+      "baseLevel": "world-laundromat",
       "characterId": "boks_green",
       "start": {
-        "x": 2,
-        "y": 0
-      },
-      "goal": {
         "x": 1,
         "y": 2
       },
-      "startOri": "left",
+      "goal": {
+        "x": 3,
+        "y": 2
+      },
+      "startOri": "up",
       "obstacles": [
         {
           "x": 1,
           "y": 1
         },
         {
-          "x": 2,
-          "y": 1
-        },
-        {
-          "x": 3,
-          "y": 1
-        },
-        {
-          "x": 3,
+          "x": 0,
           "y": 2
         },
         {
-          "x": 1,
-          "y": 3
+          "x": 2,
+          "y": 2
         },
         {
           "x": 2,
-          "y": 3
-        },
-        {
-          "x": 3,
-          "y": 3
+          "y": 1
         }
       ],
       "decorations": [],
@@ -724,7 +932,7 @@
         true,
         true,
         true,
-        true,
+        false,
         false
       ],
       "fnSlotEnabled": [
@@ -737,7 +945,7 @@
         "forward": true,
         "left": true,
         "right": true,
-        "backward": false,
+        "backward": true,
         "function": false
       },
       "themeOverrides": {},
@@ -751,8 +959,9 @@
       "baseStepIndex": 14,
       "campaignIndex": 14,
       "name": "L15",
+      "notes": "Mondo 4 (Strada Piovosa) - Due strade, scegli quella compatta (B B L F F F)",
       "icon": "leaf",
-      "baseLevel": "level1",
+      "baseLevel": "world-sky",
       "characterId": "boks_green",
       "start": {
         "x": 1,
@@ -760,10 +969,22 @@
       },
       "goal": {
         "x": 4,
-        "y": 3
+        "y": 2
       },
-      "startOri": "up",
+      "startOri": "down",
       "obstacles": [
+        {
+          "x": 1,
+          "y": 5
+        },
+        {
+          "x": 0,
+          "y": 4
+        },
+        {
+          "x": 2,
+          "y": 3
+        },
         {
           "x": 3,
           "y": 3
@@ -790,7 +1011,7 @@
         "forward": true,
         "left": true,
         "right": true,
-        "backward": false,
+        "backward": true,
         "function": false
       },
       "themeOverrides": {},
@@ -804,22 +1025,39 @@
       "baseStepIndex": 15,
       "campaignIndex": 15,
       "name": "L16",
+      "notes": "Mondo 4 (Strada Piovosa) - Sequenza di varchi (B B L B L F)",
       "icon": "leaf",
-      "baseLevel": "level1",
+      "baseLevel": "level-sky-clouds",
       "characterId": "boks_green",
       "start": {
-        "x": 5,
-        "y": 4
-      },
-      "goal": {
         "x": 2,
         "y": 2
       },
-      "startOri": "left",
+      "goal": {
+        "x": 3,
+        "y": 5
+      },
+      "startOri": "up",
       "obstacles": [
         {
           "x": 2,
-          "y": 4
+          "y": 1
+        },
+        {
+          "x": 1,
+          "y": 2
+        },
+        {
+          "x": 3,
+          "y": 2
+        },
+        {
+          "x": 3,
+          "y": 3
+        },
+        {
+          "x": 2,
+          "y": 5
         }
       ],
       "decorations": [],
@@ -830,7 +1068,7 @@
         true,
         true,
         true,
-        true,
+        false,
         false
       ],
       "fnSlotEnabled": [
@@ -843,10 +1081,12 @@
         "forward": true,
         "left": true,
         "right": true,
-        "backward": false,
+        "backward": true,
         "function": false
       },
-      "themeOverrides": {},
+      "themeOverrides": {
+        "--grid-bg": "#62a8c6"
+      },
       "levelHints": {
         "availableBlockGlow": false
       }
@@ -857,20 +1097,71 @@
       "baseStepIndex": 16,
       "campaignIndex": 16,
       "name": "L17",
-      "icon": "leaf",
+      "notes": "Mondo 5 (Ingranaggi) - Prima Funzione: ripeti due volte (QQ [Fn:FF])",
+      "icon": "star",
       "baseLevel": "level1",
       "characterId": "boks_green",
       "start": {
-        "x": 5,
-        "y": 1
+        "x": 1,
+        "y": 2
       },
       "goal": {
-        "x": 3,
-        "y": 3
+        "x": 5,
+        "y": 2
       },
-      "startOri": "down",
-      "obstacles": [],
-      "decorations": [],
+      "startOri": "right",
+      "obstacles": [
+        {
+          "x": 1,
+          "y": 3
+        },
+        {
+          "x": 1,
+          "y": 1
+        },
+        {
+          "x": 0,
+          "y": 2
+        }
+      ],
+      "decorations": [
+        {
+          "id": "d-17-1",
+          "x": 3,
+          "y": 0,
+          "anchorX": 0.583,
+          "anchorY": 0.137,
+          "asset": "world_clock",
+          "layer": "object",
+          "scale": 0.65,
+          "rotation": 0,
+          "pivotX": 0.5,
+          "pivotY": 0.5,
+          "motion": "pulse",
+          "motionExtent": 0.4,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "d-17-2",
+          "x": 4,
+          "y": 4,
+          "anchorX": 0.75,
+          "anchorY": 0.803,
+          "asset": "world_antenna",
+          "layer": "object",
+          "scale": 0.6,
+          "rotation": 0,
+          "pivotX": 0.5,
+          "pivotY": 0.5,
+          "motion": "sway",
+          "motionExtent": 0.4,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        }
+      ],
       "mainSlotEnabled": [
         true,
         true,
@@ -884,13 +1175,13 @@
       "fnSlotEnabled": [
         true,
         true,
-        true,
-        true
+        false,
+        false
       ],
       "enabledBlocks": {
         "forward": true,
-        "left": true,
-        "right": true,
+        "left": false,
+        "right": false,
         "backward": false,
         "function": true
       },
@@ -905,7 +1196,8 @@
       "baseStepIndex": 17,
       "campaignIndex": 17,
       "name": "L18",
-      "icon": "leaf",
+      "notes": "Mondo 5 (Ingranaggi) - Curva a destra nella Funzione (QQ [Fn:FFR])",
+      "icon": "star",
       "baseLevel": "level1",
       "characterId": "boks_green",
       "start": {
@@ -917,8 +1209,54 @@
         "y": 2
       },
       "startOri": "up",
-      "obstacles": [],
-      "decorations": [],
+      "obstacles": [
+        {
+          "x": 1,
+          "y": 3
+        },
+        {
+          "x": 0,
+          "y": 1
+        }
+      ],
+      "decorations": [
+        {
+          "id": "d-18-1",
+          "x": 4,
+          "y": 1,
+          "anchorX": 0.75,
+          "anchorY": 0.303,
+          "asset": "world_clock",
+          "layer": "object",
+          "scale": 0.65,
+          "rotation": 0,
+          "pivotX": 0.5,
+          "pivotY": 0.5,
+          "motion": "pulse",
+          "motionExtent": 0.4,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "d-18-2",
+          "x": 4,
+          "y": 4,
+          "anchorX": 0.75,
+          "anchorY": 0.803,
+          "asset": "world_antenna",
+          "layer": "object",
+          "scale": 0.6,
+          "rotation": 0,
+          "pivotX": 0.5,
+          "pivotY": 0.5,
+          "motion": "sway",
+          "motionExtent": 0.4,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        }
+      ],
       "mainSlotEnabled": [
         true,
         true,
@@ -953,7 +1291,8 @@
       "baseStepIndex": 18,
       "campaignIndex": 18,
       "name": "L19",
-      "icon": "leaf",
+      "notes": "Mondo 5 (Ingranaggi) - Curva a sinistra nella Funzione (QQ [Fn:FFL])",
+      "icon": "star",
       "baseLevel": "level1",
       "characterId": "boks_green",
       "start": {
@@ -961,12 +1300,58 @@
         "y": 4
       },
       "goal": {
-        "x": 1,
+        "x": 3,
         "y": 2
       },
       "startOri": "right",
-      "obstacles": [],
-      "decorations": [],
+      "obstacles": [
+        {
+          "x": 2,
+          "y": 3
+        },
+        {
+          "x": 4,
+          "y": 4
+        }
+      ],
+      "decorations": [
+        {
+          "id": "d-19-1",
+          "x": 0,
+          "y": 1,
+          "anchorX": 0.083,
+          "anchorY": 0.303,
+          "asset": "world_clock",
+          "layer": "object",
+          "scale": 0.65,
+          "rotation": 0,
+          "pivotX": 0.5,
+          "pivotY": 0.5,
+          "motion": "pulse",
+          "motionExtent": 0.4,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "d-19-2",
+          "x": 5,
+          "y": 1,
+          "anchorX": 0.917,
+          "anchorY": 0.303,
+          "asset": "world_antenna",
+          "layer": "object",
+          "scale": 0.6,
+          "rotation": 0,
+          "pivotX": 0.5,
+          "pivotY": 0.5,
+          "motion": "sway",
+          "motionExtent": 0.4,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        }
+      ],
       "mainSlotEnabled": [
         true,
         true,
@@ -1001,7 +1386,8 @@
       "baseStepIndex": 19,
       "campaignIndex": 19,
       "name": "L20",
-      "icon": "leaf",
+      "notes": "Mondo 5 (Ingranaggi) - Forma riutilizzabile a 4 slot (QQ [Fn:FFRF])",
+      "icon": "star",
       "baseLevel": "level1",
       "characterId": "boks_green",
       "start": {
@@ -1013,8 +1399,54 @@
         "y": 3
       },
       "startOri": "right",
-      "obstacles": [],
-      "decorations": [],
+      "obstacles": [
+        {
+          "x": 1,
+          "y": 1
+        },
+        {
+          "x": 3,
+          "y": 0
+        }
+      ],
+      "decorations": [
+        {
+          "id": "d-20-1",
+          "x": 4,
+          "y": 4,
+          "anchorX": 0.75,
+          "anchorY": 0.803,
+          "asset": "world_clock",
+          "layer": "object",
+          "scale": 0.65,
+          "rotation": 0,
+          "pivotX": 0.5,
+          "pivotY": 0.5,
+          "motion": "pulse",
+          "motionExtent": 0.4,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "d-20-2",
+          "x": 5,
+          "y": 2,
+          "anchorX": 0.917,
+          "anchorY": 0.47,
+          "asset": "world_antenna",
+          "layer": "object",
+          "scale": 0.6,
+          "rotation": 0,
+          "pivotX": 0.5,
+          "pivotY": 0.5,
+          "motion": "sway",
+          "motionExtent": 0.4,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        }
+      ],
       "mainSlotEnabled": [
         true,
         true,
@@ -1049,7 +1481,8 @@
       "baseStepIndex": 20,
       "campaignIndex": 20,
       "name": "L21",
-      "icon": "leaf",
+      "notes": "Mondo 6 (Spazio) - Backward dentro la Funzione (QQ [Fn:BRFF])",
+      "icon": "moon",
       "baseLevel": "level1",
       "characterId": "boks_green",
       "start": {
@@ -1065,9 +1498,54 @@
         {
           "x": 2,
           "y": 1
+        },
+        {
+          "x": 5,
+          "y": 1
+        },
+        {
+          "x": 4,
+          "y": 2
         }
       ],
-      "decorations": [],
+      "decorations": [
+        {
+          "id": "d-21-1",
+          "x": 0,
+          "y": 4,
+          "anchorX": 0.083,
+          "anchorY": 0.803,
+          "asset": "world_antenna",
+          "layer": "object",
+          "scale": 0.65,
+          "rotation": 0,
+          "pivotX": 0.5,
+          "pivotY": 0.5,
+          "motion": "pulse",
+          "motionExtent": 0.4,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "d-21-2",
+          "x": 5,
+          "y": 4,
+          "anchorX": 0.917,
+          "anchorY": 0.803,
+          "asset": "world_stone",
+          "layer": "object",
+          "scale": 0.6,
+          "rotation": 0,
+          "pivotX": 0.5,
+          "pivotY": 0.5,
+          "motion": "bob",
+          "motionExtent": 0.4,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        }
+      ],
       "mainSlotEnabled": [
         true,
         true,
@@ -1102,7 +1580,8 @@
       "baseStepIndex": 21,
       "campaignIndex": 21,
       "name": "L22",
-      "icon": "leaf",
+      "notes": "Mondo 6 (Spazio) - Doppio salto indietro (QQ [Fn:LBB])",
+      "icon": "moon",
       "baseLevel": "level1",
       "characterId": "boks_green",
       "start": {
@@ -1118,13 +1597,54 @@
         {
           "x": 3,
           "y": 4
+        },
+        {
+          "x": 3,
+          "y": 5
         }
       ],
-      "decorations": [],
+      "decorations": [
+        {
+          "id": "d-22-1",
+          "x": 1,
+          "y": 1,
+          "anchorX": 0.25,
+          "anchorY": 0.303,
+          "asset": "world_antenna",
+          "layer": "object",
+          "scale": 0.65,
+          "rotation": 0,
+          "pivotX": 0.5,
+          "pivotY": 0.5,
+          "motion": "pulse",
+          "motionExtent": 0.4,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "d-22-2",
+          "x": 0,
+          "y": 4,
+          "anchorX": 0.083,
+          "anchorY": 0.803,
+          "asset": "world_stone",
+          "layer": "object",
+          "scale": 0.6,
+          "rotation": 0,
+          "pivotX": 0.5,
+          "pivotY": 0.5,
+          "motion": "bob",
+          "motionExtent": 0.4,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        }
+      ],
       "mainSlotEnabled": [
         true,
         true,
-        true,
+        false,
         false,
         false,
         false,
@@ -1155,25 +1675,79 @@
       "baseStepIndex": 22,
       "campaignIndex": 22,
       "name": "L23",
-      "icon": "leaf",
+      "notes": "Mondo 6 (Spazio) - Esci dalla tasca e ripeti (BQQ [Fn:LFF])",
+      "icon": "moon",
       "baseLevel": "level1",
       "characterId": "boks_green",
       "start": {
-        "x": 0,
-        "y": 4
+        "x": 4,
+        "y": 1
       },
       "goal": {
-        "x": 1,
-        "y": 2
+        "x": 2,
+        "y": 4
       },
       "startOri": "up",
       "obstacles": [
         {
-          "x": 0,
-          "y": 2
+          "x": 4,
+          "y": 0
+        },
+        {
+          "x": 3,
+          "y": 1
+        },
+        {
+          "x": 5,
+          "y": 1
+        },
+        {
+          "x": 4,
+          "y": 3
+        },
+        {
+          "x": 3,
+          "y": 3
         }
       ],
-      "decorations": [],
+      "decorations": [
+        {
+          "id": "d-23-1",
+          "x": 0,
+          "y": 1,
+          "anchorX": 0.083,
+          "anchorY": 0.303,
+          "asset": "world_antenna",
+          "layer": "object",
+          "scale": 0.65,
+          "rotation": 0,
+          "pivotX": 0.5,
+          "pivotY": 0.5,
+          "motion": "pulse",
+          "motionExtent": 0.4,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "d-23-2",
+          "x": 5,
+          "y": 5,
+          "anchorX": 0.917,
+          "anchorY": 0.97,
+          "asset": "world_stone",
+          "layer": "object",
+          "scale": 0.6,
+          "rotation": 0,
+          "pivotX": 0.5,
+          "pivotY": 0.5,
+          "motion": "bob",
+          "motionExtent": 0.4,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        }
+      ],
       "mainSlotEnabled": [
         true,
         true,
@@ -1208,25 +1782,89 @@
       "baseStepIndex": 23,
       "campaignIndex": 23,
       "name": "L24",
+      "notes": "Mondo 6 (Spazio) - Gran Finale: Ritorno a casa (QQ [Fn:BLFF])",
       "icon": "leaf",
       "baseLevel": "level1",
       "characterId": "boks_green",
       "start": {
-        "x": 4,
-        "y": 4
+        "x": 5,
+        "y": 2
       },
       "goal": {
-        "x": 2,
-        "y": 2
+        "x": 4,
+        "y": 5
       },
       "startOri": "up",
       "obstacles": [
         {
+          "x": 5,
+          "y": 1
+        },
+        {
           "x": 4,
           "y": 2
+        },
+        {
+          "x": 5,
+          "y": 4
         }
       ],
-      "decorations": [],
+      "decorations": [
+        {
+          "id": "d-24-1",
+          "x": 1,
+          "y": 1,
+          "anchorX": 0.25,
+          "anchorY": 0.303,
+          "asset": "world_antenna",
+          "layer": "object",
+          "scale": 0.7,
+          "rotation": 0,
+          "pivotX": 0.5,
+          "pivotY": 0.5,
+          "motion": "pulse",
+          "motionExtent": 0.45,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "d-24-2",
+          "x": 1,
+          "y": 4,
+          "anchorX": 0.25,
+          "anchorY": 0.803,
+          "asset": "world_stone",
+          "layer": "object",
+          "scale": 0.6,
+          "rotation": 0,
+          "pivotX": 0.5,
+          "pivotY": 0.5,
+          "motion": "bob",
+          "motionExtent": 0.4,
+          "count": 1,
+          "foliageColor": "",
+          "trunkColor": ""
+        },
+        {
+          "id": "d-24-3",
+          "x": 2,
+          "y": 1,
+          "anchorX": 0.417,
+          "anchorY": 0.303,
+          "asset": "bee_hover",
+          "layer": "overlay",
+          "scale": 0.85,
+          "rotation": 0,
+          "pivotX": 0.5,
+          "pivotY": 0.5,
+          "motion": "orbit_cw",
+          "motionExtent": 0.5,
+          "count": 2,
+          "foliageColor": "",
+          "trunkColor": ""
+        }
+      ],
       "mainSlotEnabled": [
         true,
         true,

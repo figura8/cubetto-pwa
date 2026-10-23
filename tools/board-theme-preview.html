@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>BÖKS · Anteprima dei mondi</title>
+  <link rel="stylesheet" href="../styles/app.css">
+  <link rel="stylesheet" href="../styles/board-themes.css">
+  <link rel="stylesheet" href="board-theme-preview.css">
+</head>
+<body>
+  <main class="theme-preview">
+    <a class="back-link" href="../index.html">← Torna a BÖKS</a>
+    <h1 id="themeCountTitle">Un livello, tanti mondi</h1>
+    <p>Confronta lo stesso puzzle 6×6: cambiano solo la superficie e i colori della griglia. Gli oggetti si aggiungono manualmente nell’editor, dalla sezione Decorazioni.</p>
+    <div class="theme-navigation">
+      <button id="previousTheme" type="button" aria-label="Tema precedente">←</button>
+      <label for="previewTheme">Mondo</label>
+      <select id="previewTheme"></select>
+      <button id="nextTheme" type="button" aria-label="Tema successivo">→</button>
+    </div>
+    <section class="preview-world" aria-label="Anteprima del livello">
+      <div id="header">
+        <img class="boks-logo" src="../assets/ui/brand/boks-logo.svg" alt="BÖKS">
+      </div>
+      <div id="previewBoard" role="img" aria-label="Griglia 6 per 6: BÖKS in basso a sinistra, goal nella seconda riga, quattro ostacoli"></div>
+    </section>
+    <p id="themeDescription" aria-live="polite"></p>
+    <p class="sample-info">Partenza (0,5), verso su · Goal (0,1) · 4 ostacoli · 4 slot · Avanti ×4</p>
+    <p id="artStatus"></p>
+    <details class="theme-inspector">
+      <summary>Personalizza una copia del tema</summary>
+      <p>Modifica i dati e scarica la definizione. L’anteprima non salva modifiche ai livelli.</p>
+      <label>Nome <input id="themeName" type="text" maxlength="64"></label>
+      <label>ID <input id="themeId" type="text" pattern="[a-z0-9-]+" placeholder="world-nuovo-mondo"></label>
+      <div id="paletteFields"></div>
+      <div class="preview-actions">
+        <button id="applyPreview" type="button">Anteprima copia</button>
+        <button id="exportTheme" type="button">Scarica definizione JSON</button>
+      </div>
+      <p id="inspectorStatus" role="status"></p>
+    </details>
+    <p id="previewError" role="alert"></p>
+  </main>
+  <script src="../js/levels/level1.js"></script>
+  <script src="../js/themes/board-themes.js"></script>
+  <script src="board-theme-preview.js"></script>
+</body>
+</html>

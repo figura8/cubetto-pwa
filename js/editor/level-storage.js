@@ -55,7 +55,7 @@
     function normalizeDecorationScale(scale, fallback = 1) {
       const numeric = Number(scale);
       if (!Number.isFinite(numeric)) return fallback;
-      return Math.max(0.5, Math.min(1.8, Math.round(numeric * 100) / 100));
+      return Math.max(0.3, Math.min(2.5, Math.round(numeric * 100) / 100));
     }
 
     function normalizeDecorationCount(count, fallback = 1) {
@@ -73,6 +73,12 @@
       const numeric = Number(value);
       if (!Number.isFinite(numeric)) return fallback;
       return Math.max(0, Math.min(1, Math.round(numeric * 1000) / 1000));
+    }
+
+    function normalizeDecorationRotation(value) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return 0;
+      return Math.round(((((numeric + 180) % 360) + 360) % 360 - 180) * 10) / 10;
     }
 
     function normalizeDecorations(source = []) {
@@ -111,6 +117,11 @@
           asset,
           layer,
           scale: normalizeDecorationScale(entry?.scale, 1),
+          rotation: normalizeDecorationRotation(entry?.rotation),
+          pivotX: normalizeDecorationAnchor(entry?.pivotX, 0.5),
+          pivotY: normalizeDecorationAnchor(entry?.pivotY, 0.5),
+          motion: ['none', 'sweep_lr', 'sweep_rl', 'orbit_cw', 'orbit_ccw', 'bob', 'sway', 'figure8', 'patrol_vertical', 'pulse', 'flutter'].includes(entry?.motion) ? entry.motion : 'none',
+          motionExtent: Math.max(0.25, Math.min(2, Math.round((Number(entry?.motionExtent) || 1) * 100) / 100)),
           count: normalizeDecorationCount(entry?.count, asset === 'bee_hover' ? 3 : 1),
           foliageColor: normalizeDecorationColor(entry?.foliageColor),
           trunkColor: normalizeDecorationColor(entry?.trunkColor)
@@ -145,6 +156,7 @@
         baseStepIndex: normalizedCampaignIndex,
         campaignIndex: normalizedCampaignIndex,
         name: normalizeLevelName(level.name || 'Livello custom') || 'Livello custom',
+        notes: typeof level.notes === 'string' ? level.notes : '',
         icon: api.customIcons.includes(level.icon) ? level.icon : api.customIcons[0],
         baseLevel: normalizedBaseLevel,
         characterId: normalizeCharacterId(level.characterId),
@@ -374,25 +386,37 @@
 
       let projectLevels = [];
       const cachedProjectLevels = readStoredLevels(api.projectLevelsCacheKey);
+      const draftLevels = readStoredLevels(api.editorLevelsStorageKey);
+
+      function withSavedBrowserStyles(levels) {
+        const previousById = new Map(cachedProjectLevels.map(level => [level.id, level]));
+        const draftById = new Map(draftLevels.map(level => [level.id, level]));
+        const styleKeys = ['baseLevel', 'characterId', 'themeOverrides'];
+        return levels.map(level => {
+          const previous = previousById.get(level.id);
+          const draft = draftById.get(level.id);
+          if (!previous || !draft) return level;
+          const styleChanges = {};
+          for (const key of styleKeys) {
+            if (JSON.stringify(draft[key]) !== JSON.stringify(previous[key])) styleChanges[key] = draft[key];
+          }
+          return Object.keys(styleChanges).length ? normalizeCustomLevel({ ...level, ...styleChanges }) : level;
+        });
+      }
 
       if (api.preferProjectLevelsFile) {
-        if (cachedProjectLevels.length) {
-          setActiveLevels(cachedProjectLevels);
-          void fetchProjectLevels().then(levels => {
-            if (!levels.length) return;
-            editorLevelsCache = levels.map(normalizeCustomLevel);
-          });
-          return;
-        }
         projectLevels = await fetchProjectLevels();
         if (projectLevels.length) {
-          setActiveLevels(projectLevels);
+          setActiveLevels(withSavedBrowserStyles(projectLevels));
+          return;
+        }
+        if (cachedProjectLevels.length) {
+          setActiveLevels(withSavedBrowserStyles(cachedProjectLevels));
           return;
         }
         return;
       }
 
-      const draftLevels = readStoredLevels(api.editorLevelsStorageKey);
       if (draftLevels.length) {
         setActiveLevels(draftLevels);
         return;

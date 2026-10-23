@@ -115,7 +115,7 @@ export const tutorialData = {
         {
           "type": "Wait for event",
           "eventName": "BLOCK_RELEASED_WITHOUT_SLOT",
-          "minRepetitions": 2,
+          "minRepetitions": 1,
           "completionCondition": ""
         },
         {

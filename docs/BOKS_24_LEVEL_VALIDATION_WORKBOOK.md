@@ -1,43 +1,45 @@
 # BOKS 24-Level Validation Workbook
 
-Status: in progress. This workbook is the required design and validation
-artifact before replacing `data/editor-levels.json`.
+Status: **verified and applied** to `data/editor-levels.json`.
 
 ## Notation
 
-`S` start, `G` goal, `#` obstacle, `.` empty. Coordinates are X1-X6,
-Y1-Y6. Reference programs use F, L, R, B, and Q (Function call).
+`S` start, `G` goal, `#` obstacle, `.` empty. Zero-based grid coordinates `(x, y)` from `0..5` (as stored in `data/editor-levels.json`). Reference programs use `F` (Forward), `L` (Left), `R` (Right), `B` (Backward), and `Q` (Function call).
+
+## 6-World Campaign Progression
+
+1. **Mondo 1 (L1–L4) — Prato (`level1`, `boks_green`)**: Forward distance reading and first obstacle turn.
+2. **Mondo 2 (L5–L8) — Cielo / Nuvole (`world-sky`, `boks_yellow`)**: Left/Right turns and Backward discovery + orientation preservation.
+3. **Mondo 3 (L9–L12) — Stazione (`world-train-station`, `boks_red`)**: Backward maneuvers, pockets, L-switches, and long retreats.
+4. **Mondo 4 (L13–L16) — Strada Piovosa (`world-rainy-street`, `boks_city`)**: False shortcuts, U-exits, route budget comparison, and multi-gate choreography.
+5. **Mondo 5 (L17–L20) — Città degli Ingranaggi (`world-clockwork`, `boks_blu`)**: Clean Function (`Q`) introduction and repeated spatial shapes.
+6. **Mondo 6 (L21–L24) — Spazio (`world-space`, `boks_yellow`)**: Function + Backward synthesis and compact finale.
 
 ## Level Table
 
-| # | Name | Start orientation | Blocks | Main/Fn | Reference solution | Obstacle purpose | Pass |
-|---:|---|---|---|---|---|---|---|
-| 1 | First Step | East | F | 1/0 | F | None | verified |
-| 2 | Count Two | North | F | 2/0 | F F | None | verified |
-| 3 | Count Three | South | F | 3/0 | F F F | None | verified |
-| 4 | Closed Ahead | North | F,R | 2/0 | R F | Blocks direct forward | verified |
-| 5 | Mirror Door | South | F,L | 2/0 | L F | Blocks direct forward | verified |
-| 6 | Around Corner | West | F,L,R | 6/0 | R F F L F | Closes the short line | verified |
-| 7 | Back One | North | B | 1/0 | B | None: discovery | verified |
-| 8 | Stay Facing | East | B | 2/0 | B B | None: preserved orientation | verified |
-| 9 | Closed Forward | East | F,B | 2/0 | B B | X5,Y3 closes Forward | verified |
-| 10 | Short Exit | North | F,L,B | 3/0 | B L F | X4,Y3 closes Forward | verified |
-| 11 | Pocket | East | F,L,B | 3/0 | B L F | X4,Y5 closes Forward | verified |
-| 12 | First Corridor | North | F,L,R,B | 5/0 | pending | Corridor entrance | pending |
-| 13 | False Shortcut | East | F,L,R,B | 5/0 | pending | Direct route is closed | pending |
-| 14 | U Exit | South | F,L,R,B | 6/0 | pending | U-shape exit | pending |
-| 15 | Two Routes | West | F,L,R,B | 6/0 | pending | Makes route choice meaningful | pending |
-| 16 | Gate Sequence | North | F,L,R,B | 7/0 | pending | Three gates create order | pending |
-| 17 | Repeat One | North | F,Q | 1/2 | Q; Fn=F F | First Function | pending |
-| 18 | Repeat Twice | West | F,Q | 2/2 | Q Q; Fn=F F | Genuine repetition | pending |
-| 19 | Bend Repeat | South | F,R,Q | 2/2 | pending | Repeated bend | pending |
-| 20 | Same Shape | East | F,L,R,Q | 3/3 | pending | Same routine in two places | pending |
-| 21 | Retreat Routine | North | F,L,R,B,Q | 3/3 | pending | Backward inside Function | pending |
-| 22 | Split Decision | West | F,L,R,B,Q | 4/3 | pending | Main vs Function choice | pending |
-| 23 | Cloud Bridge | South | F,L,R,B,Q | 5/3 | pending | False bridge | pending |
-| 24 | Homeward | East | F,L,R,B,Q | 5/3 | pending | Compact final synthesis | pending |
-
-## Gate
-
-Do not implement this workbook yet. Complete every `pending` solution, then
-add and solver-check all 24 ASCII boards before applying campaign data.
+| # | World / Theme | Character | Start (x,y,ori) | Goal (x,y) | Blocks | Main/Fn | Reference solution | Obstacle purpose | Pass |
+|---:|---|---|---|---|---|---|---|---|---|
+| 1 | `level1` | `boks_green` | `(2,3,right)` | `(3,3)` | F | 1/0 | `F` | None: first command | verified |
+| 2 | `level1` | `boks_green` | `(4,2,left)` | `(2,2)` | F | 2/0 | `F F` | None: count two cells | verified |
+| 3 | `level1` | `boks_green` | `(1,4,up)` | `(1,1)` | F | 3/0 | `F F F` | None: count three cells | verified |
+| 4 | `level1` | `boks_green` | `(1,4,up)` | `(2,3)` | F,L,R | 4/0 | `R F L F` | `(1,3)` blocks direct forward | verified |
+| 5 | `world-sky` | `boks_yellow` | `(4,1,left)` | `(3,2)` | F,L,R | 4/0 | `L F R F` | `(3,1)` blocks direct forward | verified |
+| 6 | `world-sky` | `boks_yellow` | `(1,1,down)` | `(3,3)` | F,L,R | 6/0 | `L F F R F F` | `(1,3),(2,2)` close inner route | verified |
+| 7 | `world-sky` | `boks_yellow` | `(3,3,up)` | `(3,4)` | F,B | 1/0 | `B` | `(3,2)` blocks forward; discovery | verified |
+| 8 | `world-sky` | `boks_yellow` | `(2,2,right)` | `(0,2)` | F,L,R,B | 2/0 | `B B` | `(3,2)` blocks forward; saves turn slots | verified |
+| 9 | `world-train-station` | `boks_red` | `(3,3,up)` | `(1,4)` | F,L,R,B | 4/0 | `B L F F` | `(2,3)` blocks left turn before backing up | verified |
+| 10 | `world-train-station` | `boks_red` | `(2,1,up)` | `(4,2)` | F,L,R,B | 4/0 | `B L B B` | `(2,0),(1,1),(3,1)` form a pocket | verified |
+| 11 | `world-train-station` | `boks_red` | `(4,4,right)` | `(2,2)` | F,L,R,B | 5/0 | `B B L F F` | `(4,2),(3,3)` block direct turn | verified |
+| 12 | `world-train-station` | `boks_red` | `(1,1,left)` | `(4,2)` | F,L,R,B | 5/0 | `B B B L F` | `(2,2),(2,0)` guide 3-step retreat | verified |
+| 13 | `world-rainy-street` | `boks_city` | `(1,3,left)` | `(4,1)` | F,L,R,B | 6/0 | `B B B R F F` | `(0,3),(1,2),(2,2),(3,2)` close upper shortcut | verified |
+| 14 | `world-rainy-street` | `boks_city` | `(1,2,up)` | `(3,2)` | F,L,R,B | 6/0 | `B R F F L F` | `(1,1),(0,2),(2,2),(2,1)` form U-pocket | verified |
+| 15 | `world-rainy-street` | `boks_city` | `(1,4,down)` | `(4,2)` | F,L,R,B | 6/0 | `B B L F F F` | `(1,5),(0,4),(2,3),(3,3)` force compact route | verified |
+| 16 | `world-rainy-street` | `boks_city` | `(2,2,up)` | `(3,5)` | F,L,R,B | 6/0 | `B B L B L F` | `(2,1),(1,2),(3,2),(3,3),(2,5)` gate sequence | verified |
+| 17 | `world-clockwork` | `boks_blu` | `(1,2,right)` | `(5,2)` | F,Q | 2/2 | `Q Q` (`Fn: F F`) | `(1,3),(1,1),(0,2)` frame straight corridor | verified |
+| 18 | `world-clockwork` | `boks_blu` | `(0,4,up)` | `(2,2)` | F,R,Q | 2/3 | `Q Q` (`Fn: F F R`) | `(1,3),(0,1)` require repeated right bend | verified |
+| 19 | `world-clockwork` | `boks_blu` | `(1,4,right)` | `(3,2)` | F,L,Q | 2/3 | `Q Q` (`Fn: F F L`) | `(2,3),(4,4)` require repeated left bend | verified |
+| 20 | `world-clockwork` | `boks_blu` | `(0,0,right)` | `(1,3)` | F,L,R,Q | 2/4 | `Q Q` (`Fn: F F R F`) | `(1,1),(3,0)` guide 4-slot spiral | verified |
+| 21 | `world-space` | `boks_yellow` | `(4,1,right)` | `(1,2)` | F,L,R,B,Q | 2/4 | `Q Q` (`Fn: B R F F`) | `(2,1),(5,1),(4,2)` require Backward in Fn | verified |
+| 22 | `world-space` | `boks_yellow` | `(4,5,left)` | `(3,3)` | F,L,R,B,Q | 2/3 | `Q Q` (`Fn: L B B`) | `(3,4),(3,5)` require turn+retreat in Fn | verified |
+| 23 | `world-space` | `boks_yellow` | `(4,1,up)` | `(2,4)` | F,L,R,B,Q | 3/3 | `B Q Q` (`Fn: L F F`) | `(4,0),(3,1),(5,1),(4,3),(3,3)` split Main/Fn | verified |
+| 24 | `world-space` | `boks_yellow` | `(5,2,up)` | `(4,5)` | F,L,R,B,Q | 2/4 | `Q Q` (`Fn: B L F F`) | `(5,1),(4,2),(5,4)` compact final synthesis | verified |

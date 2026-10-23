@@ -1,0 +1,427 @@
+{
+  "version": 1,
+  "artStatus": "Themes contain grid surfaces only. All props are optional manual decoration tools; approved BOKS artwork is unchanged.",
+  "themes": [
+    {
+      "id": "level1",
+      "displayName": "Prato / Giardino",
+      "description": "Prato BÖKS originale: erba",
+      "useExistingVisuals": true,
+      "placeholder": false
+    },
+    {
+      "id": "world-sky",
+      "displayName": "Cielo / Nuvole",
+      "description": "Isole di nuvole",
+      "placeholder": true,
+      "palette": {
+        "board": "#d9eff8",
+        "tile": "#c1e3f2",
+        "alternate": "#d9eff8",
+        "border": "#a2cedf"
+      },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M0 71Q20 62 37 71T74 71T105 71\" fill=\"none\" stroke=\"#fff\" stroke-opacity=\".4\" stroke-width=\"3\"/></svg>"
+    },
+    {
+      "id": "world-rainy-street",
+      "displayName": "Strada piovosa",
+      "description": "Pavimento bagnato",
+      "placeholder": true,
+      "palette": {
+        "board": "#c7d7dd",
+        "tile": "#b9cbd1",
+        "alternate": "#c7d7dd",
+        "border": "#7e9eac"
+      },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><ellipse cx=\"68\" cy=\"79\" rx=\"19\" ry=\"7\" fill=\"#90bcc9\" opacity=\".42\"/><path d=\"M2 25H98M24 0V25M75 25V100\" stroke=\"#7b96a2\" opacity=\".17\" stroke-width=\"2\"/></svg>"
+    },
+    {
+      "id": "world-train-station",
+      "displayName": "Stazione",
+      "description": "Banchina",
+      "placeholder": true,
+      "palette": {
+        "board": "#e2e5d8",
+        "tile": "#d7ded3",
+        "alternate": "#e2e5d8",
+        "border": "#98aaa0"
+      },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M7 91H93\" stroke=\"#edc64e\" stroke-width=\"5\"/><path d=\"M25 89V94M50 89V94M75 89V94\" stroke=\"#ae9252\" stroke-width=\"2\"/><path d=\"M2 33H98M2 66H98\" stroke=\"#7c908d\" opacity=\".2\"/></svg>"
+    },
+    {
+      "id": "world-supermarket",
+      "displayName": "Supermercato",
+      "description": "Piastrelle crema",
+      "placeholder": true,
+      "palette": {
+        "board": "#fff3df",
+        "tile": "#f3e8cf",
+        "alternate": "#fff3df",
+        "border": "#cbb58e"
+      },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M0 50H100M50 0V100\" stroke=\"#c4b393\" opacity=\".25\" stroke-width=\"2\"/><rect x=\"6\" y=\"6\" width=\"12\" height=\"12\" rx=\"3\" fill=\"#fffaf0\" opacity=\".45\"/></svg>"
+    },
+    {
+      "id": "world-school",
+      "displayName": "Scuola",
+      "description": "Corridoio",
+      "placeholder": true,
+      "palette": {
+        "board": "#e9e4dc",
+        "tile": "#dedbd2",
+        "alternate": "#e9e4dc",
+        "border": "#b0a89a"
+      },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M10 10L20 11M70 65L77 68M35 85L41 84M79 16L84 20\" stroke=\"#b4ada4\" opacity=\".42\" stroke-width=\"3\"/></svg>"
+    },
+    {
+      "id": "world-camping",
+      "displayName": "Campeggio",
+      "description": "Terra",
+      "placeholder": true,
+      "palette": {
+        "board": "#d4d9b8",
+        "tile": "#c7cfaa",
+        "alternate": "#d4d9b8",
+        "border": "#8f9b71"
+      },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M3 75Q23 68 46 78T98 74\" fill=\"none\" stroke=\"#a68f62\" opacity=\".25\" stroke-width=\"5\"/><path d=\"M16 89L18 80L23 88\" fill=\"none\" stroke=\"#798c60\" opacity=\".4\" stroke-width=\"2\"/></svg>"
+    },
+    {
+      "id": "world-laundromat",
+      "displayName": "Lavanderia",
+      "description": "Ceramica azzurra",
+      "placeholder": true,
+      "palette": {
+        "board": "#e0eef1",
+        "tile": "#cce3e9",
+        "alternate": "#e0eef1",
+        "border": "#8eb6c3"
+      },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M0 50H100M50 0V100\" stroke=\"#8aa9b4\" opacity=\".3\" stroke-width=\"2\"/><circle cx=\"82\" cy=\"19\" r=\"5\" fill=\"none\" stroke=\"#f6fcff\" stroke-width=\"2\"/></svg>"
+    },
+    {
+      "id": "world-space",
+      "displayName": "Spazio / Luna",
+      "description": "Suolo lunare",
+      "placeholder": true,
+      "palette": {
+        "board": "#d2d3df",
+        "tile": "#c0c2d1",
+        "alternate": "#d2d3df",
+        "border": "#8b90ac"
+      },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><ellipse cx=\"78\" cy=\"76\" rx=\"13\" ry=\"6\" fill=\"none\" stroke=\"#8e92aa\" opacity=\".35\" stroke-width=\"2\"/><circle cx=\"23\" cy=\"24\" r=\"3\" fill=\"#b0b1bd\" opacity=\".4\"/></svg>"
+    },
+    {
+      "id": "world-beach",
+      "displayName": "Spiaggia / Mare",
+      "description": "Sabbia",
+      "placeholder": true,
+      "palette": {
+        "board": "#f8e8c9",
+        "tile": "#f0dfb9",
+        "alternate": "#f8e8c9",
+        "border": "#c7b383"
+      },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M6 83Q19 79 31 83M55 16Q64 12 75 16\" fill=\"none\" stroke=\"#c9b07c\" opacity=\".35\" stroke-width=\"2\"/><circle cx=\"86\" cy=\"84\" r=\"2\" fill=\"#c9b07c\" opacity=\".4\"/></svg>"
+    },
+    {
+      "id": "world-seabed",
+      "displayName": "Fondale marino",
+      "description": "Sabbia azzurra e riflessi d'acqua",
+      "placeholder": true,
+      "palette": {
+        "board": "#80cad4",
+        "tile": "#a9dde1",
+        "alternate": "#97d3d9",
+        "border": "#559ba9"
+      },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M-10 23Q22 5 55 23T110 22M-10 66Q22 48 55 66T110 65\" fill=\"none\" stroke=\"#ecfbf1\" stroke-width=\"7\" opacity=\".23\"/><path d=\"M9 87Q28 81 45 87M68 12Q78 8 89 12\" fill=\"none\" stroke=\"#438d99\" stroke-width=\"2\" opacity=\".24\"/></svg>"
+    },
+    {
+      "id": "world-night-garden",
+      "displayName": "Giardino notturno",
+      "description": "Sentieri viola e lucciole",
+      "placeholder": true,
+      "palette": {
+        "board": "#334365",
+        "tile": "#53608b",
+        "alternate": "#48567d",
+        "border": "#8793b7"
+      },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M3 79Q37 68 69 80T110 79\" fill=\"none\" stroke=\"#a499cf\" stroke-width=\"8\" opacity=\".2\"/><circle cx=\"19\" cy=\"24\" r=\"2.5\" fill=\"#f7e8ad\" opacity=\".85\"/><circle cx=\"76\" cy=\"41\" r=\"1.7\" fill=\"#dce6c2\" opacity=\".7\"/></svg>"
+    },
+    {
+      "id": "world-toy-workshop",
+      "displayName": "Laboratorio dei giocattoli",
+      "description": "Piano di lavoro illustrato",
+      "placeholder": true,
+      "palette": {
+        "board": "#ead8b9",
+        "tile": "#f1e1c5",
+        "alternate": "#e7d4b3",
+        "border": "#b79166"
+      },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M8 17H33M12 22H29M68 74H91M73 79H88\" fill=\"none\" stroke=\"#aa865e\" stroke-width=\"2\" opacity=\".25\"/><circle cx=\"81\" cy=\"21\" r=\"3\" fill=\"#cb8468\" opacity=\".36\"/><path d=\"M18 72L30 84M30 72L18 84\" stroke=\"#7791a2\" stroke-width=\"2\" opacity=\".3\"/></svg>"
+    },
+    {
+      "id": "world-autumn-forest",
+      "displayName": "Bosco d'autunno",
+      "description": "Terra ambrata e venature di foglie",
+      "placeholder": true,
+      "palette": { "board": "#bc8055", "tile": "#d8ae79", "alternate": "#cfa06c", "border": "#865f49" },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M9 74Q23 62 36 75M68 24Q79 14 90 24\" fill=\"none\" stroke=\"#8e593d\" stroke-width=\"2\" opacity=\".34\"/><path d=\"M17 27Q24 19 28 30Q21 36 17 27ZM75 77Q82 68 87 78Q81 85 75 77Z\" fill=\"#edca84\" opacity=\".35\"/></svg>"
+    },
+    {
+      "id": "world-snow-village",
+      "displayName": "Villaggio innevato",
+      "description": "Neve morbida con ombre ghiacciate",
+      "placeholder": true,
+      "palette": { "board": "#b8d5e2", "tile": "#eff7f4", "alternate": "#dfeef1", "border": "#8faebe" },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M-5 72Q19 64 44 72T105 72\" fill=\"none\" stroke=\"#a9cbd5\" stroke-width=\"5\" opacity=\".32\"/><circle cx=\"20\" cy=\"23\" r=\"2\" fill=\"#a0c4d2\"/><circle cx=\"79\" cy=\"38\" r=\"1.5\" fill=\"#a0c4d2\"/></svg>"
+    },
+    {
+      "id": "world-desert-dunes",
+      "displayName": "Dune del deserto",
+      "description": "Sabbia dorata e tracce di vento",
+      "placeholder": true,
+      "palette": { "board": "#d8aa68", "tile": "#f1d394", "alternate": "#e8c586", "border": "#b78955" },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M-8 68Q20 45 51 66T108 63M6 80Q29 65 54 79\" fill=\"none\" stroke=\"#c18d50\" stroke-width=\"3\" opacity=\".28\"/><circle cx=\"81\" cy=\"24\" r=\"2\" fill=\"#fff3c0\" opacity=\".7\"/></svg>"
+    },
+    {
+      "id": "world-crystal-cave",
+      "displayName": "Grotta dei cristalli",
+      "description": "Pietra indaco con bagliori turchesi",
+      "placeholder": true,
+      "palette": { "board": "#343d63", "tile": "#536280", "alternate": "#495774", "border": "#8394ac" },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M18 82L29 64L39 82ZM73 36L81 20L89 36Z\" fill=\"#8de0d7\" opacity=\".24\"/><path d=\"M18 82L29 64L39 82M73 36L81 20L89 36\" fill=\"none\" stroke=\"#a8d8dc\" stroke-width=\"2\" opacity=\".4\"/></svg>"
+    },
+    {
+      "id": "world-candy-land",
+      "displayName": "Paese delle caramelle",
+      "description": "Pastello rosa e zucchero leggero",
+      "placeholder": true,
+      "palette": { "board": "#e9aeca", "tile": "#f9dbe3", "alternate": "#f0c9dc", "border": "#c880a4" },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M-5 28L26 -3M23 103L103 23\" stroke=\"#fff8eb\" stroke-width=\"8\" opacity=\".2\"/><circle cx=\"73\" cy=\"72\" r=\"3\" fill=\"#83c8be\" opacity=\".55\"/></svg>"
+    },
+    {
+      "id": "world-clockwork",
+      "displayName": "Città degli ingranaggi",
+      "description": "Ottone, rame e incisioni meccaniche",
+      "placeholder": true,
+      "palette": { "board": "#9b7758", "tile": "#c7ad7d", "alternate": "#bca072", "border": "#755944" },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"77\" cy=\"25\" r=\"12\" fill=\"none\" stroke=\"#725942\" stroke-width=\"3\" opacity=\".25\"/><circle cx=\"77\" cy=\"25\" r=\"3\" fill=\"#725942\" opacity=\".3\"/><path d=\"M7 72H42M7 79H31\" stroke=\"#725942\" stroke-width=\"2\" opacity=\".28\"/></svg>"
+    },
+    {
+      "id": "world-dinosaur-jungle",
+      "displayName": "Giungla dei dinosauri",
+      "description": "Verde tropicale e impronte fossili",
+      "placeholder": true,
+      "palette": { "board": "#548b65", "tile": "#a6c78a", "alternate": "#93bc7d", "border": "#47765e" },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M7 90Q9 61 29 51M12 88Q27 74 36 76M72 16Q79 34 93 39\" fill=\"none\" stroke=\"#407654\" stroke-width=\"4\" opacity=\".28\"/><ellipse cx=\"69\" cy=\"72\" rx=\"8\" ry=\"5\" fill=\"#47765e\" opacity=\".2\"/></svg>"
+    },
+    {
+      "id": "world-mountain-summit",
+      "displayName": "Cima delle montagne",
+      "description": "Roccia chiara e aria d'alta quota",
+      "placeholder": true,
+      "palette": { "board": "#8ca8ac", "tile": "#cad6cc", "alternate": "#b8cbc4", "border": "#718d91" },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M-5 82L25 45L43 66L63 39L106 82\" fill=\"none\" stroke=\"#729093\" stroke-width=\"3\" opacity=\".3\"/><path d=\"M18 54L25 45L31 54M56 48L63 39L71 49\" fill=\"none\" stroke=\"#f3f7e9\" stroke-width=\"3\" opacity=\".4\"/></svg>"
+    },
+    {
+      "id": "world-enchanted-library",
+      "displayName": "Biblioteca incantata",
+      "description": "Pavimento blu e dettagli di carta",
+      "placeholder": true,
+      "palette": { "board": "#586a87", "tile": "#aeb6c6", "alternate": "#9daac0", "border": "#65748d" },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M10 24H37M10 29H31M67 75H92M73 80H92\" stroke=\"#f8eed1\" stroke-width=\"2\" opacity=\".5\"/><path d=\"M76 17L80 25L88 28L80 31L76 39L73 31L65 28L73 25Z\" fill=\"#ecd896\" opacity=\".25\"/></svg>"
+    },
+    {
+      "id": "world-paper-castle",
+      "displayName": "Castello di carta",
+      "description": "Pietra illustrata e pieghe di cartoncino",
+      "placeholder": true,
+      "palette": { "board": "#c3afa0", "tile": "#eee0ca", "alternate": "#e1cfb9", "border": "#ab9384" },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M0 33H100M0 67H100M33 0V33M67 33V67M33 67V100\" stroke=\"#b99e8b\" stroke-width=\"2\" opacity=\".28\"/><path d=\"M80 8L91 20L80 20Z\" fill=\"#fff6e8\" opacity=\".45\"/></svg>"
+    },
+    {
+      "id": "world-sunset-rooftops",
+      "displayName": "Tetti al tramonto",
+      "description": "Tegole calde illuminate dal cielo rosa",
+      "placeholder": true,
+      "palette": { "board": "#bb8090", "tile": "#ebbaab", "alternate": "#dfa89f", "border": "#a66d79" },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M0 27H100M0 55H100M0 83H100M25 0V27M70 27V55M38 55V83M80 83V100\" fill=\"none\" stroke=\"#a66771\" stroke-width=\"2\" opacity=\".28\"/><path d=\"M70 12H90\" stroke=\"#fff1cc\" stroke-width=\"4\" opacity=\".3\"/></svg>"
+    },
+    {
+      "id": "world-moss-forest",
+      "displayName": "Bosco di muschio",
+      "description": "Verde soffice, muschio e piccole felci",
+      "placeholder": true,
+      "palette": { "board": "#648c66", "tile": "#c3d8a7", "alternate": "#b7d19f", "border": "#648e69" },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M9 86Q15 67 27 54M17 72Q11 65 10 57M21 64Q30 60 33 52\" fill=\"none\" stroke=\"#497a55\" stroke-width=\"2.5\" opacity=\".22\"/><circle cx=\"74\" cy=\"25\" r=\"4\" fill=\"#e7e9b3\" opacity=\".28\"/><circle cx=\"82\" cy=\"72\" r=\"2\" fill=\"#5a8756\" opacity=\".22\"/></svg>"
+    },
+    {
+      "id": "world-botanical-garden",
+      "displayName": "Orto botanico",
+      "description": "Verde menta e filari ordinati",
+      "placeholder": true,
+      "palette": { "board": "#71ad94", "tile": "#d0e7ba", "alternate": "#bde0b5", "border": "#629b83" },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M18 12V88M50 12V88M82 12V88\" stroke=\"#6baf8c\" stroke-width=\"3\" opacity=\".15\"/><path d=\"M49 33Q39 27 39 20Q48 22 49 33ZM51 63Q62 55 63 48Q53 50 51 63Z\" fill=\"#4f9d79\" opacity=\".23\"/></svg>"
+    },
+    {
+      "id": "world-poppy-garden",
+      "displayName": "Giardino dei papaveri",
+      "description": "Rosso corallo con petali leggeri",
+      "placeholder": true,
+      "palette": { "board": "#c66365", "tile": "#efb5ab", "alternate": "#e8a6a0", "border": "#aa565b" },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M18 77Q25 70 29 76M71 23Q76 17 83 22\" fill=\"none\" stroke=\"#ae5963\" stroke-width=\"2\" opacity=\".25\"/><circle cx=\"25\" cy=\"74\" r=\"3\" fill=\"#fff0d0\" opacity=\".28\"/><circle cx=\"77\" cy=\"21\" r=\"2\" fill=\"#fff0d0\" opacity=\".24\"/></svg>"
+    },
+    {
+      "id": "world-maple-forest",
+      "displayName": "Bosco d'acero",
+      "description": "Rosso foglia con venature discrete",
+      "placeholder": true,
+      "palette": { "board": "#ac5358", "tile": "#dfa59b", "alternate": "#d5968e", "border": "#91494f" },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M21 73L30 58L40 68M30 58L31 82M68 25L76 16L84 27M76 16L76 35\" fill=\"none\" stroke=\"#9a4e53\" stroke-width=\"2\" opacity=\".22\"/></svg>"
+    },
+    {
+      "id": "world-terracotta-canyon",
+      "displayName": "Canyon di terracotta",
+      "description": "Rosso mattone e tracce di roccia",
+      "placeholder": true,
+      "palette": { "board": "#b76558", "tile": "#e5ac98", "alternate": "#d99c8b", "border": "#995449" },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M-5 70Q24 62 49 70T105 69M8 81Q35 76 58 82\" fill=\"none\" stroke=\"#a95a4d\" stroke-width=\"3\" opacity=\".21\"/><path d=\"M71 22L83 19L91 26\" fill=\"none\" stroke=\"#fff1dc\" stroke-width=\"2\" opacity=\".2\"/></svg>"
+    },
+    {
+      "id": "world-ruby-planet",
+      "displayName": "Pianeta rubino",
+      "description": "Rosso granato con riflessi cristallini",
+      "placeholder": true,
+      "palette": { "board": "#8d4558", "tile": "#ce8d98", "alternate": "#c17e8c", "border": "#753e50" },
+      "surfaceSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M16 24L27 12L37 25L27 37ZM67 70L78 57L89 70L78 84Z\" fill=\"none\" stroke=\"#f4c3c0\" stroke-width=\"2\" opacity=\".24\"/><path d=\"M27 12V37M78 57V84\" stroke=\"#f4c3c0\" stroke-width=\"1.5\" opacity=\".18\"/></svg>"
+    }
+  ],
+  "decorations": [
+    {
+      "id": "world_kite",
+      "label": "Aquilone",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M49 12L77 42L48 66L21 40Z\" fill=\"#ecac56\" stroke=\"#7a829c\" stroke-width=\"3\"/><path d=\"M49 12L48 66M21 40L77 42M48 66Q68 78 46 94\" fill=\"none\" stroke=\"#7a829c\" stroke-width=\"2\"/></svg>",
+      "layer": "object",
+      "hint": "Seleziona e tocca la griglia per posizionare",
+      "defaults": {
+        "scale": 0.55
+      }
+    },
+    {
+      "id": "world_umbrella",
+      "label": "Ombrello",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M12 49Q50 -9 88 49Q69 36 50 49Q31 36 12 49Z\" fill=\"#edac76\" stroke=\"#576b7b\" stroke-width=\"3\"/><path d=\"M50 48V78Q50 92 65 83\" fill=\"none\" stroke=\"#576b7b\" stroke-width=\"5\"/><ellipse cx=\"48\" cy=\"94\" rx=\"30\" ry=\"3\" fill=\"#92b8c9\"/></svg>",
+      "layer": "object",
+      "hint": "Seleziona e tocca la griglia per posizionare",
+      "defaults": {
+        "scale": 0.55
+      }
+    },
+    {
+      "id": "world_clock",
+      "label": "Orologio stazione",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M50 8V93M21 93H79\" stroke=\"#6b7e77\" stroke-width=\"6\"/><circle cx=\"50\" cy=\"40\" r=\"29\" fill=\"#fff7df\" stroke=\"#6b7e77\" stroke-width=\"5\"/><path d=\"M50 23V41H65\" fill=\"none\" stroke=\"#8a654b\" stroke-width=\"4\"/></svg>",
+      "layer": "object",
+      "hint": "Seleziona e tocca la griglia per posizionare",
+      "defaults": {
+        "scale": 0.55
+      }
+    },
+    {
+      "id": "world_fruit",
+      "label": "Cesto di frutta",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><ellipse cx=\"50\" cy=\"70\" rx=\"37\" ry=\"18\" fill=\"#d5b88b\" stroke=\"#9a805a\" stroke-width=\"3\"/><circle cx=\"33\" cy=\"50\" r=\"15\" fill=\"#dc7d6c\"/><circle cx=\"61\" cy=\"47\" r=\"16\" fill=\"#e9c064\"/><path d=\"M63 28Q84 12 80 31Z\" fill=\"#76a478\"/></svg>",
+      "layer": "object",
+      "hint": "Seleziona e tocca la griglia per posizionare",
+      "defaults": {
+        "scale": 0.55
+      }
+    },
+    {
+      "id": "world_pencil",
+      "label": "Matita",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M17 75L70 15L85 29L32 89Z\" fill=\"#edc970\" stroke=\"#94765c\" stroke-width=\"3\"/><path d=\"M17 75L11 96L32 89Z\" fill=\"#e3c4a4\"/><path d=\"M11 96L16 82L23 90Z\" fill=\"#655953\"/><path d=\"M61 26L75 39\" stroke=\"#d6858b\" stroke-width=\"8\"/></svg>",
+      "layer": "object",
+      "hint": "Seleziona e tocca la griglia per posizionare",
+      "defaults": {
+        "scale": 0.55
+      }
+    },
+    {
+      "id": "world_tent",
+      "label": "Tenda",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M8 85L50 14L93 85Z\" fill=\"#dba671\" stroke=\"#876849\" stroke-width=\"4\"/><path d=\"M35 85L50 44L68 85Z\" fill=\"#786f58\"/><path d=\"M50 15V43M10 86H92\" stroke=\"#f4d9a5\" stroke-width=\"3\"/></svg>",
+      "layer": "object",
+      "hint": "Seleziona e tocca la griglia per posizionare",
+      "defaults": {
+        "scale": 0.55
+      }
+    },
+    {
+      "id": "world_sock",
+      "label": "Calzino",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M31 13H67V63L83 70Q92 78 80 87Q65 96 55 84L31 66Z\" fill=\"#e2a2a2\" stroke=\"#a5757d\" stroke-width=\"3\"/><path d=\"M33 27H65\" stroke=\"#fff2df\" stroke-width=\"7\"/></svg>",
+      "layer": "object",
+      "hint": "Seleziona e tocca la griglia per posizionare",
+      "defaults": {
+        "scale": 0.55
+      }
+    },
+    {
+      "id": "world_antenna",
+      "label": "Antenna",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M50 47V88M30 90H72M50 48L28 20Q51 17 78 31Q64 50 50 48Z\" fill=\"#d4d2d9\" stroke=\"#8c8ea7\" stroke-width=\"4\"/><path d=\"M51 40L72 13\" stroke=\"#9ba0b9\" stroke-width=\"3\"/><circle cx=\"74\" cy=\"10\" r=\"5\" fill=\"#e0ba72\"/></svg>",
+      "layer": "object",
+      "hint": "Seleziona e tocca la griglia per posizionare",
+      "defaults": {
+        "scale": 0.55
+      }
+    },
+    {
+      "id": "world_shell",
+      "label": "Conchiglia",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M14 44Q47 -9 84 44L58 84H39Z\" fill=\"#f1c6b6\" stroke=\"#be9386\" stroke-width=\"3\"/><path d=\"M48 81V20M42 79L25 35M56 79L72 35\" stroke=\"#d8a795\" stroke-width=\"3\"/></svg>",
+      "layer": "object",
+      "hint": "Seleziona e tocca la griglia per posizionare",
+      "defaults": {
+        "scale": 0.55
+      }
+    },
+    {
+      "id": "world_stone",
+      "label": "Pietra",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><ellipse cx=\"50\" cy=\"68\" rx=\"32\" ry=\"18\" fill=\"#bdbbb0\" stroke=\"#93958a\" stroke-width=\"3\"/><path d=\"M31 60Q48 49 66 59\" fill=\"none\" stroke=\"#d9d8ce\" stroke-width=\"4\"/></svg>",
+      "layer": "object",
+      "hint": "Seleziona e tocca la griglia per posizionare",
+      "defaults": {
+        "scale": 0.55
+      }
+    },
+    {
+      "id": "world_cloud",
+      "label": "Nuvola",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M18 64C3 62 4 42 21 39C23 19 52 14 60 36C81 27 97 49 83 63Z\" fill=\"#fff\" stroke=\"#8eb6ca\" stroke-width=\"3\"/></svg>",
+      "layer": "object",
+      "hint": "Seleziona e tocca la griglia per posizionare",
+      "defaults": {
+        "scale": 0.55
+      }
+    },
+    {
+      "id": "world_grass",
+      "label": "Ciuffo d’erba",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M15 81Q31 54 31 39Q49 63 47 83Q53 53 64 23Q66 56 68 82Q78 59 88 51L81 87H21Z\" fill=\"#83b367\"/></svg>",
+      "layer": "object",
+      "hint": "Seleziona e tocca la griglia per posizionare",
+      "defaults": {
+        "scale": 0.55
+      }
+    }
+  ]
+}

@@ -85,7 +85,7 @@
         "id": "1-8-block-released-without-slot",
         "type": "waitFor",
         "event": "block-drop-failed",
-        "count": 2
+        "count": 1
       },
       {
         "id": "1-9-lock-1",

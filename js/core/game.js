@@ -468,26 +468,83 @@ const DECORATION_TOUCH_SPRITE_INSET_RATIO = 0.04;
 const CUSTOM_ICONS = ['leaf', 'star', 'turtle', 'sun', 'moon', 'flower'];
   const DEFAULT_CHARACTER_ID = 'boks_green';
 const LOCKED_THEME_SCENE_VAR_KEYS = ['--scene-body-bg', '--bg-base', '--panel-bg', '--panel-edge'];
+const GRID_THEME_SCENE_VAR_KEYS = new Set([
+  '--scene-grid-wrap-bg', '--grid-bg', '--cell-bg', '--cell-edge',
+  '--cell-hi-bg', '--cell-hi-edge', '--cell-hi-ring',
+  '--grid-wrap-radius', '--grid-radius', '--cell-radius'
+]);
 const EDITOR_THEME_COLOR_CONTROLS = [
-  { key: '--panel-bg', label: 'Pannelli' },
-  { key: '--panel-edge', label: 'Bordo pannelli' },
   { key: '--scene-grid-wrap-bg', label: 'Cornice griglia' },
   { key: '--grid-bg', label: 'Sfondo griglia' },
   { key: '--cell-bg', label: 'Celle' },
   { key: '--cell-hi-bg', label: 'Highlight celle' },
-  { key: '--cell-hi-edge', label: 'Bordo highlight' },
-  { key: '--obstacle-bg-top', label: 'Mattoni top' },
-  { key: '--obstacle-bg-bottom', label: 'Mattoni bottom' },
-  { key: '--obstacle-edge', label: 'Bordo mattoni' }
+  { key: '--cell-hi-edge', label: 'Bordo highlight' }
 ];
 const EDITOR_THEME_COLOR_KEYS = new Set(EDITOR_THEME_COLOR_CONTROLS.map(control => control.key));
+const EDITOR_THEME_COLOR_GROUPS = [
+  { id: 'green', label: 'Verdi naturali', color: '#83b878', themes: ['level1', 'level-thomas', 'world-camping', 'world-dinosaur-jungle', 'world-moss-forest', 'world-botanical-garden'] },
+  { id: 'aqua', label: 'Azzurri e turchesi', color: '#82c6d2', themes: ['level-sky-clouds', 'level-city', 'world-sky', 'world-rainy-street', 'world-laundromat', 'world-seabed'] },
+  { id: 'blue', label: 'Blu e viola', color: '#737ea9', themes: ['level-universe', 'world-space', 'world-night-garden', 'world-crystal-cave', 'world-enchanted-library'] },
+  { id: 'gold', label: 'Gialli e sabbia', color: '#dec080', themes: ['level-zelda-greco', 'level-manuale01', 'world-supermarket', 'world-beach', 'world-desert-dunes', 'world-toy-workshop'] },
+  { id: 'earth', label: 'Terra e rame', color: '#bd906d', themes: ['world-autumn-forest', 'world-clockwork', 'world-paper-castle'] },
+  { id: 'pink', label: 'Rosa e corallo', color: '#df9db3', themes: ['world-candy-land', 'world-sunset-rooftops'] },
+  { id: 'red', label: 'Rossi', color: '#c55f66', themes: ['world-poppy-garden', 'world-maple-forest', 'world-terracotta-canyon', 'world-ruby-planet'] },
+  { id: 'neutral', label: 'Neutri e chiari', color: '#c7d0c4', themes: ['level-base', 'world-train-station', 'world-school', 'world-snow-village', 'world-mountain-summit'] }
+];
 const DECORATION_BEE_LOTTIE_SRC = 'assets/animations/decor/bee_swarm_hover.json';
 const DECORATION_BEE_BASE_SIZE = 16;
 const DECORATION_BEE_PLAYBACK_SPEED = 2;
 const DECORATION_BEE_MAX_LOTTIE_ACTORS = LOW_END_DEVICE ? 0 : 2;
 const DECORATION_LAYERS = ['ground', 'object', 'overlay'];
 const DECORATION_ERASE_TOOL = '__decor_erase__';
+const DECORATION_MOTIONS = [
+  ['none', 'Nessuno'], ['sweep_lr', 'Attraversa da sinistra'],
+  ['sweep_rl', 'Attraversa da destra'], ['orbit_cw', 'Giro orario'],
+  ['orbit_ccw', 'Giro antiorario'], ['bob', 'Su e giù'],
+  ['sway', 'Dondolio'], ['figure8', 'Otto volante'],
+  ['patrol_vertical', 'Pattuglia verticale'], ['pulse', 'Respiro'],
+  ['flutter', 'Svolazzo']
+];
+function normalizeDecorationMotion(value) {
+  return DECORATION_MOTIONS.some(([id]) => id === value) ? value : 'none';
+}
+function decorationMotionPose(motion, x, y, t, extent = 1) {
+  const a = t * Math.PI * 2;
+  switch (motion) {
+    case 'sweep_lr': return { x: x + (t - 0.5) * 1.16 * extent, y };
+    case 'sweep_rl': return { x: x + (0.5 - t) * 1.16 * extent, y };
+    case 'orbit_cw': return { x: x + 0.35 * extent * Math.cos(a), y: y + 0.35 * extent * Math.sin(a) };
+    case 'orbit_ccw': return { x: x + 0.35 * extent * Math.cos(a), y: y - 0.35 * extent * Math.sin(a) };
+    case 'bob': return { x, y: y + 0.09 * extent * Math.sin(a) };
+    case 'sway': return { x: x + 0.08 * extent * Math.sin(a), y, angle: 10 * extent * Math.sin(a) };
+    case 'figure8': return { x: x + 0.22 * extent * Math.sin(a), y: y + 0.13 * extent * Math.sin(2 * a) };
+    case 'patrol_vertical': return { x, y: y + 0.42 * extent * (1 - 4 * Math.abs(t - 0.5)) };
+    case 'pulse': return { x, y, scale: 1 + 0.13 * extent * Math.sin(a) };
+    case 'flutter': return { x: x + 0.12 * extent * Math.sin(a), y: y + 0.06 * extent * Math.sin(3 * a), angle: 8 * extent * Math.sin(2 * a) };
+    default: return { x, y };
+  }
+}
+function applyDecorationMotion(item, entry, metrics, frame) {
+  const motion = normalizeDecorationMotion(entry.motion);
+  if (motion === 'none' || (editorMode && decorationTransformMode && entry.id === selectedDecorationId)
+    || !item.animate || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  const pivotX = Number.isFinite(entry.pivotX) ? entry.pivotX : 0.5;
+  const pivotY = Number.isFinite(entry.pivotY) ? entry.pivotY : 0.5;
+  const x = (frame.left + frame.width * pivotX - metrics.wrapLeft) / metrics.width;
+  const y = (frame.top + frame.height * pivotY - metrics.wrapTop) / metrics.height;
+  const rotation = Number(entry.rotation) || 0;
+  const frames = Array.from({ length: 33 }, (_, index) => {
+    const t = index / 32;
+    const pose = decorationMotionPose(motion, x, y, t, entry.motionExtent);
+    const dx = (pose.x - x) * metrics.width;
+    const dy = (pose.y - y) * metrics.height;
+    return { offset: t, transform: `translate(${dx}px, ${dy}px) rotate(${rotation + (pose.angle || 0)}deg) scale(${pose.scale || 1})` };
+  });
+  const long = ['sweep_lr', 'sweep_rl', 'orbit_cw', 'orbit_ccw', 'figure8', 'patrol_vertical'].includes(motion);
+  item.animate(frames, { duration: long ? 7000 : 2600, iterations: Infinity, easing: 'linear' });
+}
 const DECORATION_ASSET_DEFS = {
+  ...(window.BOKS_BOARD_THEMES?.decorationAssets?.() || {}),
   tree_small: {
     label: 'Alberello',
     layer: 'object',
@@ -591,6 +648,8 @@ let playerPlaced = true;
 let goalPlaced = true;
 let selectedElementTool = null;
 let selectedDecorationBrush = null;
+let selectedDecorationId = null;
+let decorationTransformMode = false;
 let activeLevelDecorations = [];
 let decorationBrushSettings = {
   tree_small: { scale: 1, foliageColor: '#5dae61', trunkColor: '#8f6136' },
@@ -607,6 +666,7 @@ let editorWorkspaceTab = 'elements';
 let pendingNewLevelThemeOverrides = {};
 let pendingNewLevelCharacterId = DEFAULT_CHARACTER_ID;
 let pendingNewLevelHints = {};
+let pendingNewLevelNotes = '';
 let emptyRunHintTimers = [];
 let lastEmptyRunHintAt = 0;
 let firstLevelOnboardingStage = 'idle';
@@ -1509,7 +1569,12 @@ function initGrid() {
   for(let y=0; y<ROWS; y++) for(let x=0; x<COLS; x++) {
     const c = document.createElement('div');
     c.className = 'cell'; c.dataset.cx = x; c.dataset.cy = y;
-    if (lv?.decorateCell) lv.decorateCell(c, x, y);
+    if (lv?.worldTheme && lv.decorateCell) lv.decorateCell(c, x, y, {
+      levelId: currentCustomLevel?.id || selectedEditorLevelId || String(tutorialStepIndex),
+      protectedCell: isBlockedCell(x, y)
+        || (goalPlaced && x === GOAL.x && y === GOAL.y)
+        || (playerPlaced && x === pos.x && y === pos.y)
+    });
     if (isBlockedCell(x, y)) {
       c.classList.remove(...DECOR_CLASSES);
       c.classList.add('obstacle-cell');
@@ -2682,6 +2747,8 @@ function renderDecorationAssetMarkup(assetInput) {
       ...getDecorationDefaultOptions(assetId),
       ...(assetInput || {})
     };
+  const customSvg = getDecorationAssetDef(assetId)?.svg;
+  if (customSvg) return customSvg;
   switch (assetId) {
     case 'tree_small': {
       const foliage = parseColorToHex(options.foliageColor) || '#5dae61';
@@ -2784,13 +2851,14 @@ function getBeeDecorationActorSeed(index = 0) {
 
 function getBeeSwarmSpread(entry, metrics = null) {
   const count = getBeeDecorationCount(entry);
+  const scale = Number.isFinite(entry?.scale) ? entry.scale : 1;
   const cellUnitX = metrics?.width ? (metrics.cellWidth / metrics.width) : (1 / COLS);
   const cellUnitY = metrics?.height ? (metrics.cellHeight / metrics.height) : (1 / ROWS);
   const spreadFactor = 0.6 + (Math.sqrt(Math.max(1, count)) * 0.42);
   return {
     count,
-    radiusX: Math.min(0.34, cellUnitX * spreadFactor),
-    radiusY: Math.min(0.32, cellUnitY * (spreadFactor * 0.92))
+    radiusX: Math.min(0.45, cellUnitX * spreadFactor * scale),
+    radiusY: Math.min(0.45, cellUnitY * (spreadFactor * 0.92) * scale)
   };
 }
 
@@ -2945,11 +3013,16 @@ function ensureBeeDecorationActor(entry, index = 0, globalIndex = index) {
   actor.actorIndex = index;
   actor.globalIndex = globalIndex;
   actor.scale = nextScale;
+  actor.motion = normalizeDecorationMotion(entry.motion);
+  actor.rotation = Number(entry.rotation) || 0;
+  actor.pivotX = entry.pivotX ?? 0.5;
+  actor.pivotY = entry.pivotY ?? 0.5;
   actor.prefersLottie = prefersLottie;
   actor.mount.dataset.id = actorId;
   actor.mount.dataset.entryId = entry.id;
   actor.mount.dataset.asset = entry.asset;
   actor.mount.dataset.layer = entry.layer;
+  actor.mount.classList.toggle('is-editor-selected', editorMode && entry.id === selectedDecorationId);
   actor.mount.classList.toggle('grid-decoration-bee--lottie', prefersLottie);
   actor.mount.classList.toggle('grid-decoration-bee--fallback-only', !prefersLottie);
 
@@ -3002,34 +3075,64 @@ function updateBeeDecorationActors(now = window.performance?.now?.() || Date.now
         layer: 'overlay',
         anchorX: actor.homeX,
         anchorY: actor.homeY,
-        scale: actor.scale
+        scale: actor.scale,
+        motion: actor.motion,
+        rotation: actor.rotation,
+        pivotX: actor.pivotX,
+        pivotY: actor.pivotY
       }, actor.actorIndex, actor.globalIndex ?? actor.actorIndex);
     }
-    if (!actor.legStart) pickBeeDecorationTarget(actor, metrics);
+    const editing = editorMode && decorationTransformMode && actor.entryId === selectedDecorationId;
+    if (!actor.legStart && actor.motion === 'none' && !editing) pickBeeDecorationTarget(actor, metrics);
 
     const elapsed = now - actor.legStart;
     const rawProgress = actor.legDuration > 0 ? (elapsed / actor.legDuration) : 1;
     const progress = clamp01(rawProgress);
     const eased = 0.5 - (Math.cos(Math.PI * progress) * 0.5);
-    actor.x = actor.startX + ((actor.targetX - actor.startX) * eased);
-    actor.y = actor.startY + ((actor.targetY - actor.startY) * eased);
-
     const width = Math.max(10, Math.round((DECORATION_BEE_BASE_SIZE - Math.min(actor.actorIndex, 4)) * actor.scale));
     const height = width;
+    const beeEntry = activeLevelDecorations.find(entry => entry.id === actor.entryId);
+    const groupFrame = beeEntry ? getDecorationFrame(beeEntry, metrics) : null;
+    const pivotX = groupFrame
+      ? (groupFrame.left + groupFrame.width * actor.pivotX - metrics.wrapLeft) / metrics.width
+      : actor.homeX;
+    const pivotY = groupFrame
+      ? (groupFrame.top + groupFrame.height * actor.pivotY - metrics.wrapTop) / metrics.height
+      : actor.homeY;
+    const radians = actor.rotation * Math.PI / 180;
+    const offsetX = actor.homeX + actor.offsetX - pivotX;
+    const offsetY = actor.homeY + actor.offsetY - pivotY;
+    const groupX = pivotX + offsetX * Math.cos(radians) - offsetY * Math.sin(radians);
+    const groupY = pivotY + offsetX * Math.sin(radians) + offsetY * Math.cos(radians);
+    if (editing) {
+      actor.x = groupX;
+      actor.y = groupY;
+    } else if (actor.motion === 'none' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      actor.x = actor.startX + ((actor.targetX - actor.startX) * eased);
+      actor.y = actor.startY + ((actor.targetY - actor.startY) * eased);
+    } else {
+      const long = ['sweep_lr', 'sweep_rl', 'orbit_cw', 'orbit_ccw', 'figure8', 'patrol_vertical'].includes(actor.motion);
+      const cycle = (now / (long ? 7000 : 2600)) % 1;
+      const pose = decorationMotionPose(actor.motion, pivotX, pivotY, cycle, beeEntry?.motionExtent);
+      actor.x = groupX + pose.x - pivotX;
+      actor.y = groupY + pose.y - pivotY;
+    }
+
     const localX = metrics.wrapLeft + (actor.x * metrics.width);
     const localY = metrics.wrapTop + (actor.y * metrics.height);
-    const bob = Math.sin((now / 260) + actor.bobPhase) * 5;
-    const drift = Math.cos((now / 410) + actor.bobPhase) * 3;
+    const bob = editing || actor.motion !== 'none' ? 0 : Math.sin((now / 260) + actor.bobPhase) * 5;
+    const drift = editing || actor.motion !== 'none' ? 0 : Math.cos((now / 410) + actor.bobPhase) * 3;
     const dx = actor.targetX - actor.startX;
     const dy = actor.targetY - actor.startY;
-    const angle = (Math.atan2(dy, dx) * 180 / Math.PI) || 0;
-    const tilt = Math.sin((now / 520) + actor.bobPhase) * 6;
+    const angle = actor.motion === 'none' ? (Math.atan2(dy, dx) * 180 / Math.PI) || 0 : 0;
+    const tilt = actor.motion === 'none' ? Math.sin((now / 520) + actor.bobPhase) * 6 : 0;
 
     actor.mount.style.left = `${localX + drift}px`;
     actor.mount.style.top = `${localY + bob}px`;
     actor.mount.style.width = `${width}px`;
     actor.mount.style.height = `${height}px`;
-    actor.mount.style.transform = `translate(-50%, -50%) rotate(${angle + tilt}deg)`;
+    actor.mount.style.transformOrigin = `${actor.pivotX * 100}% ${actor.pivotY * 100}%`;
+    actor.mount.style.transform = `translate(-50%, -50%) rotate(${actor.rotation + (editing ? 0 : angle + tilt)}deg)`;
     actor.width = width;
     actor.height = height;
     actor.localX = localX + drift;
@@ -3044,7 +3147,7 @@ function updateBeeDecorationActors(now = window.performance?.now?.() || Date.now
       if (isNear) isHeroNearAnyBee = true;
     }
 
-    if (progress >= 1) {
+    if (progress >= 1 && actor.motion === 'none' && !editing) {
       pickBeeDecorationTarget(actor, metrics);
     }
   });
@@ -3115,8 +3218,13 @@ function getDecorationFrame(entry, metrics = getGridMetrics()) {
   const anchorLeft = metrics.wrapLeft + (anchorX * metrics.width);
   const anchorTop = metrics.wrapTop + (anchorY * metrics.height);
   if (resolveDecorationAssetId(entry?.asset) === 'bee_hover') {
-    const width = Math.max(12, Math.round(DECORATION_BEE_BASE_SIZE * scale));
-    const height = width;
+    const swarm = getBeeSwarmSpread(entry, metrics);
+    const width = swarm.count > 1
+      ? Math.max(52, swarm.radiusX * metrics.width * 2.15 + DECORATION_BEE_BASE_SIZE * scale)
+      : Math.max(52, DECORATION_BEE_BASE_SIZE * scale);
+    const height = swarm.count > 1
+      ? Math.max(52, swarm.radiusY * metrics.height * 2.15 + DECORATION_BEE_BASE_SIZE * scale)
+      : Math.max(52, DECORATION_BEE_BASE_SIZE * scale);
     return {
       left: anchorLeft - (width / 2),
       top: anchorTop - (height / 2),
@@ -3159,7 +3267,20 @@ function getInsetFrame(frame, insetRatioX = 0, insetRatioY = insetRatioX) {
 }
 
 function getDecorationTouchFrame(entry, metrics = getGridMetrics()) {
-  const frame = getDecorationFrame(entry, metrics);
+  let frame = getDecorationFrame(entry, metrics);
+  if ((normalizeDecorationMotion(entry?.motion) !== 'none' || Number(entry?.rotation)) && entry?.id) {
+    const item = [...(document.getElementById('gridDecor')?.children || [])]
+      .find(candidate => candidate.dataset.id === entry.id);
+    if (item) {
+      const rect = item.getBoundingClientRect();
+      const topLeft = viewportPointToGridStage(rect.left, rect.top);
+      const bottomRight = viewportPointToGridStage(rect.right, rect.bottom);
+      if (topLeft && bottomRight) frame = {
+        left: topLeft.x, top: topLeft.y,
+        width: bottomRight.x - topLeft.x, height: bottomRight.y - topLeft.y
+      };
+    }
+  }
   if (!frame) return null;
   const def = getDecorationAssetDef(entry?.asset);
   const hitbox = def?.touchHitbox || {};
@@ -3213,7 +3334,7 @@ function isSpriteTouchingDecoration(entry, spriteFrame, metrics = getGridMetrics
   const decorationFrame = getDecorationTouchFrame(entry, metrics);
   if (!decorationFrame || !spriteFrame) return false;
   if (framesIntersect(spriteFrame, decorationFrame)) return true;
-  if (Number.isInteger(entry?.x) && Number.isInteger(entry?.y) && entry.x === pos.x && entry.y === pos.y) {
+  if (normalizeDecorationMotion(entry?.motion) === 'none' && Number.isInteger(entry?.x) && Number.isInteger(entry?.y) && entry.x === pos.x && entry.y === pos.y) {
     return true;
   }
   const spriteCenterX = spriteFrame.left + (spriteFrame.width / 2);
@@ -3372,7 +3493,7 @@ function getDecorationHitAtPoint(clientX, clientY) {
       continue;
     }
 
-    const frame = getDecorationFrame(entry, metrics);
+    const frame = getDecorationTouchFrame(entry, metrics);
     if (!frame) continue;
     if (
       localX >= frame.left
@@ -3386,7 +3507,136 @@ function getDecorationHitAtPoint(clientX, clientY) {
   return null;
 }
 
+function updateDecorationTransformVisual(entry) {
+  const metrics = getGridMetrics();
+  const frame = getDecorationFrame(entry, metrics);
+  if (!frame) return;
+  const item = [...(document.getElementById('gridDecor')?.children || [])]
+    .find(candidate => candidate.dataset.id === entry.id);
+  if (item) {
+    item.style.left = `${frame.left}px`;
+    item.style.top = `${frame.top}px`;
+    item.style.width = `${frame.width}px`;
+    item.style.height = `${frame.height}px`;
+    item.style.transformOrigin = `${(entry.pivotX ?? 0.5) * 100}% ${(entry.pivotY ?? 0.5) * 100}%`;
+    item.style.transform = `rotate(${entry.rotation || 0}deg)`;
+  }
+  decorationFxState.beeActors.forEach(actor => {
+    if (actor.entryId !== entry.id) return;
+    actor.homeX = entry.anchorX;
+    actor.homeY = entry.anchorY;
+    actor.scale = entry.scale;
+    actor.rotation = entry.rotation || 0;
+    actor.pivotX = entry.pivotX ?? 0.5;
+    actor.pivotY = entry.pivotY ?? 0.5;
+    const swarm = getBeeSwarmSpread(entry, metrics);
+    const seed = getBeeDecorationActorSeed(actor.actorIndex);
+    const angle = seed * Math.PI * 2;
+    const distance = swarm.count <= 1 ? 0
+      : 0.34 + actor.actorIndex / Math.max(1, swarm.count - 1) * 0.72;
+    actor.offsetX = Math.cos(angle) * swarm.radiusX * distance;
+    actor.offsetY = Math.sin(angle) * swarm.radiusY * distance;
+  });
+  const overlay = document.getElementById('decorTransformOverlay');
+  if (!overlay) return;
+  overlay.style.left = `${frame.left}px`;
+  overlay.style.top = `${frame.top}px`;
+  overlay.style.width = `${frame.width}px`;
+  overlay.style.height = `${frame.height}px`;
+  overlay.style.transformOrigin = `${(entry.pivotX ?? 0.5) * 100}% ${(entry.pivotY ?? 0.5) * 100}%`;
+  overlay.style.transform = `rotate(${entry.rotation || 0}deg)`;
+  const pivot = overlay.querySelector('.decor-transform-pivot');
+  if (pivot) {
+    pivot.style.left = `${(entry.pivotX ?? 0.5) * 100}%`;
+    pivot.style.top = `${(entry.pivotY ?? 0.5) * 100}%`;
+  }
+}
+
+function renderDecorationTransformOverlay() {
+  document.getElementById('decorTransformOverlay')?.remove();
+  if (!editorMode || !decorationTransformMode) return;
+  const entry = activeLevelDecorations.find(item => item.id === selectedDecorationId);
+  const stage = ensureGridStage();
+  if (!entry || !stage) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'decorTransformOverlay';
+  overlay.setAttribute('aria-label', 'Trasforma decorazione: trascina, scala, ruota o sposta il pivot');
+  overlay.innerHTML = '<span class="decor-transform-rotate" data-handle="rotate" title="Ruota"></span>'
+    + '<span class="decor-transform-scale" data-handle="scale" title="Scala"></span>'
+    + '<span class="decor-transform-move" data-handle="move" title="Sposta"></span>'
+    + '<span class="decor-transform-pivot" data-handle="pivot" title="Sposta il pivot"></span>';
+  stage.appendChild(overlay);
+  updateDecorationTransformVisual(entry);
+
+  let drag = null;
+  overlay.addEventListener('pointerdown', event => {
+    if (!editorMode || !decorationTransformMode) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const metrics = getGridMetrics();
+    const point = viewportPointToGridStage(event.clientX, event.clientY);
+    const frame = getDecorationFrame(entry, metrics);
+    if (!point || !frame) return;
+    const pivotX = entry.pivotX ?? 0.5;
+    const pivotY = entry.pivotY ?? 0.5;
+    const pivot = { x: frame.left + frame.width * pivotX, y: frame.top + frame.height * pivotY };
+    drag = {
+      pointerId: event.pointerId,
+      mode: event.target.dataset.handle || 'move', point, frame, pivot,
+      anchorX: entry.anchorX, anchorY: entry.anchorY,
+      scale: entry.scale, rotation: entry.rotation || 0,
+      pivotX, pivotY,
+      angle: Math.atan2(point.y - pivot.y, point.x - pivot.x),
+      distance: Math.max(1, Math.hypot(point.x - pivot.x, point.y - pivot.y))
+    };
+    overlay.setPointerCapture(event.pointerId);
+  });
+  overlay.addEventListener('pointermove', event => {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    event.preventDefault();
+    const metrics = getGridMetrics();
+    const point = viewportPointToGridStage(event.clientX, event.clientY);
+    if (!point || !metrics) return;
+    const clamp = n => Math.max(0, Math.min(1, n));
+    if (drag.mode === 'move') {
+      entry.anchorX = clamp(drag.anchorX + (point.x - drag.point.x) / metrics.width);
+      entry.anchorY = clamp(drag.anchorY + (point.y - drag.point.y) / metrics.height);
+    } else if (drag.mode === 'scale') {
+      const distance = Math.hypot(point.x - drag.pivot.x, point.y - drag.pivot.y);
+      entry.scale = Math.max(0.3, Math.min(2.5, drag.scale * distance / drag.distance));
+      const next = getDecorationFrame({ ...entry, anchorX: drag.anchorX, anchorY: drag.anchorY }, metrics);
+      entry.anchorX = clamp(drag.anchorX + (drag.pivot.x - next.left - next.width * drag.pivotX) / metrics.width);
+      entry.anchorY = clamp(drag.anchorY + (drag.pivot.y - next.top - next.height * drag.pivotY) / metrics.height);
+    } else if (drag.mode === 'rotate') {
+      const angle = Math.atan2(point.y - drag.pivot.y, point.x - drag.pivot.x);
+      entry.rotation = drag.rotation + (angle - drag.angle) * 180 / Math.PI;
+    } else if (drag.mode === 'pivot') {
+      const radians = drag.rotation * Math.PI / 180;
+      const dx = point.x - drag.pivot.x;
+      const dy = point.y - drag.pivot.y;
+      const localX = drag.pivotX * drag.frame.width + dx * Math.cos(radians) + dy * Math.sin(radians);
+      const localY = drag.pivotY * drag.frame.height - dx * Math.sin(radians) + dy * Math.cos(radians);
+      entry.pivotX = clamp(localX / drag.frame.width);
+      entry.pivotY = clamp(localY / drag.frame.height);
+      const shiftX = (entry.pivotX - drag.pivotX) * drag.frame.width;
+      const shiftY = (entry.pivotY - drag.pivotY) * drag.frame.height;
+      entry.anchorX = clamp(drag.anchorX - (shiftX * (1 - Math.cos(radians)) + shiftY * Math.sin(radians)) / metrics.width);
+      entry.anchorY = clamp(drag.anchorY - (shiftY * (1 - Math.cos(radians)) - shiftX * Math.sin(radians)) / metrics.height);
+    }
+    updateDecorationTransformVisual(entry);
+  });
+  const finish = event => {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    drag = null;
+    activeLevelDecorations = normalizeLevelDecorations(activeLevelDecorations);
+    applyEditorBoardChanges();
+  };
+  overlay.addEventListener('pointerup', finish);
+  overlay.addEventListener('pointercancel', finish);
+}
+
 function renderGridDecorations() {
+  document.getElementById('decorTransformOverlay')?.remove();
   const layer = ensureGridDecorationLayer();
   const fxLayer = ensureGridDecorationFxLayer();
   if (!layer) return;
@@ -3420,6 +3670,7 @@ function renderGridDecorations() {
     if (!frame) return;
     const item = document.createElement('span');
     item.className = `grid-decoration grid-decoration--${entry.asset} grid-decoration-layer--${entry.layer}`;
+    item.classList.toggle('is-editor-selected', editorMode && entry.id === selectedDecorationId);
     if (entry.id) item.dataset.id = entry.id;
     item.dataset.asset = entry.asset;
     item.dataset.layer = entry.layer;
@@ -3428,11 +3679,15 @@ function renderGridDecorations() {
     item.style.width = `${frame.width}px`;
     item.style.height = `${frame.height}px`;
     item.style.zIndex = String(zIndexByLayer[entry.layer] || 1);
+    item.style.transformOrigin = `${(entry.pivotX ?? 0.5) * 100}% ${(entry.pivotY ?? 0.5) * 100}%`;
+    item.style.transform = `rotate(${entry.rotation || 0}deg)`;
     item.innerHTML = renderDecorationAssetMarkup(entry);
     layer.appendChild(item);
+    applyDecorationMotion(item, entry, metrics, frame);
   });
 
   syncBeeDecorationActors(beeEntries);
+  renderDecorationTransformOverlay();
 }
 
 function normalizeThemeClassName(themeId) {
@@ -3552,6 +3807,35 @@ function getCurrentEditorThemeOverrides() {
   return {};
 }
 
+function getCurrentEditorLevelNotes() {
+  if (currentCustomLevel) return currentCustomLevel.notes || '';
+  if (selectedEditorLevelId === NEW_EDITOR_LEVEL_ID) return pendingNewLevelNotes;
+  return findCustomLevel(selectedEditorLevelId || '')?.notes || '';
+}
+
+function setCurrentEditorLevelNotes(notes) {
+  if (selectedEditorLevelId === NEW_EDITOR_LEVEL_ID) {
+    pendingNewLevelNotes = notes;
+    if (currentCustomLevel) currentCustomLevel.notes = notes;
+    return;
+  }
+  if (!currentCustomLevel) {
+    const selectedLevel = findCustomLevel(selectedEditorLevelId || '');
+    if (!selectedLevel) return;
+    currentCustomLevel = normalizeCustomLevel({
+      ...selectedLevel,
+      ...collectCurrentEditorLevel(),
+      id: selectedLevel.id,
+      number: selectedLevel.number,
+      campaignIndex: selectedLevel.campaignIndex ?? selectedLevel.baseStepIndex ?? null,
+      baseStepIndex: selectedLevel.baseStepIndex,
+      name: selectedLevel.name
+    });
+  }
+  currentCustomLevel.notes = notes;
+  syncCurrentEditorLevelToSessionCache();
+}
+
 function getCurrentEditorLevelHints() {
   if (currentCustomLevel) {
     return sanitizeLevelHints(currentCustomLevel.levelHints || {});
@@ -3626,6 +3910,7 @@ function resetCurrentEditorThemeOverrides() {
   if (!setCurrentEditorThemeOverrides({})) return;
   applyLevelSceneVars();
   renderThemeEditorPanel();
+  renderCustomLevels();
 }
 
 function buildCurrentEditorStylePreset(name) {
@@ -3792,7 +4077,7 @@ async function applyCurrentStyleToSelectedLevel() {
     levelHints: getCurrentEditorLevelHints()
   });
   levels[idx] = updated;
-  const persistResult = await persistEditorLevels(levels, { promptIfMissing: true });
+  const persistResult = await persistEditorLevels(levels, { promptIfMissing: false });
 
   if (currentCustomLevel && currentCustomLevel.id === updated.id) {
     currentCustomLevel = cloneCustomLevel({
@@ -3862,8 +4147,7 @@ function getActiveCharacterId() {
     const campaignLevel = getCurrentCampaignLevel();
     if (campaignLevel?.characterId) return resolveCharacterId(campaignLevel.characterId);
   }
-  const level = getLevel();
-  return resolveCharacterId(level?.characterId);
+  return resolveCharacterId(DEFAULT_CHARACTER_ID);
 }
 
 function getCurrentEditorCharacterId() {
@@ -3904,6 +4188,8 @@ function setCurrentEditorCharacterId(characterId) {
 
 function buildThemePreviewSVG(themeId) {
   const resolvedId = resolveThemeLevelId(themeId);
+  const worldPreview = window.BOKS_BOARD_THEMES?.thumbnail(resolvedId);
+  if (worldPreview) return worldPreview;
   if (resolvedId === 'level-base') {
     return `<svg viewBox="0 0 48 48" width="54" height="54" aria-hidden="true">
       <rect x="0" y="0" width="48" height="48" fill="#ede7d7"/>
@@ -4393,10 +4679,12 @@ function getLevel() {
 function applyLevelSceneVars() {
   const lv = getLevel();
   if (!lv) return;
-  const isThomas = lv.id === 'level-thomas';
-  document.body?.classList.toggle('theme-thomas', isThomas);
+  document.body?.classList.remove('theme-thomas');
   document.body?.setAttribute('data-active-theme', lv.id || '');
-  const baseVars = { ...(lv.sceneVars || {}) };
+  const baseVars = { ...(LEVELS.level1?.sceneVars || {}) };
+  Object.entries(lv.sceneVars || {}).forEach(([key, value]) => {
+    if (GRID_THEME_SCENE_VAR_KEYS.has(key)) baseVars[key] = value;
+  });
   let activeOverrides = {};
   if (editorMode && selectedEditorLevelId === NEW_EDITOR_LEVEL_ID) {
     activeOverrides = sanitizeThemeOverrides(pendingNewLevelThemeOverrides || {});
@@ -4416,6 +4704,7 @@ function applyLevelSceneVars() {
   Object.entries(baseVars).forEach(([k, v]) => {
     document.documentElement.style.setProperty(k, v);
   });
+  window.BOKS_BOARD_THEMES?.applyStyles(lv.id);
 }
 function setLevel(levelId, { persist = true } = {}) {
   if (!LEVELS[levelId]) return false;
@@ -5127,6 +5416,8 @@ function applyCustomLevel(level, { openEditor = false } = {}) {
   stepStartHintActive = !!normalized.levelHints?.availableBlockGlow;
   selectedElementTool = null;
   selectedDecorationBrush = null;
+  selectedDecorationId = null;
+  decorationTransformMode = false;
   mainSlotEnabled = normalizeSlotArray(normalized.mainSlotEnabled, SLOTS);
   fnSlotEnabled = normalizeSlotArray(normalized.fnSlotEnabled, FSLOTS);
   editorBlockEnabled = normalizeEnabledBlocks(normalized.enabledBlocks);
@@ -5172,6 +5463,7 @@ function collectCurrentEditorLevel() {
     campaignIndex: currentCustomLevel?.campaignIndex ?? currentCustomLevel?.baseStepIndex ?? null,
     baseStepIndex: currentCustomLevel?.baseStepIndex ?? null,
     name: currentCustomLevel?.name || 'Livello custom',
+    notes: getCurrentEditorLevelNotes(),
     icon: currentCustomLevel?.icon || selectedSaveIcon,
     baseLevel: getCurrentEditorThemeId(),
     characterId: getCurrentEditorCharacterId(),
@@ -5493,8 +5785,159 @@ function renderBeeBrushControls(card) {
   card.appendChild(controls);
 }
 
+function renderDecorationTransformControls(card) {
+  const entry = activeLevelDecorations.find(item => item.id === selectedDecorationId);
+  if (!entry) {
+    selectedDecorationId = null;
+    return;
+  }
+  const controls = document.createElement('div');
+  controls.className = 'editor-decor-controls editor-decor-inspector';
+  const title = document.createElement('div');
+  title.className = 'editor-setup-title';
+  title.textContent = getDecorationAssetDef(entry.asset)?.label || 'Decorazione';
+  controls.appendChild(title);
+  const hint = document.createElement('div');
+  hint.className = 'editor-setup-hint';
+  hint.textContent = decorationTransformMode ? 'Modifica direttamente sulla griglia.' : 'Premi Trasforma per usare le maniglie sulla griglia.';
+  controls.appendChild(hint);
+  const transformButton = document.createElement('button');
+  transformButton.type = 'button';
+  transformButton.className = 'editor-decor-transform-toggle';
+  transformButton.textContent = decorationTransformMode ? 'Termina trasformazione' : 'Trasforma sulla griglia';
+  transformButton.title = 'Scorciatoie: Ctrl+T o Maiusc+T';
+  transformButton.addEventListener('click', () => {
+    decorationTransformMode = !decorationTransformMode;
+    renderElementPalette();
+    renderGridDecorations();
+  });
+  controls.appendChild(transformButton);
+  if (decorationTransformMode) {
+    const instructions = document.createElement('div');
+    instructions.className = 'editor-setup-hint';
+    instructions.textContent = 'Sposta: cornice · Ruota: cerchio · Scala: quadrato · Pivot: punto giallo.';
+    controls.appendChild(instructions);
+  }
+  const update = change => {
+    activeLevelDecorations = normalizeLevelDecorations(activeLevelDecorations.map(item =>
+      item.id === entry.id ? { ...item, ...change } : item
+    ));
+    applyEditorBoardChanges();
+  };
+
+  if (!decorationTransformMode) {
+    const scaleLabel = document.createElement('label');
+    scaleLabel.className = 'editor-decor-control';
+    const scaleText = document.createElement('span');
+    scaleText.className = 'editor-decor-control-label';
+    scaleText.textContent = `Scala ${Math.round((entry.scale || 1) * 100)}%`;
+    const scaleInput = document.createElement('input');
+    scaleInput.type = 'range';
+    scaleInput.min = '30';
+    scaleInput.max = '250';
+    scaleInput.step = '5';
+    scaleInput.value = String(Math.round((entry.scale || 1) * 100));
+    scaleInput.addEventListener('input', () => {
+      scaleText.textContent = `Scala ${scaleInput.value}%`;
+    });
+    scaleInput.addEventListener('change', () => update({ scale: Number(scaleInput.value) / 100 }));
+    scaleLabel.append(scaleText, scaleInput);
+    controls.appendChild(scaleLabel);
+
+    const motionLabel = document.createElement('label');
+    motionLabel.className = 'editor-decor-control';
+    const motionText = document.createElement('span');
+    motionText.className = 'editor-decor-control-label';
+    motionText.textContent = 'Movimento';
+    const select = document.createElement('select');
+    for (const [id, label] of DECORATION_MOTIONS) {
+      const option = document.createElement('option');
+      option.value = id;
+      option.textContent = label;
+      select.appendChild(option);
+    }
+    select.value = normalizeDecorationMotion(entry.motion);
+    select.addEventListener('change', () => update({ motion: select.value }));
+    motionLabel.append(motionText, select);
+    controls.appendChild(motionLabel);
+    if (select.value !== 'none') {
+      const extentLabel = document.createElement('label');
+      extentLabel.className = 'editor-decor-control';
+      const extentText = document.createElement('span');
+      extentText.className = 'editor-decor-control-label';
+      extentText.textContent = `Ampiezza ${Math.round((entry.motionExtent || 1) * 100)}%`;
+      const extentInput = document.createElement('input');
+      extentInput.type = 'range';
+      extentInput.min = '25';
+      extentInput.max = '200';
+      extentInput.step = '5';
+      extentInput.value = String(Math.round((entry.motionExtent || 1) * 100));
+      extentInput.addEventListener('input', () => {
+        extentText.textContent = `Ampiezza ${extentInput.value}%`;
+      });
+      extentInput.addEventListener('change', () => update({ motionExtent: Number(extentInput.value) / 100 }));
+      extentLabel.append(extentText, extentInput);
+      controls.appendChild(extentLabel);
+      const pivotHint = document.createElement('div');
+      pivotHint.className = 'editor-setup-hint';
+      pivotHint.textContent = 'Il pivot giallo è il centro della traiettoria. Spostalo con Trasforma.';
+      controls.appendChild(pivotHint);
+    }
+  }
+
+  if (!decorationTransformMode && entry.asset === 'tree_small') {
+    for (const [key, label, fallback] of [
+      ['foliageColor', 'Chioma', '#5dae61'],
+      ['trunkColor', 'Tronco', '#8f6136']
+    ]) {
+      const wrap = document.createElement('label');
+      wrap.className = 'editor-decor-control editor-decor-control--color';
+      const text = document.createElement('span');
+      text.textContent = label;
+      const input = document.createElement('input');
+      input.type = 'color';
+      input.value = parseColorToHex(entry[key]) || fallback;
+      input.addEventListener('change', () => update({ [key]: input.value }));
+      wrap.append(text, input);
+      controls.appendChild(wrap);
+    }
+  }
+  if (!decorationTransformMode && entry.asset === 'bee_hover') {
+    const wrap = document.createElement('label');
+    wrap.className = 'editor-decor-control';
+    const text = document.createElement('span');
+    text.className = 'editor-decor-control-label';
+    text.textContent = `Numero api ${normalizeDecorationCount(entry.count, 3)}`;
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.min = '1'; input.max = '10'; input.step = '1';
+    input.value = String(normalizeDecorationCount(entry.count, 3));
+    input.addEventListener('input', () => { text.textContent = `Numero api ${input.value}`; });
+    input.addEventListener('change', () => update({ count: Number(input.value) }));
+    wrap.append(text, input);
+    controls.appendChild(wrap);
+  }
+
+  const done = document.createElement('button');
+  done.type = 'button';
+  done.className = 'editor-decor-done';
+  done.textContent = 'Fatto';
+  done.addEventListener('click', () => {
+    decorationTransformMode = false;
+    selectedDecorationId = null;
+    selectedDecorationBrush = null;
+    editorWorkspaceTab = 'elements';
+    syncEditorWorkspaceTabs();
+    renderElementPalette();
+    renderGridDecorations();
+  });
+  controls.insertBefore(done, hint);
+  document.body.appendChild(controls);
+}
+
 function renderDecorationPalette(palette) {
   if (!palette || !editorMode) return;
+  document.querySelector('.editor-decor-inspector')?.remove();
 
   const card = document.createElement('div');
   card.className = 'editor-setup-card editor-decor-card';
@@ -5506,13 +5949,28 @@ function renderDecorationPalette(palette) {
 
   const hint = document.createElement('div');
   hint.className = 'editor-setup-hint';
-  hint.innerHTML = 'Qui scegli gli elementi decorativi del livello: <strong>alberello</strong>, <strong>margherita</strong>, <strong>stormo di api</strong> con istanze regolabili e <strong>ponte</strong> placeholder.';
+  hint.textContent = 'Scegli un oggetto, tocca la griglia per piazzarlo, poi regolalo. Tocca un oggetto già piazzato per modificarlo.';
   card.appendChild(hint);
 
   const summary = document.createElement('div');
   summary.className = 'editor-decor-summary';
   summary.textContent = `${activeLevelDecorations.length} elementi decorativi nel livello`;
   card.appendChild(summary);
+
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'editor-decor-close';
+  close.textContent = 'Chiudi decorazioni';
+  close.addEventListener('click', () => {
+    decorationTransformMode = false;
+    selectedDecorationId = null;
+    selectedDecorationBrush = null;
+    editorWorkspaceTab = 'elements';
+    syncEditorWorkspaceTabs();
+    renderElementPalette();
+    renderGridDecorations();
+  });
+  card.appendChild(close);
 
   const grid = document.createElement('div');
   grid.className = 'editor-decor-grid';
@@ -5532,9 +5990,12 @@ function renderDecorationPalette(palette) {
     <span class="element-tool-hint">Rimuove la decorazione sotto il punto cliccato</span>
   `;
   eraseBtn.addEventListener('click', () => {
+    decorationTransformMode = false;
+    selectedDecorationId = null;
     selectedDecorationBrush = selectedDecorationBrush === DECORATION_ERASE_TOOL ? null : DECORATION_ERASE_TOOL;
     selectedElementTool = null;
     renderElementPalette();
+    renderGridDecorations();
   });
   grid.appendChild(eraseBtn);
 
@@ -5550,15 +6011,17 @@ function renderDecorationPalette(palette) {
       <span class="element-tool-hint">${def.hint}</span>
     `;
     btn.addEventListener('click', () => {
+      decorationTransformMode = false;
+      selectedDecorationId = null;
       selectedDecorationBrush = selectedDecorationBrush === assetId ? null : assetId;
       selectedElementTool = null;
       renderElementPalette();
+      renderGridDecorations();
     });
     grid.appendChild(btn);
   });
 
-  renderTreeBrushControls(card);
-  renderBeeBrushControls(card);
+  renderDecorationTransformControls(card);
   card.appendChild(grid);
   palette.appendChild(card);
 }
@@ -5575,6 +6038,7 @@ function renderElementPalette() {
   panel.style.display = (editorMode && !editorStylePanelOpen) ? 'block' : 'none';
   if (decorationPanel) decorationPanel.style.display = (editorMode && !editorStylePanelOpen) ? 'block' : 'none';
   if (!editorMode) {
+    document.querySelector('.editor-decor-inspector')?.remove();
     palette.innerHTML = '';
     if (decorationPalette) decorationPalette.innerHTML = '';
     renderThemeEditorPanel();
@@ -5611,6 +6075,8 @@ function renderElementPalette() {
   ];
 
   palette.innerHTML = '';
+
+  renderLevelNotesControls(palette);
 
   function removeEditorGoal() {
     if (!goalPlaced) return;
@@ -5670,7 +6136,26 @@ function renderThemePicker() {
   const selectedThemeId = getCurrentEditorThemeId();
   const options = getEditorThemeOptions();
   picker.innerHTML = '';
-  options.forEach(theme => {
+  const groupFor = themeId => EDITOR_THEME_COLOR_GROUPS.find(group => group.themes.includes(themeId))?.id || 'other';
+  const groups = [
+    ...EDITOR_THEME_COLOR_GROUPS,
+    { id: 'other', label: 'Altri colori', color: '#b8b0a5', themes: [] }
+  ];
+  groups.forEach(group => {
+    const themes = options.filter(theme => groupFor(theme.id) === group.id);
+    if (!themes.length) return;
+    const section = document.createElement('details');
+    section.className = 'theme-color-group';
+    section.dataset.colorGroup = group.id;
+    section.open = themes.some(theme => theme.id === selectedThemeId);
+    const heading = document.createElement('summary');
+    heading.className = 'theme-color-group-heading';
+    heading.innerHTML = `<span class="theme-color-group-swatch" aria-hidden="true"></span><span>${group.label}</span><small>${themes.length} temi</small>`;
+    heading.querySelector('.theme-color-group-swatch').style.backgroundColor = group.color;
+    section.appendChild(heading);
+    const grid = document.createElement('div');
+    grid.className = 'theme-color-group-grid';
+    themes.forEach(theme => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'theme-choice' + (selectedThemeId === theme.id ? ' active' : '');
@@ -5683,7 +6168,10 @@ function renderThemePicker() {
       </span>
     `;
     btn.addEventListener('click', () => applyEditorTheme(theme.id));
-    picker.appendChild(btn);
+      grid.appendChild(btn);
+    });
+    section.appendChild(grid);
+    picker.appendChild(section);
   });
 }
 
@@ -5792,6 +6280,29 @@ function renderLevelHintControls(controls) {
   controls.appendChild(item);
 }
 
+function renderLevelNotesControls(controls) {
+  const notesField = document.createElement('div');
+  notesField.className = 'editor-setup-card level-notes-field';
+  const notesLabel = document.createElement('label');
+  notesLabel.className = 'level-hint-label';
+  notesLabel.htmlFor = 'levelNotesInput';
+  notesLabel.textContent = 'Note del livello';
+  const notesHint = document.createElement('span');
+  notesHint.id = 'levelNotesHint';
+  notesHint.className = 'level-hint-hint';
+  notesHint.textContent = 'Descrivi cosa fa e cosa non fa il livello. Premi Salva per conservare le note.';
+  const notesInput = document.createElement('textarea');
+  notesInput.id = 'levelNotesInput';
+  notesInput.className = 'level-notes-input';
+  notesInput.rows = 5;
+  notesInput.placeholder = 'Cosa fa:\n\nCosa non fa / problemi noti:';
+  notesInput.setAttribute('aria-describedby', notesHint.id);
+  notesInput.value = getCurrentEditorLevelNotes();
+  notesInput.addEventListener('input', () => setCurrentEditorLevelNotes(notesInput.value));
+  notesField.append(notesLabel, notesHint, notesInput);
+  controls.appendChild(notesField);
+}
+
 function renderThemeColorControls() {
   const controls = document.getElementById('themeColorControls');
   if (!controls) return;
@@ -5812,7 +6323,6 @@ function renderThemeColorControls() {
     item.innerHTML = `
       <div class="theme-color-copy">
         <span class="theme-color-label">${control.label}</span>
-        <span class="theme-color-key">${control.key}</span>
       </div>
     `;
     const picker = document.createElement('input');
@@ -5820,20 +6330,46 @@ function renderThemeColorControls() {
     picker.className = 'theme-color-input';
     picker.value = currentColor;
     picker.setAttribute('aria-label', `Colore ${control.label}`);
-    picker.addEventListener('input', () => {
+    const hexInput = document.createElement('input');
+    hexInput.type = 'text';
+    hexInput.className = 'theme-color-hex';
+    hexInput.maxLength = 7;
+    hexInput.value = currentColor.toUpperCase();
+    hexInput.setAttribute('aria-label', `Codice colore ${control.label}`);
+    hexInput.spellcheck = false;
+    const applyColor = value => {
+      const hex = parseColorToHex(value);
+      if (!hex) return false;
       const nextOverrides = getCurrentEditorThemeOverrides();
-      nextOverrides[control.key] = picker.value;
-      if (!setCurrentEditorThemeOverrides(nextOverrides)) return;
+      nextOverrides[control.key] = hex;
+      if (!setCurrentEditorThemeOverrides(nextOverrides)) return false;
+      picker.value = hex;
+      hexInput.value = hex.toUpperCase();
+      hexInput.setAttribute('aria-invalid', 'false');
       clearBtn.disabled = false;
       applyLevelSceneVars();
       renderCustomLevels();
+      return true;
+    };
+    picker.addEventListener('input', () => { applyColor(picker.value); });
+    hexInput.addEventListener('input', () => {
+      if (/^#[0-9a-f]{6}$/i.test(hexInput.value)) applyColor(hexInput.value);
+      else hexInput.setAttribute('aria-invalid', 'true');
+    });
+    hexInput.addEventListener('blur', () => {
+      if (hexInput.getAttribute('aria-invalid') === 'true') {
+        hexInput.value = picker.value.toUpperCase();
+        hexInput.setAttribute('aria-invalid', 'false');
+      }
     });
     item.appendChild(picker);
+    item.appendChild(hexInput);
 
     const clearBtn = document.createElement('button');
     clearBtn.type = 'button';
     clearBtn.className = 'theme-color-reset';
     clearBtn.textContent = 'Reset';
+    clearBtn.setAttribute('aria-label', `Ripristina ${control.label}`);
     clearBtn.disabled = !overrides[control.key];
     clearBtn.addEventListener('click', () => {
       const nextOverrides = getCurrentEditorThemeOverrides();
@@ -5889,11 +6425,14 @@ function startBlankEditorLevel() {
   tutorialSceneLevelId = currentLevel;
   pendingNewLevelCharacterId = resolveCharacterId(getLevel()?.characterId);
   pendingNewLevelHints = {};
+  pendingNewLevelNotes = '';
   applyLevelSceneVars();
   playerPlaced = false;
   goalPlaced = false;
   selectedElementTool = null;
   selectedDecorationBrush = null;
+  selectedDecorationId = null;
+  decorationTransformMode = false;
   START = { x: 2, y: 2 };
   GOAL = { x: 5, y: 5 };
   pos = { ...START };
@@ -5925,6 +6464,7 @@ function startSandboxLevel() {
   pendingNewLevelCharacterId = resolveCharacterId(getLevel()?.characterId);
   pendingNewLevelHints = {};
   editorStylePanelOpen = false;
+  pendingNewLevelNotes = '';
   applyLevelSceneVars();
   playerPlaced = true;
   goalPlaced = true;
@@ -5974,6 +6514,7 @@ function startTutorialStage() {
   pendingNewLevelCharacterId = resolveCharacterId(getLevel()?.characterId);
   pendingNewLevelHints = {};
   editorStylePanelOpen = false;
+  pendingNewLevelNotes = '';
   applyLevelSceneVars();
   playerPlaced = false;
   goalPlaced = false;
@@ -6588,16 +7129,20 @@ function setupEditorElementPlacement() {
     if (!anchor) return false;
     const layer = normalizeDecorationLayer(def.layer);
     const options = getDecorationBrushOptions(assetId);
+    const id = `decor-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const next = [
       ...activeLevelDecorations,
       {
-        id: `decor-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        id,
         asset: resolveDecorationAssetId(assetId),
         layer,
         ...anchor,
         ...options
       }
     ];
+    decorationTransformMode = false;
+    selectedDecorationId = id;
+    selectedDecorationBrush = null;
     updateDecorations(next);
     return true;
   }
@@ -6605,6 +7150,10 @@ function setupEditorElementPlacement() {
   function eraseDecorationAtPoint(clientX, clientY) {
     const hit = getDecorationHitAtPoint(clientX, clientY);
     if (!hit) return false;
+    if (selectedDecorationId === hit.id) {
+      selectedDecorationId = null;
+      decorationTransformMode = false;
+    }
     updateDecorations(activeLevelDecorations.filter(entry => entry.id !== hit.id));
     return true;
   }
@@ -6614,6 +7163,19 @@ function setupEditorElementPlacement() {
     if (suppressNextClick) {
       suppressNextClick = false;
       return;
+    }
+    if (editorMode && selectedElementTool == null && selectedDecorationBrush !== DECORATION_ERASE_TOOL) {
+      const hit = getDecorationHitAtPoint(e.clientX, e.clientY);
+      if (hit) {
+        decorationTransformMode = false;
+        selectedDecorationId = hit.id;
+        selectedDecorationBrush = null;
+        editorWorkspaceTab = 'decorations';
+        syncEditorWorkspaceTabs();
+        renderElementPalette();
+        renderGridDecorations();
+        return;
+      }
     }
     if (selectedDecorationBrush) {
       if (selectedDecorationBrush === DECORATION_ERASE_TOOL) {
@@ -7023,7 +7585,7 @@ function renderCustomLevels() {
   list.appendChild(emptyTile);
 }
 
-function goalSVG() { const lv = getLevel(); return lv?.renderGoal ? lv.renderGoal() : ''; }
+function goalSVG() { return LEVELS.level1?.renderGoal?.() || ''; }
 function svgRobot(o) { const lv = getLevel(); return lv?.renderSprite ? lv.renderSprite(o) : ''; }
 function drawBackground() { const lv = getLevel(); if (lv?.renderBackground) lv.renderBackground(); }
 
@@ -7874,6 +8436,15 @@ function triggerEmptyRunHint() {
   });
 }
 
+function triggerActiveSlotCollisionFeedback() {
+  const slot = document.querySelector('.pslot.fn-active') || document.querySelector('.pslot.active');
+  if (!slot) return;
+  slot.classList.remove('slot-error-shake');
+  void slot.offsetWidth;
+  slot.classList.add('slot-error-shake');
+  setTimeout(() => slot.classList.remove('slot-error-shake'), 420);
+}
+
 async function moveChar(dir) {
   syncSprite();
   const activeCharacterId = resolveRuntimeCharacterId(getActiveCharacterId());
@@ -7887,6 +8458,7 @@ async function moveChar(dir) {
     else                   p.x=Math.min(COLS-1, p.x + (reverse ? -1 : 1));
     if (isBlockedCell(p.x, p.y)) {
       triggerBoksObstacleStruggle();
+      triggerActiveSlotCollisionFeedback();
       audioManager.playEffortSfx();
       await sleep(120);
       return;
@@ -8529,7 +9101,20 @@ document.addEventListener('keydown', e => {
   const tag = e.target?.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) return;
   const key = (e.key || '').toLowerCase();
+  if (editorMode && selectedDecorationId && key === 't' && (e.ctrlKey || e.metaKey || e.shiftKey)) {
+    e.preventDefault();
+    decorationTransformMode = !decorationTransformMode;
+    renderElementPalette();
+    renderGridDecorations();
+    return;
+  }
   if (key === 'escape') {
+    if (editorMode && decorationTransformMode) {
+      decorationTransformMode = false;
+      renderElementPalette();
+      renderGridDecorations();
+      return;
+    }
     if (settingsPanel?.isOpen()) {
       closeSettingsPanel();
       return;

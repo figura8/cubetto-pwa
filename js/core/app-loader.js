@@ -151,6 +151,7 @@
   const CORE_STARTUP_SCRIPTS = [
     'js/core/character/character-renderer.js',
     'js/levels/level1.js',
+    'js/themes/board-themes.js',
     'js/core/debug-tools.js',
     'js/core/audio-manager.js',
     'js/core/settings-panel.js',
@@ -292,6 +293,13 @@
     await loadCharacterManifests();
     for (const file of CORE_STARTUP_SCRIPTS) {
       await loadScript(file);
+      if (file === 'js/themes/board-themes.js') {
+        try {
+          await window.BOKS_BOARD_THEMES.load(`data/board-themes.json?v=${encodeURIComponent(build)}`);
+        } catch (err) {
+          console.warn('[BOKS] Board theme catalog unavailable; using existing themes.', err);
+        }
+      }
     }
     scheduleDeferredScript('js/core/sw-register.js', 1200);
     if (audioDiagnosticsEnabled) {

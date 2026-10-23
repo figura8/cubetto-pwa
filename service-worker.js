@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v38';
+const CACHE_VERSION = 'v53';
 const SHELL_CACHE = `cubetto-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `cubetto-runtime-${CACHE_VERSION}`;
 const FONTS_CACHE = `cubetto-fonts-${CACHE_VERSION}`;
@@ -11,6 +11,7 @@ const PRECACHE_URLS = [
   './styles/app.css',
   './styles/character.css',
   './styles/tutorial.css',
+  './styles/board-themes.css',
   './js/core/app-loader.js',
   './js/core/sw-register.js',
   './js/core/debug-tools.js',
@@ -25,6 +26,12 @@ const PRECACHE_URLS = [
   './js/tutorial/tutorial-data.js',
   './js/tutorial/tutorial-engine.js',
   './js/levels/level1.js',
+  './js/themes/board-themes.js',
+  './data/board-themes.json',
+  './tools/board-theme-preview.html',
+  './tools/board-theme-preview.css',
+  './tools/board-theme-preview.js',
+  './assets/characters/boks_green/base-up-green.svg',
   './data/editor-levels.json',
   './assets/animations/characters/registry.json',
   './assets/animations/characters/boks_green/manifest.js',
